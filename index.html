@@ -1,0 +1,2186 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ร้านน้ำยายแต๊ป</title>
+  <!-- Google Font: Sarabun -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap"
+    rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="ร้านน้ำยายแต๊ป.png">
+  <link rel="apple-touch-icon" href="ร้านน้ำยายแต๊ป.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <div class="app-layout">
+    <!-- Mobile Top Header -->
+    <header class="mobile-header">
+      <button id="mobileMenuBtn" class="icon-btn" aria-label="เปิดเมนู">
+        <i data-lucide="menu"></i>
+      </button>
+      <div class="mobile-brand">
+        <img src="ร้านน้ำยายแต๊ป.png" alt="โลโก้ร้านน้ำยายแต๊ป" class="brand-logo-img"
+          style="width:34px; height:34px; object-fit:cover; border-radius:var(--radius-sm); box-shadow:0 2px 6px rgba(0,0,0,0.15);">
+        <span class="brand-name">ร้านน้ำยายแต๊ป</span>
+      </div>
+      <button id="quickSaleMobileBtn" class="btn-fastwork-sm" title="บันทึกการขาย">
+        <i data-lucide="plus"></i>
+        <span>ขาย</span>
+      </button>
+    </header>
+
+    <!-- Sidebar (Fastwork Style) -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="brand-logo">
+          <img src="ร้านน้ำยายแต๊ป.png" alt="โลโก้ร้านน้ำยายแต๊ป" class="brand-logo-img"
+            style="width:42px; height:42px; object-fit:cover; border-radius:var(--radius-md); box-shadow:0 3px 10px rgba(0,80,240,0.25); border:1px solid rgba(0,80,240,0.15);">
+          <div class="brand-info">
+            <h1 class="brand-title">ร้านน้ำยายแต๊ป</h1>
+          </div>
+        </div>
+        <button id="closeSidebarBtn" class="close-sidebar-btn" aria-label="ปิดเมนู">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+
+
+      <!-- Navigation Links -->
+      <nav class="sidebar-nav">
+        <div class="nav-section-title">ภาพรวมระบบ</div>
+        <button class="nav-item nav-item-main active" data-tab="dashboard">
+          <i data-lucide="layout-dashboard"></i>
+          <span>แดชบอร์ดภาพรวม</span>
+        </button>
+
+        <div class="nav-sub-group">
+          <div class="nav-sub-header">
+            <span class="nav-sub-line"></span>
+            <span class="nav-sub-title">ระบบย่อย & การจัดการร้าน</span>
+          </div>
+          <button class="nav-item nav-item-sub" data-tab="today">
+            <i data-lucide="badge-dollar-sign"></i>
+            <span>รายได้วันนี้ & บันทึกขาย</span>
+            <span class="nav-badge" id="todaySalesBadge">0 บ.</span>
+          </button>
+          <button class="nav-item nav-item-sub" data-tab="expenses">
+            <i data-lucide="receipt"></i>
+            <span>บันทึกต้นทุน & วัตถุดิบ</span>
+          </button>
+          <button class="nav-item nav-item-sub" data-tab="pricing">
+            <i data-lucide="calculator"></i>
+            <span>คำนวณราคาขายต่อขวด/ลัง</span>
+          </button>
+          <button class="nav-item nav-item-sub" data-tab="calendar">
+            <i data-lucide="calendar-days"></i>
+            <span>ปฏิทินสรุปยอดรายวัน</span>
+          </button>
+          <button class="nav-item nav-item-sub" data-tab="recipes">
+            <i data-lucide="beaker"></i>
+            <span>สูตรชงน้ำ (ต่อ 1 โหล)</span>
+          </button>
+        </div>
+
+        <div class="nav-section-title mt-4">สต๊อกร้านค้า</div>
+        <button class="nav-item nav-item-main" data-tab="stock">
+          <i data-lucide="boxes"></i>
+          <span>สต๊อกร้านค้า & วัตถุดิบ</span>
+          <span class="nav-badge" id="stockAlertBadge" style="background-color: var(--danger);">3 เตือน</span>
+        </button>
+
+        <div class="nav-sub-group">
+          <div class="nav-sub-header">
+            <span class="nav-sub-line"></span>
+            <span class="nav-sub-title">จัดการสินค้า & วัตถุดิบคงคลัง</span>
+          </div>
+          <button class="nav-item nav-item-sub" data-tab="stock-low" id="navStockLow">
+            <i data-lucide="alert-triangle" style="color: var(--warning);"></i>
+            <span>สินค้าใกล้หมด (เตือนซื้อ)</span>
+            <span class="nav-badge" id="stockLowCountBadge"
+              style="background-color: var(--warning); color: #fff;">0</span>
+          </button>
+          <button class="nav-item nav-item-sub" data-tab="stock-history" id="navStockHistory">
+            <i data-lucide="history"></i>
+            <span>ประวัติเบิก-ตัดสต๊อก</span>
+          </button>
+        </div>
+
+        <div class="nav-section-title mt-4">ตั้งค่า & ฐานข้อมูล</div>
+        <button class="nav-item" data-tab="settings">
+          <i data-lucide="settings"></i>
+          <span>จัดการข้อมูล / สำรองข้อมูล</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="rent-reminder-card">
+          <div class="rent-header">
+            <i data-lucide="store"></i>
+            <span>หักค่าเช่าร้านประจำเดือน</span>
+          </div>
+          <div class="rent-amount">฿10,000 / เดือน</div>
+          <div class="rent-progress-bar">
+            <div class="rent-progress-fill" id="rentProgressBar" style="width: 0%;"></div>
+          </div>
+          <div class="rent-caption" id="rentProgressText">เป้าหมายยอดกำไรคุ้มค่าเช่า</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Overlay for mobile drawer -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Top Bar -->
+      <div class="top-nav-bar">
+        <div class="top-nav-left">
+          <span class="current-date-badge" id="currentDateDisplay">
+            <i data-lucide="calendar"></i>
+            <span>กำลังโหลดวันที่...</span>
+          </span>
+        </div>
+      </div>
+
+      <!-- TAB 1: DASHBOARD -->
+      <section id="tab-dashboard" class="tab-pane active">
+        <!-- Modern Executive Dashboard Hero (Fastwork Inventory Theme) -->
+        <div class="stock-main-hero mb-4"
+          style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0050f0 100%);">
+          <div class="stock-main-hero-content">
+            <div class="stock-main-icon-ring"
+              style="background: rgba(0, 80, 240, 0.25); border: 2px solid rgba(255, 255, 255, 0.35);">
+              <i data-lucide="layout-dashboard"></i>
+            </div>
+            <div>
+              <div class="stock-main-badge-top">📊 FINANCIAL PERFORMANCE OVERVIEW</div>
+              <h2 class="stock-main-title">แดชบอร์ดสรุปผลประกอบการร้านค้า</h2>
+              <p class="stock-main-desc" id="dashHeaderDesc">สรุปยอดขายจริง หักต้นทุนวัตถุดิบและค่าเช่าร้าน
+                คำนวณกำไรสุทธิ และวิเคราะห์แนวโน้มธุรกิจ</p>
+            </div>
+          </div>
+          <div class="stock-main-hero-actions">
+            <button class="btn-fastwork"
+              style="background: rgba(255, 255, 255, 0.15); border: 1.5px solid rgba(255, 255, 255, 0.3); color:#ffffff; font-weight:600;"
+              onclick="app.switchTab('today')">
+              <i data-lucide="plus-circle"></i>
+              <span>+ บันทึกยอดขายวันนี้</span>
+            </button>
+            <button class="btn-fastwork"
+              style="background: #ffffff; color: var(--primary); font-weight: 700; box-shadow: 0 4px 14px rgba(0,80,240,0.25);"
+              onclick="app.openExpenseModal()">
+              <i data-lucide="receipt"></i>
+              <span>+ บันทึกรายจ่าย</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Period Filter & Time Selector Card -->
+        <div class="card mb-4" style="border: 1px solid var(--border-color); box-shadow: 0 2px 10px rgba(0,0,0,0.03);">
+          <div class="card-header space-between"
+            style="flex-wrap:wrap; gap:0.75rem; background:#fbfcfe; padding:0.85rem 1.25rem;">
+            <div class="card-header-title">
+              <i data-lucide="calendar" style="color:var(--primary);"></i>
+              <span>ช่วงเวลาที่ต้องการดูข้อมูล</span>
+            </div>
+            <div class="filter-group dashboard-filter-group" style="margin-left: auto;">
+              <!-- Quick Preset Period Tabs -->
+              <div class="radio-tab-group period-tab-group" id="dashPeriodPresets">
+                <label class="radio-tab">
+                  <input type="radio" name="dashPeriodMode" value="single" checked>
+                  <span>เดือนเดียว</span>
+                </label>
+                <label class="radio-tab">
+                  <input type="radio" name="dashPeriodMode" value="3months">
+                  <span>3 เดือน</span>
+                </label>
+                <label class="radio-tab">
+                  <input type="radio" name="dashPeriodMode" value="6months">
+                  <span>6 เดือน</span>
+                </label>
+                <label class="radio-tab">
+                  <input type="radio" name="dashPeriodMode" value="all">
+                  <span>ทุกเดือน</span>
+                </label>
+                <label class="radio-tab">
+                  <input type="radio" name="dashPeriodMode" value="custom">
+                  <span>กำหนดเอง</span>
+                </label>
+              </div>
+
+              <!-- Single Month Selector -->
+              <div id="dashSingleMonthBox" style="display:inline-flex; align-items:center; gap:0.4rem;">
+                <input type="month" id="dashboardMonthSelect" class="form-input-sm">
+              </div>
+
+              <!-- Custom Range Month Selector (From - To) -->
+              <div id="dashCustomRangeBox" style="display:none; align-items:center; gap:0.4rem;">
+                <input type="month" id="dashRangeStartMonth" class="form-input-sm">
+                <span class="text-muted text-sm">ถึง</span>
+                <input type="month" id="dashRangeEndMonth" class="form-input-sm">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Metric Stat Cards (5 Cards - Styled like Stock System) -->
+        <div class="stats-grid five-col" id="dashStatsGrid">
+          <div class="stat-card revenue-card"
+            style="border-top: 4px solid var(--primary); background: linear-gradient(180deg, #eff6ff 0%, #ffffff 60%);">
+            <div class="stat-icon-wrapper blue">
+              <i data-lucide="trending-up"></i>
+            </div>
+            <div class="stat-meta">
+              <div class="stat-label">ยอดขายรวมตลอดเดือน</div>
+              <div class="stat-value text-primary" id="dashTotalSales">฿0</div>
+              <div class="stat-subtext" id="dashSalesOrdersCount">0 บิลที่ขายได้</div>
+            </div>
+          </div>
+
+          <div class="stat-card cost-card"
+            style="border-top: 4px solid #f59e0b; background: linear-gradient(180deg, #fffbeb 0%, #ffffff 60%);">
+            <div class="stat-icon-wrapper amber">
+              <i data-lucide="package-search"></i>
+            </div>
+            <div class="stat-meta">
+              <div class="stat-label">ต้นทุนรวมทั้งหมด (วัตถุดิบ + ค่าเช่าร้าน)</div>
+              <div class="stat-value text-amber" id="dashTotalCost">฿0</div>
+              <div class="stat-subtext" id="dashCostRatio">วัตถุดิบ ฿0 + ค่าเช่าร้าน ฿10,000</div>
+            </div>
+          </div>
+
+          <div class="stat-card rent-card"
+            style="border-top: 4px solid #8b5cf6; background: linear-gradient(180deg, #f5f3ff 0%, #ffffff 60%);">
+            <div class="stat-icon-wrapper purple">
+              <i data-lucide="home"></i>
+            </div>
+            <div class="stat-meta">
+              <div class="stat-label">ค่าเช่าร้านคงที่ประจำเดือน</div>
+              <div class="stat-value text-purple" id="dashRentDisplay">฿10,000</div>
+              <div class="stat-subtext">รวมอยู่ในต้นทุนทั้งหมดแล้ว</div>
+            </div>
+          </div>
+
+          <div class="stat-card expense-card"
+            style="border-top: 4px solid #ea580c; background: linear-gradient(180deg, #fff7ed 0%, #ffffff 60%);">
+            <div class="stat-icon-wrapper orange">
+              <i data-lucide="receipt"></i>
+            </div>
+            <div class="stat-meta">
+              <div class="stat-label">ต้นทุนวัตถุดิบ</div>
+              <div class="stat-value text-amber" id="dashMaterialExpense">฿0</div>
+              <div class="stat-subtext" id="dashExpenseCount">0 รายการในเดือนนี้</div>
+            </div>
+          </div>
+
+          <div class="stat-card profit-card" id="dashProfitCard"
+            style="border-top: 4px solid var(--success); background: linear-gradient(180deg, #ecfdf5 0%, #ffffff 60%);">
+            <div class="stat-icon-wrapper green" id="dashProfitIconWrapper">
+              <i data-lucide="sparkles"></i>
+            </div>
+            <div class="stat-meta">
+              <div class="stat-label">กำไรสุทธิคงเหลือ</div>
+              <div class="stat-value text-green" id="dashNetProfit">฿0</div>
+              <div class="stat-subtext" id="dashProfitStatus" style="display: none;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="charts-grid">
+          <div class="card chart-card">
+            <div class="card-header">
+              <div class="card-header-title">
+                <i data-lucide="bar-chart-3"></i>
+                <span id="dashTrendChartTitle">กราฟแนวโน้มยอดขาย & กำไรสุทธิ</span>
+              </div>
+            </div>
+            <div class="card-body chart-container">
+              <canvas id="monthlyTrendChart"></canvas>
+            </div>
+          </div>
+
+          <div class="card chart-card">
+            <div class="card-header">
+              <div class="card-header-title">
+                <i data-lucide="pie-chart"></i>
+                <span>สัดส่วนค่าใช้จ่าย & กำไร</span>
+              </div>
+            </div>
+            <div class="card-body chart-container doughnut-wrapper">
+              <canvas id="costBreakdownChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Sales & Top Items Summary -->
+        <div class="summary-two-col">
+          <div class="card">
+            <div class="card-header space-between">
+              <div class="card-header-title">
+                <i data-lucide="history"></i>
+                <span>สรุปยอดขายรายวันล่าสุดในเดือนนี้</span>
+              </div>
+              <button class="text-btn" data-action="goToToday">ไปหน้าบันทึกยอดรายวัน &rarr;</button>
+            </div>
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="fastwork-table dash-recent-sales-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 140px;">วันที่</th>
+                      <th style="width: 120px;">ยอดขายที่ได้</th>
+                      <th style="width: 120px;">หักต้นทุน</th>
+                      <th style="width: 130px;">กำไรสุทธิ</th>
+                      <th>หมายเหตุ</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dashRecentSalesTableBody">
+                    <tr>
+                      <td colspan="5" class="text-center text-muted py-4">ยังไม่มีข้อมูลการขายในเดือนนี้</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-header-title">
+                <i data-lucide="award"></i>
+                <span>สถิติประสิทธิภาพประจำเดือน</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="monthly-stats-summary" id="monthlyStatsSummary">
+                <div class="summary-stat-row">
+                  <span class="text-muted">จำนวนวันที่เปิดร้าน/บันทึกยอด:</span>
+                  <span class="font-bold text-main" id="statDaysRecorded">0 วัน</span>
+                </div>
+                <div class="summary-stat-row">
+                  <span class="text-muted">ยอดขายเฉลี่ยต่อวัน:</span>
+                  <span class="font-bold text-primary" id="statAvgDailySales">฿0</span>
+                </div>
+                <div class="summary-stat-row">
+                  <span class="text-muted">กำไรเฉลี่ยต่อวัน:</span>
+                  <span class="font-bold text-green" id="statAvgDailyProfit">฿0</span>
+                </div>
+                <div class="summary-stat-row">
+                  <span class="text-muted">อัตรากำไรเฉลี่ย (Profit Margin):</span>
+                  <span class="font-bold text-green" id="statAvgMargin">0%</span>
+                </div>
+                <div class="summary-stat-row highlight-box">
+                  <span class="text-muted">วันที่ขายดีที่สุดในเดือน:</span>
+                  <span class="font-bold text-primary" id="statBestDay">-</span>
+                </div>
+
+                <!-- Top 3 Most Used / Fast-Moving Stock Items (เฉพาะน้ำยกลัง) -->
+                <div style="margin-top: 1rem; padding-top: 0.85rem; border-top: 1.5px dashed var(--border-color);">
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.6rem;">
+                    <div
+                      style="font-weight:700; font-size:0.875rem; color:var(--text-main); display:flex; align-items:center; gap:0.35rem;">
+                      <i data-lucide="package" style="width:16px; height:16px; color:var(--primary);"></i>
+                      <span>3 อันดับน้ำยกลัง เบิกขายดีที่สุด</span>
+                    </div>
+                    <span class="pill-tag purple-tag" style="font-size:0.7rem; font-weight:700;">น้ำสำเร็จรูป/ลัง</span>
+                  </div>
+                  <div id="dashTopStockItemsList" style="display:flex; flex-direction:column; gap:0.45rem;">
+                    <!-- Dynamically populated top 3 items -->
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: TODAY SALES & SUMMARY (บันทึกยอดเงินรายวัน) -->
+      <section id="tab-today" class="tab-pane">
+        <div class="section-header">
+          <div>
+            <h2 class="page-title">บันทึกยอดขายประจำวัน & สรุปกำไร</h2>
+            <p class="page-desc" id="todayDateSubtitle">บันทึกยอดเงินที่ขายได้ทั้งหมดในแต่ละวัน หักต้นทุน
+              และคำนวณกำไรสุทธิทันที</p>
+          </div>
+          <div class="action-buttons">
+            <input type="date" id="selectedTodayDateInput" class="form-input-sm">
+          </div>
+        </div>
+
+        <!-- Today Summary Stat Cards -->
+        <div class="stats-grid three-col">
+          <div class="stat-card revenue-card">
+            <div class="stat-icon-wrapper blue">
+              <i data-lucide="wallet"></i>
+            </div>
+            <div class="stat-meta">
+              <div class="stat-label">ยอดขายวันนี้ (รายรับทั้งหมด)</div>
+              <div class="stat-value" id="todaySalesAmount">฿0</div>
+              <div class="stat-subtext" id="todayItemsCount">ยอดเงินรวมที่ขายได้ทั้งวัน</div>
+            </div>
+          </div>
+
+          <div class="stat-card cost-card">
+            <div class="stat-icon-wrapper amber">
+              <i data-lucide="shopping-bag"></i>
+            </div>
+            <div class="stat-meta">
+              <div class="stat-label">ต้นทุนรวมวันนี้ (วัตถุดิบ + ค่าเช่าวันเปิดขาย)</div>
+              <div class="stat-value text-amber" id="todayCostAmount">฿0</div>
+              <div class="stat-subtext" id="todayCostSubtitle">วัตถุดิบ ฿0 + ค่าเช่าร้านวันขาย (โรงเรียน)</div>
+            </div>
+          </div>
+
+          <div class="stat-card profit-card" id="todayProfitCard">
+            <div class="stat-icon-wrapper green" id="todayProfitIconWrapper">
+              <i data-lucide="badge-percent" id="todayProfitIcon"></i>
+            </div>
+            <div class="stat-meta">
+              <div class="stat-label" id="todayProfitLabel">กำไร / ขาดทุนสุทธิวันนี้</div>
+              <div class="stat-value text-green" id="todayProfitAmount">฿0</div>
+              <div class="stat-subtext" id="todayProfitMargin">ยอดเงินสุทธิหลังหักต้นทุนรวมทั้งหมด</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Daily Revenue Entry Card (บันทึกยอดเงินที่ขายได้วันนี้ทั้งหมด) -->
+        <div class="card mb-4 daily-entry-card">
+          <div class="card-header space-between">
+            <div class="card-header-title">
+              <i data-lucide="calculator"></i>
+              <span id="dailyFormHeaderTitle">กรอกยอดเงินที่ขายได้ประจำวัน</span>
+            </div>
+            <span class="pill-tag blue-tag" id="dailyFormModeTag">บันทึกยอดวันปัจจุบัน</span>
+          </div>
+          <div class="card-body">
+            <form id="dailyRevenueForm">
+              <input type="hidden" id="dailyRecordId">
+
+              <div class="form-row three-col mb-3">
+                <div class="form-group">
+                  <label class="form-label" for="dailyFormDate">วันที่ขาย</label>
+                  <input type="date" id="dailyFormDate" class="form-input" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="dailyFormRevenue">ยอดเงินที่ขายได้ทั้งหมดวันนี้ (บาท) <span
+                      class="text-danger">*</span></label>
+                  <div class="input-with-affix">
+                    <span class="affix-left">฿</span>
+                    <input type="number" id="dailyFormRevenue" class="form-input font-bold"
+                      placeholder="กรอกยอดเงินที่ขายได้ประจำวัน" min="0" step="1" required>
+                  </div>
+                  <span class="field-hint">กรอกยอดขายวันนี้ ระบบจะนำไปหักกับต้นทุนคงที่ประจำวันให้อัตโนมัติ</span>
+                </div>
+                <div class="form-group">
+                  <div class="space-between mb-1">
+                    <label class="form-label mb-0" for="dailyFormCost">ต้นทุนรวมวันนี้ (วัตถุดิบ + ค่าเช่า)</label>
+                    <span class="pill-tag blue-tag" style="font-size: 0.7rem;"
+                      id="costSourceBadge">ดึงจากระบบอัตโนมัติ</span>
+                  </div>
+                  <div class="input-with-affix">
+                    <span class="affix-left">฿</span>
+                    <input type="number" id="dailyFormCost" class="form-input" placeholder="0" min="0" step="1" readonly
+                      style="background-color: #f8fafc; font-weight: 600;">
+                  </div>
+                  <span class="field-hint" id="dailyCostSourceHint">วัตถุดิบเฉลี่ยเปิดเทอม +
+                    ค่าเช่าร้านเฉลี่ยวันเปิดเรียน</span>
+                </div>
+              </div>
+
+              <!-- Live Profit or Loss Calculation Display -->
+              <div class="daily-profit-preview-banner mb-3" id="dailyProfitBanner">
+                <div class="preview-item">
+                  <span class="text-muted">ยอดขายรวม:</span>
+                  <span class="font-bold text-primary" id="previewDailyRevenue">฿0</span>
+                </div>
+                <div class="preview-operator">−</div>
+                <div class="preview-item">
+                  <span class="text-muted">ต้นทุนรวม (วัตถุดิบ+ค่าเช่า):</span>
+                  <span class="font-bold text-amber" id="previewDailyCost">฿0</span>
+                </div>
+                <div class="preview-operator">=</div>
+                <div class="preview-item highlight" id="previewDailyResultBox">
+                  <span class="text-muted" id="previewResultLabel">กำไร/ขาดทุนสุทธิวันนี้:</span>
+                  <span class="font-bold text-green" id="previewDailyProfit">฿0</span>
+                  <span class="preview-margin-badge" id="previewDailyMargin">(0%)</span>
+                </div>
+              </div>
+
+              <div class="form-group mb-3">
+                <label class="form-label" for="dailyFormNote">หมายเหตุเพิ่มเติม (ถ้ามี)</label>
+                <input type="text" id="dailyFormNote" class="form-input"
+                  placeholder="เช่น วันนี้ลูกค้าเยอะ, ฝนตก, วัตถุดิบหมดไว">
+              </div>
+
+              <div class="form-actions-right">
+                <button type="button" class="btn-secondary" id="btnResetDailyForm"
+                  style="display:none;">ยกเลิกแก้ไข</button>
+                <button type="submit" class="btn-fastwork" id="btnSaveDailyRevenue">
+                  <i data-lucide="check-circle-2"></i>
+                  <span>บันทึกยอดเงินวันนี้</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Daily Sales Records History List -->
+        <div class="card">
+          <div class="card-header space-between">
+            <div class="card-header-title">
+              <i data-lucide="calendar-check"></i>
+              <span>ประวัติการบันทึกยอดเงินรายวัน</span>
+            </div>
+            <div class="table-actions">
+              <span class="badge-counter" id="todayBillCountBadge">0 วัน</span>
+            </div>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="fastwork-table">
+                <thead>
+                  <tr>
+                    <th>วันที่</th>
+                    <th>ยอดขายที่ได้ทั้งหมด</th>
+                    <th>หักต้นทุน</th>
+                    <th>กำไรสุทธิที่ได้จริง</th>
+                    <th>อัตรากำไร (%)</th>
+                    <th>หมายเหตุ</th>
+                    <th class="text-center">จัดการ</th>
+                  </tr>
+                </thead>
+                <tbody id="todaySalesTableBody">
+                  <tr>
+                    <td colspan="7" class="text-center text-muted py-4">ยังไม่มีรายการบันทึกยอดขาย</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: EXPENSES & INGREDIENT COSTS -->
+      <section id="tab-expenses" class="tab-pane">
+        <div class="section-header">
+          <div>
+            <h2 class="page-title">บันทึกค่าใช้จ่าย & ต้นทุนวัตถุดิบ</h2>
+            <p class="page-desc">บันทึกรายจ่ายต่างๆ เช่น โหลบรรจุน้ำ, นมข้นหวาน, ชา, โกโก้, น้ำแข็ง, แก้ว, หลอด</p>
+          </div>
+          <button class="btn-fastwork" id="btnOpenExpenseModal">
+            <i data-lucide="plus"></i>
+            <span>+ เพิ่มรายการค่าใช้จ่าย</span>
+          </button>
+        </div>
+
+        <!-- Expense Filter and Stats (Redesigned KPI Cards Grid) -->
+        <div class="stats-grid four-col mb-4" id="expenseStatsGrid">
+          <div class="stat-card" id="cardExpTotal"
+            style="border-top: 4px solid var(--danger); background: linear-gradient(180deg, #fef2f2 0%, #ffffff 60%); cursor:pointer;"
+            onclick="document.getElementById('expenseCategoryFilter').value='ALL'; app.renderExpenses();"
+            title="คลิกเพื่อดูค่าใช้จ่ายทั้งหมด">
+            <div class="stat-icon-wrapper red">
+              <i data-lucide="receipt"></i>
+            </div>
+            <div class="stat-meta">
+              <div class="stat-label">ยอดจ่ายรวมทั้งหมด</div>
+              <div class="stat-value text-danger" id="expCategoryTotal">฿0</div>
+              <div class="stat-subtext" id="expTotalCountSubtext">ทุกรายการค่าใช้จ่าย</div>
+            </div>
+          </div>
+
+          <div class="stat-card" id="cardExpIngredients"
+            style="border-top: 4px solid var(--warning); background: linear-gradient(180deg, #fffbeb 0%, #ffffff 60%); cursor:pointer;"
+            onclick="document.getElementById('expenseCategoryFilter').value='INGREDIENT'; app.renderExpenses();"
+            title="คลิกเพื่อกรองวัตถุดิบชงน้ำ">
+            <div class="stat-icon-wrapper amber">
+              <i data-lucide="shopping-cart"></i>
+            </div>
+            <div class="stat-meta">
+              <div class="stat-label">วัตถุดิบชงน้ำ</div>
+              <div class="stat-value text-amber" id="expCategoryIngredients">฿0</div>
+              <div class="stat-subtext">นม, ชา, โกโก้, น้ำเชื่อม</div>
+            </div>
+          </div>
+
+          <div class="stat-card" id="cardExpPackaging"
+            style="border-top: 4px solid var(--primary); background: linear-gradient(180deg, #eff6ff 0%, #ffffff 60%); cursor:pointer;"
+            onclick="document.getElementById('expenseCategoryFilter').value='PACKAGING'; app.renderExpenses();"
+            title="คลิกเพื่อกรองบรรจุภัณฑ์">
+            <div class="stat-icon-wrapper blue">
+              <i data-lucide="box"></i>
+            </div>
+            <div class="stat-meta">
+              <div class="stat-label">บรรจุภัณฑ์ & แก้ว</div>
+              <div class="stat-value text-primary" id="expCategoryPackaging">฿0</div>
+              <div class="stat-subtext">โหล, แก้ว, หลอด, ถุง</div>
+            </div>
+          </div>
+
+          <div class="stat-card" id="cardExpStock"
+            style="border-top: 4px solid var(--purple); background: linear-gradient(180deg, #f5f3ff 0%, #ffffff 60%); cursor:pointer;"
+            onclick="document.getElementById('expenseCategoryFilter').value='STOCK'; app.renderExpenses();"
+            title="คลิกเพื่อกรองสินค้ายกลัง">
+            <div class="stat-icon-wrapper purple">
+              <i data-lucide="archive"></i>
+            </div>
+            <div class="stat-meta">
+              <div class="stat-label">ซื้อยกลัง/สำเร็จรูป</div>
+              <div class="stat-value text-purple" id="expCategoryStock">฿0</div>
+              <div class="stat-subtext">น้ำขวดสำเร็จรูปพร้อมขาย</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Expense Table -->
+        <div class="card">
+          <div class="card-header space-between">
+            <div class="card-header-title">
+              <i data-lucide="receipt"></i>
+              <span>ประวัติการซื้อของ & ค่าใช้จ่ายทั้งหมด</span>
+            </div>
+            <div class="filter-group">
+              <select id="expenseCategoryFilter" class="form-input-sm">
+                <option value="ALL">หมวดหมู่ทั้งหมด</option>
+                <option value="INGREDIENT">วัตถุดิบเครื่องดื่ม</option>
+                <option value="PACKAGING">บรรจุภัณฑ์ (โหล/ขวด/แก้ว)</option>
+                <option value="STOCK">สินค้าซื้อยกลัง/สำเร็จรูป</option>
+                <option value="OTHER">ค่าใช้จ่ายอื่นๆ</option>
+              </select>
+            </div>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="fastwork-table">
+                <thead>
+                  <tr>
+                    <th>วันที่ซื้อ</th>
+                    <th>รายการวัตถุดิบ/ค่าใช้จ่าย</th>
+                    <th>หมวดหมู่</th>
+                    <th>จำนวนที่ซื้อ</th>
+                    <th>ราคาต่อหน่วย</th>
+                    <th>ยอดจ่ายรวม</th>
+                    <th>หมายเหตุ</th>
+                    <th class="text-center">จัดการ</th>
+                  </tr>
+                </thead>
+                <tbody id="expenseTableBody">
+                  <tr>
+                    <td colspan="8" class="text-center text-muted py-4">ไม่มีรายการค่าใช้จ่าย</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 4: PRICING CALCULATOR (น้ำแยกขวด / ยกลัง) -->
+      <section id="tab-pricing" class="tab-pane">
+        <div class="section-header">
+          <div>
+            <h2 class="page-title">เครื่องคิดเลขคำนวณราคาขาย (เฉพาะน้ำขวด / ซื้อยกลัง)</h2>
+            <p class="page-desc">คำนวณต้นทุนต่อขวดเมื่อซื้อยกลัง และแนะนำราคาขายที่ควรตั้งเพื่อให้ได้กำไรตามเป้าหมาย</p>
+          </div>
+        </div>
+
+        <div class="pricing-calc-layout">
+          <!-- Calculator Input Form -->
+          <div class="card calc-form-card">
+            <div class="card-header">
+              <div class="card-header-title">
+                <i data-lucide="calculator"></i>
+                <span>กรอกข้อมูลต้นทุนลังสินค้า</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="form-group mb-3">
+                <label class="form-label" for="calcItemName">ชื่อเครื่องดื่ม / สินค้า</label>
+                <input type="text" id="calcItemName" class="form-input" value="น้ำดื่ม / น้ำสมุนไพรแยกขวด"
+                  placeholder="เช่น น้ำเก๊กฮวยขวด, ชาเขียวขวด">
+              </div>
+
+              <div class="form-row two-col mb-3">
+                <div class="form-group">
+                  <label class="form-label" for="calcPackPrice">ราคาซื้อมาต่อลัง (บาท)</label>
+                  <div class="input-with-affix">
+                    <span class="affix-left">฿</span>
+                    <input type="number" id="calcPackPrice" class="form-input" value="349" min="1" step="0.5">
+                  </div>
+                  <span class="field-hint">ตัวอย่าง: ลังละ 349 บาท</span>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="calcUnitsPerPack">จำนวนขวดใน 1 ลัง (ขวด)</label>
+                  <div class="input-with-affix">
+                    <input type="number" id="calcUnitsPerPack" class="form-input" value="24" min="1" step="1">
+                    <span class="affix-right">ขวด</span>
+                  </div>
+                  <span class="field-hint">ตัวอย่าง: 1 ลัง มี 24 ขวด</span>
+                </div>
+              </div>
+
+              <div class="form-group mb-3">
+                <label class="form-label" for="calcExtraCostPerUnit">ต้นทุนเพิ่มต่อขวด (เช่น ถุงหิ้ว, หลอด, แช่เย็น)
+                  (บาท)</label>
+                <div class="input-with-affix">
+                  <span class="affix-left">฿</span>
+                  <input type="number" id="calcExtraCostPerUnit" class="form-input" value="1.0" min="0" step="0.25">
+                </div>
+              </div>
+
+              <div class="divider-hr"></div>
+
+              <div class="form-group mb-3">
+                <label class="form-label">เลือกวิธีคำนวณราคาขาย:</label>
+                <div class="radio-tab-group">
+                  <label class="radio-tab">
+                    <input type="radio" name="calcMode" value="profitBaht" checked>
+                    <span>กำหนดกำไรที่ต้องการ (บาท/ขวด)</span>
+                  </label>
+                  <label class="radio-tab">
+                    <input type="radio" name="calcMode" value="margin">
+                    <span>กำหนด % กำไรที่ต้องการ</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Mode 1: Desired Profit in Baht (per bottle or per pack) -->
+              <div id="calcModeProfitBahtBox" class="form-group mb-4">
+                <div class="space-between align-center mb-2">
+                  <label class="form-label mb-0" id="lblDesiredProfit">กำไรที่ต้องการ (บาท):</label>
+                  <div class="radio-tab-group" style="margin-bottom: 0;">
+                    <label class="radio-tab" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;">
+                      <input type="radio" name="profitBahtScope" value="unit" checked>
+                      <span>ต่อขวด</span>
+                    </label>
+                    <label class="radio-tab" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;">
+                      <input type="radio" name="profitBahtScope" value="pack">
+                      <span>ต่อลัง</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="input-with-affix">
+                  <span class="affix-left">฿</span>
+                  <input type="number" id="calcDesiredProfitBaht" class="form-input" value="10" min="0.5" step="0.5">
+                  <span class="affix-right" id="affixProfitScope">บาท / ขวด</span>
+                </div>
+                <span class="field-hint" id="hintProfitScope">ระบุกำไรที่ต้องการต่อ 1 ขวด &rarr;
+                  ระบบจะคำนวณราคาขายต่อขวดให้ทันที</span>
+              </div>
+
+              <!-- Mode 2: Desired Margin % -->
+              <div id="calcModeMarginBox" class="form-group mb-4" style="display:none;">
+                <label class="form-label" for="calcDesiredMargin">เปอร์เซ็นต์กำไรที่ต้องการ (%)</label>
+                <div class="slider-group">
+                  <input type="range" id="calcMarginSlider" min="10" max="150" value="45" class="form-range">
+                  <div class="input-with-affix short-input">
+                    <input type="number" id="calcDesiredMargin" class="form-input" value="45" min="5" max="300">
+                    <span class="affix-right">%</span>
+                  </div>
+                </div>
+              </div>
+
+              <button class="btn-fastwork w-full" id="btnSaveCalcPreset">
+                <i data-lucide="bookmark-check"></i>
+                <span>บันทึกราคานี้เข้าเมนูขาย</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Calculator Results & Insights -->
+          <div class="card calc-result-card">
+            <div class="card-header">
+              <div class="card-header-title">
+                <i data-lucide="badge-percent"></i>
+                <span>ผลการวิเคราะห์ต้นทุน & กำไรที่ได้</span>
+              </div>
+              <span class="pill-tag green-tag">คำนวณเรียลไทม์</span>
+            </div>
+            <div class="card-body">
+              <!-- Big Highlight Selling Price -->
+              <div class="pricing-highlight-box">
+                <div class="pricing-highlight-sub">ราคาขายแนะนำต่อขวด</div>
+                <div class="pricing-highlight-num" id="resSellingPrice">฿25.00</div>
+                <div class="pricing-highlight-badge" id="resProfitPerUnitTag">กำไรขวดละ +฿9.46</div>
+              </div>
+
+              <!-- Cost breakdown mini list -->
+              <div class="calc-metrics-table">
+                <div class="calc-row">
+                  <span class="text-muted">ต้นทุนตัวสินค้าต่อขวด (349 ÷ 24):</span>
+                  <span class="font-semibold" id="resRawCostPerUnit">฿14.54</span>
+                </div>
+                <div class="calc-row">
+                  <span class="text-muted">+ ค่าถุง/หลอด/แช่เย็น:</span>
+                  <span class="font-semibold" id="resExtraCostPerUnit">฿1.00</span>
+                </div>
+                <div class="calc-row highlight">
+                  <span>= ต้นทุนรวมจริงต่อขวด:</span>
+                  <span class="text-amber font-bold" id="resTotalCostPerUnit">฿15.54</span>
+                </div>
+                <div class="calc-row highlight-green">
+                  <span>กำไรสุทธิต่อขวด:</span>
+                  <span class="text-green font-bold" id="resProfitPerUnit">฿9.46</span>
+                </div>
+                <div class="calc-row">
+                  <span class="text-muted">อัตรากำไร (Margin):</span>
+                  <span class="font-semibold text-primary" id="resMarginPercent">37.8%</span>
+                </div>
+                <div class="calc-row">
+                  <span class="text-muted">กำไรสุทธิรวมเมื่อขายหมดลัง (24 ขวด):</span>
+                  <span class="font-bold text-green" id="resTotalPackProfit">฿227.04</span>
+                </div>
+              </div>
+
+              <!-- Quick Suggestion Tiers -->
+              <div class="pricing-tiers-section mt-4">
+                <div class="tiers-title">ตารางเปรียบเทียบราคาขายตัวเลือก:</div>
+                <div class="tiers-grid" id="pricingTiersGrid">
+                  <!-- Dynamically populated -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Saved Pricing Menu Table (ตารางเมนูขายและราคาสินค้าที่บันทึกไว้) -->
+        <div class="card mt-4" id="savedProductsSection">
+          <div class="card-header space-between">
+            <div class="card-header-title">
+              <i data-lucide="bookmark-check"></i>
+              <span>ตารางเมนูขายและราคาสินค้าที่บันทึกไว้</span>
+            </div>
+            <div class="table-actions">
+              <span class="badge-counter" id="savedProductsCountBadge">0 รายการ</span>
+            </div>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="fastwork-table">
+                <thead>
+                  <tr>
+                    <th>ชื่อสินค้า / เมนู</th>
+                    <th>แพ็คเกจ / ลัง</th>
+                    <th>ต้นทุนต่อหน่วย</th>
+                    <th>ราคาขายแนะนำ</th>
+                    <th>กำไรต่อหน่วย</th>
+                    <th>กำไรเมื่อขายหมดลัง</th>
+                    <th class="text-right">จัดการ</th>
+                  </tr>
+                </thead>
+                <tbody id="savedProductsTableBody">
+                  <!-- Dynamically populated -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 5: CALENDAR -->
+      <section id="tab-calendar" class="tab-pane">
+        <div class="section-header">
+          <div>
+            <h2 class="page-title">ปฏิทินสรุปยอดขายรายวันตลอดเดือน</h2>
+            <p class="page-desc">คลิกที่ช่องวันที่ในปฏิทิน เพื่อดูรายละเอียดบิลยอดขายและกำไรของวันนั้นๆ</p>
+          </div>
+          <div class="calendar-controls">
+            <button class="icon-btn-border" id="calPrevMonthBtn" title="เดือนก่อนหน้า">
+              <i data-lucide="chevron-left"></i>
+            </button>
+            <span class="calendar-month-label" id="calCurrentMonthLabel">ตุลาคม 2026</span>
+            <button class="icon-btn-border" id="calNextMonthBtn" title="เดือนถัดไป">
+              <i data-lucide="chevron-right"></i>
+            </button>
+            <button class="btn-outline-fastwork btn-sm" id="calTodayBtn">เดือนนี้</button>
+          </div>
+        </div>
+
+        <div class="calendar-layout">
+          <!-- The Calendar Grid -->
+          <div class="card calendar-grid-card">
+            <div class="card-body p-3">
+              <div class="calendar-weekdays">
+                <span>อา.</span>
+                <span>จ.</span>
+                <span>อ.</span>
+                <span>พ.</span>
+                <span>พฤ.</span>
+                <span>ศ.</span>
+                <span>ส.</span>
+              </div>
+              <div class="calendar-days-container" id="calendarDaysGrid">
+                <!-- Days generated by JS -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Day Details Side Panel -->
+          <div class="card day-details-card">
+            <div class="card-header space-between">
+              <div class="card-header-title">
+                <i data-lucide="calendar-check-2"></i>
+                <span id="selectedDayTitle">สรุปวันที่เลือก</span>
+              </div>
+            </div>
+            <div class="card-body" id="selectedDayBody">
+              <div class="day-stats-box">
+                <div class="day-stat-item">
+                  <div class="text-muted text-sm">ยอดขาย</div>
+                  <div class="day-stat-num text-primary" id="calDaySales">฿0</div>
+                </div>
+                <div class="day-stat-item">
+                  <div class="text-muted text-sm">ต้นทุน</div>
+                  <div class="day-stat-num text-amber" id="calDayCost">฿0</div>
+                </div>
+                <div class="day-stat-item">
+                  <div class="text-muted text-sm">กำไร</div>
+                  <div class="day-stat-num text-green" id="calDayProfit">฿0</div>
+                </div>
+              </div>
+
+              <div class="day-bills-header mt-3">
+                <span class="font-semibold text-sm">รายการขายของวัน:</span>
+              </div>
+              <div class="day-bills-list" id="calDayBillsList">
+                <p class="text-muted text-sm py-4 text-center">ไม่มีรายการขายในวันนี้</p>
+              </div>
+
+              <div class="mt-3">
+                <button class="btn-fastwork w-full btn-sm" id="calBtnAddSaleForThisDay">
+                  <i data-lucide="plus"></i>
+                  <span>บันทึกการขายให้วันนี้</span>
+                </button>
+              </div>
+
+              <!-- Holiday Management for Selected Day -->
+              <div class="custom-holiday-control-box mt-3 pt-3" style="border-top: 1px dashed var(--border-color);">
+                <div class="space-between align-center mb-2">
+                  <span class="font-semibold text-sm">สถานะวันเปิด/วันหยุด:</span>
+                  <span id="calDayStatusBadge" class="badge-pill-item green-tag"
+                    style="font-size:0.75rem;">วันเปิดเรียนปกติ</span>
+                </div>
+                <div id="calHolidayReasonNote" class="text-muted text-xs mb-2" style="display:none;"></div>
+                <div class="d-flex flex-column gap-2">
+                  <button type="button" class="btn-fastwork w-full btn-sm" id="btnToggleDayHoliday"
+                    style="justify-content:center; background:var(--amber, #f59e0b); border-color:#d97706; color:#ffffff;">
+                    <i data-lucide="calendar-plus" style="width:15px;height:15px;"></i>
+                    <span id="btnToggleHolidayText">+ เพิ่มวันหยุดพิเศษ</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 6: RECIPES (สูตรชงน้ำต่อ 1 โหล) -->
+      <section id="tab-recipes" class="tab-pane">
+        <div class="section-header">
+          <div>
+            <h2 class="page-title">สูตรชงน้ำต่อ 1 โหล (Batch Recipes)</h2>
+            <p class="page-desc">จัดการสูตรชงน้ำต่อ 1 โหล (บรรจุโหลแก้ว/เหยือก) คำนวณต้นทุนต่อโหล
+              และต้นทุนต่อแก้วได้อัตโนมัติ</p>
+          </div>
+          <div class="recipe-create-dropdown-wrapper" style="position: relative; display: inline-block;">
+            <button class="btn-fastwork" id="btnOpenAddRecipeModal"
+              style="display:inline-flex; align-items:center; gap:0.4rem;">
+              <i data-lucide="plus"></i>
+              <span>สร้างสูตรชงใหม่</span>
+              <i data-lucide="chevron-down" style="width:16px; height:16px; margin-left:0.2rem;"></i>
+            </button>
+            <div class="recipe-create-menu" id="recipeCreateMenu"
+              style="display:none; position:absolute; right:0; top:calc(100% + 6px); background:#ffffff; border:1px solid var(--border-color); border-radius:var(--radius-md); box-shadow:0 10px 25px rgba(0,0,0,0.12); min-width:240px; z-index:100; overflow:hidden; padding:0.4rem 0;">
+              <button type="button" class="recipe-dropdown-item" id="btnOptionAddCupRecipe"
+                style="width:100%; text-align:left; padding:0.65rem 1rem; border:none; background:none; cursor:pointer; display:flex; align-items:flex-start; gap:0.75rem; transition:background 0.2s;">
+                <span style="font-size:1.25rem; line-height:1;">🥤</span>
+                <div>
+                  <div style="font-weight:700; color:var(--text-main); font-size:0.9rem;">สูตรต่อ 1 แก้ว (ชงสด)</div>
+                  <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">คำนวณต้นทุนต่อแก้วโดยตรง
+                  </div>
+                </div>
+              </button>
+              <div style="height:1px; background:var(--border-color); margin:0.3rem 0;"></div>
+              <button type="button" class="recipe-dropdown-item" id="btnOptionAddJarRecipe"
+                style="width:100%; text-align:left; padding:0.65rem 1rem; border:none; background:none; cursor:pointer; display:flex; align-items:flex-start; gap:0.75rem; transition:background 0.2s;">
+                <span style="font-size:1.25rem; line-height:1;">🏺</span>
+                <div>
+                  <div style="font-weight:700; color:var(--text-main); font-size:0.9rem;">สูตรต่อ 1 โหล (ชงถัง/เหยือก)
+                  </div>
+                  <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">ขยายสูตรเป็นถัง 5-6 ลิตร
+                  </div>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="recipes-grid" id="recipesGridContainer">
+          <!-- Dynamically populated recipe cards -->
+        </div>
+      </section>
+
+      <!-- TAB: STOCK (ระบบสต๊อกร้านค้า & วัตถุดิบคงคลัง - Redesigned) -->
+      <section id="tab-stock" class="tab-pane">
+        <!-- Modern Stock Header Banner -->
+        <div class="stock-main-hero mb-4">
+          <div class="stock-main-hero-content">
+            <div class="stock-main-icon-ring">
+              <i data-lucide="boxes"></i>
+            </div>
+            <div>
+              <div class="stock-main-badge-top">🏪 INVENTORY MANAGEMENT SYSTEM</div>
+              <h2 class="stock-main-title">ระบบสต๊อกร้านค้า & คลังวัตถุดิบ</h2>
+              <p class="stock-main-desc">ตรวจนับสินค้าคงคลัง ปรับเพิ่ม-ลดสต๊อกแบบเรียลไทม์ ซิงค์ราคาต้นทุนจากบิลซื้อ
+                และแจ้งเตือนอัตโนมัติ</p>
+            </div>
+          </div>
+          <div class="stock-main-hero-actions">
+            <button class="btn-fastwork"
+              style="background:linear-gradient(135deg, #0050f0 0%, #2563eb 100%); color:#ffffff; font-weight:700; box-shadow:0 4px 14px rgba(0,80,240,0.3);"
+              onclick="app.openExpenseModal()">
+              <i data-lucide="receipt"></i>
+              <span>+ บันทึกซื้อของเข้าสต๊อก</span>
+            </button>
+            <button class="btn-fastwork" id="btnSyncStockFromExpenses"
+              style="background:#ffffff; color:var(--primary); border:1.5px solid #bfdbfe; font-weight:700;">
+              <i data-lucide="refresh-cw"></i>
+              <span>ซิงค์รายการซื้อของ</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Premium KPI Metric Stats Grid -->
+        <div class="stats-grid four-col mb-4">
+          <div class="stat-card" id="cardKpiStockLow"
+            style="border-top: 4px solid var(--danger); background: linear-gradient(180deg, #fff5f5 0%, #ffffff 60%); cursor:pointer;"
+            onclick="app.setStockFilter('low')" title="คลิกเพื่อดูสินค้าใกล้หมด">
+            <div class="stat-icon-wrapper red">
+              <i data-lucide="alert-triangle"></i>
+            </div>
+            <div class="stat-meta">
+              <div class="stat-label" style="color:var(--danger); font-weight:700;">สินค้าวิกฤต (ต้องสั่งด่วน)</div>
+              <div class="stat-value text-danger" id="kpiStockLowCount">0 รายการ</div>
+              <div class="stat-subtext" style="color:#b91c1c; font-weight:600;">ต่ำกว่าเกณฑ์ความปลอดภัย</div>
+            </div>
+          </div>
+
+          <div class="stat-card" id="cardKpiStockTotal"
+            style="border-top: 4px solid var(--primary); background: linear-gradient(180deg, #eff6ff 0%, #ffffff 60%); cursor:pointer;"
+            onclick="app.setStockFilter('all')" title="คลิกเพื่อดูสินค้าทั้งหมด">
+            <div class="stat-icon-wrapper blue">
+              <i data-lucide="package-check"></i>
+            </div>
+            <div class="stat-meta">
+              <div class="stat-label">รายการสินค้าทั้งหมด</div>
+              <div class="stat-value text-primary" id="kpiStockTotalItems">0 รายการ</div>
+              <div class="stat-subtext">วัตถุดิบชงน้ำ & บรรจุภัณฑ์</div>
+            </div>
+          </div>
+
+          <div class="stat-card" id="cardKpiStockNormal"
+            style="border-top: 4px solid var(--success); background: linear-gradient(180deg, #ecfdf5 0%, #ffffff 60%); cursor:pointer;"
+            onclick="app.setStockFilter('normal')" title="คลิกเพื่อดูสินค้าปกติ">
+            <div class="stat-icon-wrapper green">
+              <i data-lucide="check-circle-2"></i>
+            </div>
+            <div class="stat-meta">
+              <div class="stat-label">สถานะสต๊อกปกติ</div>
+              <div class="stat-value text-green" id="kpiStockNormalCount">0 รายการ</div>
+              <div class="stat-subtext">เพียงพอต่อการชงขาย</div>
+            </div>
+          </div>
+
+          <div class="stat-card" id="cardKpiStockValue"
+            style="border-top: 4px solid var(--purple); background: linear-gradient(180deg, #f5f3ff 0%, #ffffff 60%); cursor:pointer;"
+            onclick="app.setStockFilter('all')" title="คลิกเพื่อดูสินค้าทั้งหมด">
+            <div class="stat-icon-wrapper purple">
+              <i data-lucide="banknote"></i>
+            </div>
+            <div class="stat-meta">
+              <div class="stat-label">มูลค่าสต๊อกในร้านรวม</div>
+              <div class="stat-value text-purple" id="kpiStockTotalValue">฿0</div>
+              <div class="stat-subtext">คำนวณตามต้นทุนจริง</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Interactive Inventory Workspace Card -->
+        <div class="card mb-4" style="box-shadow: 0 4px 20px rgba(0,0,0,0.06); border: 1px solid var(--border-color);">
+          <div class="card-header space-between"
+            style="flex-wrap:wrap; gap:0.75rem; background:#fbfcfe; padding:1rem 1.25rem;">
+            <!-- Category Radio Filter Tabs -->
+            <div class="filter-group">
+              <div class="radio-tab-group" id="stockFilterTabs">
+                <label class="radio-tab">
+                  <input type="radio" name="stockSubFilter" value="all" checked>
+                  <span id="tabFilterAllText">ทั้งหมด (0)</span>
+                </label>
+                <label class="radio-tab">
+                  <input type="radio" name="stockSubFilter" value="low">
+                  <span id="tabFilterLowText" style="color:var(--danger); font-weight:700;">⚠️ ใกล้หมด (0)</span>
+                </label>
+                <label class="radio-tab">
+                  <input type="radio" name="stockSubFilter" value="INGREDIENT">
+                  <span>🍵 วัตถุดิบชงน้ำ</span>
+                </label>
+                <label class="radio-tab">
+                  <input type="radio" name="stockSubFilter" value="PACKAGING">
+                  <span>🥤 บรรจุภัณฑ์</span>
+                </label>
+                <label class="radio-tab">
+                  <input type="radio" name="stockSubFilter" value="STOCK">
+                  <span>📦 สำเร็จรูป/ลัง</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Search & Quick Filter Tools -->
+            <div style="display:flex; gap:0.5rem; align-items:center;">
+              <div class="input-with-affix" style="width:240px;">
+                <span class="affix-left" style="color:var(--text-muted);"><i data-lucide="search"
+                    style="width:15px;height:15px;"></i></span>
+                <input type="text" id="stockSearchInput" class="form-input" placeholder="ค้นหาชื่อ, หมวด, แหล่งซื้อ..."
+                  style="height:36px; padding-left:2.2rem; font-size:0.875rem;">
+              </div>
+            </div>
+          </div>
+
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="fastwork-table stock-redesigned-table">
+                <thead>
+                  <tr>
+                    <th style="width: 110px;">สถานะ</th>
+                    <th>รายการสินค้า / วัตถุดิบ</th>
+                    <th style="width: 130px;">หมวดหมู่</th>
+                    <th style="width: 180px; text-align: center;">ปรับยอดคงเหลือ (+ / -)</th>
+                    <th style="width: 140px;">เกณฑ์เตือนสั่ง</th>
+                    <th style="width: 120px;">ต้นทุน/หน่วย</th>
+                    <th style="width: 130px;">มูลค่าคงคลัง</th>
+                    <th class="text-center" style="width: 100px;">จัดการ</th>
+                  </tr>
+                </thead>
+                <tbody id="stockTableBody">
+                  <!-- Dynamically rendered rows from app.js -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB: STOCK LOW ALERT (หน้าศูนย์เตือนสินค้าใกล้หมด & ใบรายการสั่งซื้อด่วน) -->
+      <section id="tab-stock-low" class="tab-pane">
+        <!-- Emergency Alert Banner Header -->
+        <div class="stock-alert-hero mb-4">
+          <div class="stock-alert-hero-content">
+            <div class="stock-alert-icon-ring">
+              <i data-lucide="siren"></i>
+            </div>
+            <div>
+              <div class="stock-alert-badge-top">🚨 EMERGENCY RE-ORDER SYSTEM</div>
+              <h2 class="stock-alert-title">ศูนย์เตือนสินค้าใกล้หมด & ใบจัดเตรียมสั่งซื้อ</h2>
+              <p class="stock-alert-desc">รายการวัตถุดิบและบรรจุภัณฑ์ที่เหลือน้อยกว่าเกณฑ์ปลอดภัย ต้องจัดซื้อเพิ่มด่วน
+                เพื่อไม่ให้สะดุดเวลาเปิดร้าน</p>
+            </div>
+          </div>
+          <div class="stock-alert-hero-actions">
+            <button class="btn-fastwork" id="btnExportShoppingList"
+              style="background: #ffffff; color: #dc2626; border: 1.5px solid #fee2e2; font-weight: 700; box-shadow: 0 4px 14px rgba(220,38,38,0.2);">
+              <i data-lucide="clipboard-copy" style="color: #dc2626;"></i>
+              <span>คัดลอกรายการไปสั่งซื้อ (LINE)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Metric Highlight Bar -->
+        <div class="stats-grid three-col mb-4" id="lowStockStatsGrid">
+          <div class="stat-card card-low-alert"
+            style="background: linear-gradient(135deg, #fff5f5 0%, #fee2e2 100%); border: 1.5px solid #fecaca;">
+            <div class="stat-icon-wrapper red">
+              <i data-lucide="alert-octagon"></i>
+            </div>
+            <div class="stat-meta">
+              <div class="stat-label" style="color:#991b1b; font-weight:700;">สินค้าวิกฤต (ต้องสั่งวันนี้)</div>
+              <div class="stat-value text-danger" id="lowAlertCountVal">0 รายการ</div>
+              <div class="stat-subtext" style="color:#b91c1c;">ต่ำกว่าเกณฑ์ขั้นต่ำทุกรายการ</div>
+            </div>
+          </div>
+
+          <div class="stat-card card-low-budget"
+            style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border: 1.5px solid #bfdbfe;">
+            <div class="stat-icon-wrapper blue">
+              <i data-lucide="calculator"></i>
+            </div>
+            <div class="stat-meta">
+              <div class="stat-label" style="color:#1e40af; font-weight:700;">ประมาณการงบสั่งซื้อด่วน</div>
+              <div class="stat-value text-primary" id="lowAlertEstBudget">฿0</div>
+              <div class="stat-subtext" style="color:#2563eb;">คำนวณจากต้นทุนซื้อรอบล่าสุด</div>
+            </div>
+          </div>
+
+          <div class="stat-card card-low-suppliers"
+            style="background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border: 1.5px solid #fde68a;">
+            <div class="stat-icon-wrapper amber">
+              <i data-lucide="store"></i>
+            </div>
+            <div class="stat-meta" style="width: 100%;">
+              <div class="stat-label" style="color:#92400e; font-weight:700;">แนะนำสั่งซื้อแยกตามแหล่งซื้อ</div>
+              <!-- Mini breakdown chips by store e.g. Makro, Shopee -->
+              <div id="lowAlertSupplierBreakdownChips"
+                style="display:flex; flex-wrap:wrap; gap:0.35rem; margin-top:0.4rem;">
+                <span class="text-xs" style="color:#b45309;">ไม่มีรายการต้องซื้อ</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Urgent Purchasing Cards Grid -->
+        <div class="card mb-4" style="border: 1px solid #fecaca; box-shadow: 0 4px 20px rgba(239,68,68,0.06);">
+          <div class="card-header space-between" style="background: #fffafa; border-bottom: 1px solid #fee2e2;">
+            <div class="card-header-title"
+              style="color: #991b1b; display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+              <i data-lucide="bell-ring" style="color: #ef4444;"></i>
+              <span>การ์ดรายการเตือนด่วน & แนะนำการสั่งซื้อ (Urgent Restock Cards)</span>
+              <span id="lowStockFilterIndicator" style="display:none; margin-left:0.5rem;"></span>
+            </div>
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+              <button id="btnResetLowStockFilter" class="btn-outline-fastwork btn-sm"
+                style="display:none; color:#dc2626; border-color:#fca5a5; background:#ffffff; font-size:0.75rem; padding:0.25rem 0.6rem;"
+                onclick="app.filterLowStockBySupplier('ALL')">
+                <i data-lucide="x" style="width:12px;height:12px;"></i>
+                <span>ดูทั้งหมด</span>
+              </button>
+              <div class="pill-tag red-tag" id="lowAlertPendingBadge">ตรวจพบของใกล้หมด</div>
+            </div>
+          </div>
+          <div class="card-body p-3">
+            <div class="low-stock-cards-grid" id="lowStockCardsContainer">
+              <!-- Dynamically populated rich alert cards -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB: STOCK HISTORY (ประวัติเบิก-ตัดสต๊อก & เติมของ) -->
+      <section id="tab-stock-history" class="tab-pane">
+        <div class="stock-main-hero mb-4"
+          style="background: linear-gradient(135deg, #1e293b 0%, #334155 50%, #0050f0 100%);">
+          <div class="stock-main-hero-content">
+            <div class="stock-main-icon-ring"
+              style="background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.3);">
+              <i data-lucide="history"></i>
+            </div>
+            <div>
+              <div class="stock-badge-live">LOGS & AUDIT TRAIL</div>
+              <h2 class="stock-main-title">ประวัติการเบิก-ตัดสต๊อก & การปรับยอดสินค้า</h2>
+              <p class="stock-main-desc">บันทึกทุกความเคลื่อนไหวเมื่อมีการกด (+ / -) หรือพิมพ์ปรับยอดคงเหลือ
+                เพื่อตรวจสอบการใช้ของในร้านย้อนหลังได้ชัดเจน</p>
+            </div>
+          </div>
+          <div class="stock-main-hero-actions">
+            <button class="btn-fastwork" id="btnClearStockLogs"
+              style="background: rgba(255,255,255,0.15); border: 1.5px solid rgba(255,255,255,0.3); color:#ffffff;"
+              onclick="app.clearStockHistory()">
+              <i data-lucide="trash-2"></i>
+              <span>ล้างประวัติทั้งหมด</span>
+            </button>
+            <button class="btn-fastwork" style="background:#ffffff; color:var(--primary); font-weight:700;"
+              onclick="app.switchTab('stock')">
+              <i data-lucide="boxes"></i>
+              <span>กลับไปหน้าสต๊อกสินค้า</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- History Filter & Table Card -->
+        <div class="card mb-4" style="box-shadow: 0 4px 20px rgba(0,0,0,0.06); border: 1px solid var(--border-color);">
+          <div class="card-header space-between"
+            style="flex-wrap:wrap; gap:0.75rem; background:#fbfcfe; padding:1rem 1.25rem;">
+            <div class="card-header-title">
+              <i data-lucide="clipboard-list" style="color:var(--primary);"></i>
+              <span>รายการบันทึกการใช้ของ & ปรับสต๊อก</span>
+              <span class="badge-counter" id="stockLogsCountBadge">0 รายการ</span>
+            </div>
+            <div class="filter-group" style="display:flex; gap:0.5rem; align-items:center;">
+              <select id="stockLogTypeFilter" class="form-input-sm" onchange="app.renderStockHistory()">
+                <option value="ALL">ประเภททั้งหมด (เบิก/เติม/พิมพ์)</option>
+                <option value="USE">เฉพาะการเบิก/ใช้ของ (-)</option>
+                <option value="RESTOCK">เฉพาะการเติมสต๊อก (+)</option>
+              </select>
+            </div>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="fastwork-table stock-redesigned-table">
+                <thead>
+                  <tr>
+                    <th style="width: 170px;">วัน-เวลา</th>
+                    <th>สินค้า / วัตถุดิบ</th>
+                    <th style="width: 130px; text-align: center;">ประเภทรายการ</th>
+                    <th style="width: 140px; text-align: right;">จำนวนที่เปลี่ยน</th>
+                    <th style="width: 160px; text-align: right;">ยอดคงเหลือหลังปรับ</th>
+                    <th>หมายเหตุ / บันทึก</th>
+                  </tr>
+                </thead>
+                <tbody id="stockHistoryTableBody">
+                  <tr>
+                    <td colspan="6" class="text-center text-muted py-4">ยังไม่มีประวัติการเบิก-ตัดสต๊อก</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 7: SETTINGS & BACKUP -->
+      <section id="tab-settings" class="tab-pane">
+        <div class="section-header">
+          <div>
+            <h2 class="page-title">ตั้งค่าร้านค้า & จัดการข้อมูล</h2>
+            <p class="page-desc">ตั้งค่าค่าเช่าร้าน สำรองข้อมูล (Backup) กู้คืนข้อมูล (Restore) และวิธีนำขึ้น GitHub
+              Pages</p>
+          </div>
+        </div>
+
+        <div class="settings-grid">
+          <!-- Shop & Rent Settings -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-header-title">
+                <i data-lucide="store"></i>
+                <span>ตั้งค่าร้าน & ค่าเช่า</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="form-group mb-3">
+                <label class="form-label" for="settingShopName">ชื่อร้านค้า</label>
+                <input type="text" id="settingShopName" class="form-input" value="ร้านชา-กาแฟชงสด">
+              </div>
+              <div class="form-group mb-3">
+                <label class="form-label" for="settingMonthlyRent">ค่าเช่าร้านต่อเดือน (บาท)</label>
+                <div class="input-with-affix">
+                  <span class="affix-left">฿</span>
+                  <input type="number" id="settingMonthlyRent" class="form-input" value="10000" min="0" step="500">
+                </div>
+                <span class="field-hint">ระบบจะนำไปหักอัตโนมัติในแดชบอร์ดสรุปยอดประจำเดือน</span>
+              </div>
+              <div class="form-group mb-3">
+                <label class="form-label" for="settingSchoolDays">จำนวนวันเปิดขายจริงต่อเดือน (หักวันหยุดเสาร์-อาทิตย์ &
+                  นักขัตฤกษ์)</label>
+                <div class="input-with-affix">
+                  <span class="affix-left"><i data-lucide="calendar" style="width:16px;height:16px;"></i></span>
+                  <input type="number" id="settingSchoolDays" class="form-input" value="20" min="1" max="31" step="1">
+                </div>
+                <span class="field-hint" id="schoolDaysHint">เปิดขายเฉพาะวันธรรมดา ~20 วัน/เดือน &rarr; ค่าเช่าเฉลี่ย
+                  <strong>฿500/วันเปิดขาย</strong> (฿10,000 ÷ 20 วัน)</span>
+              </div>
+              <button class="btn-fastwork" id="btnSaveShopSettings">บันทึกการตั้งค่า</button>
+            </div>
+          </div>
+
+          <!-- Backup & Data Persistence -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-header-title">
+                <i data-lucide="database"></i>
+                <span>สำรองข้อมูล & กู้คืน (Backup / Restore)</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <p class="text-sm text-muted mb-3">
+                ข้อมูลทั้งหมดบันทึกอยู่ในเบราว์เซอร์ของคุณอย่างปลอดภัย คุณสามารถสำรองไฟล์ JSON เก็บไว้
+                หรือนำไปเปิดบนเครื่องอื่นได้
+              </p>
+              <div class="btn-group-vertical">
+                <button class="btn-outline-fastwork mb-2" id="btnExportData">
+                  <i data-lucide="download"></i>
+                  <span>ดาวน์โหลดไฟล์สำรองข้อมูล (Export JSON)</span>
+                </button>
+                <label class="btn-outline-fastwork mb-2 file-upload-label">
+                  <i data-lucide="upload"></i>
+                  <span>นำเข้าไฟล์สำรองข้อมูล (Import JSON)</span>
+                  <input type="file" id="importFileInput" accept=".json" style="display:none;">
+                </label>
+                <button class="btn-danger-outline" id="btnResetDemoData">
+                  <i data-lucide="rotate-ccw"></i>
+                  <span>คืนค่าข้อมูลตัวอย่าง (Reset Demo Data)</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- GitHub Deployment Guide -->
+          <div class="card full-width">
+            <div class="card-header">
+              <div class="card-header-title">
+                <i data-lucide="globe"></i>
+                <span>คู่มือการนำเว็บไซต์ขึ้น GitHub Pages (ดูได้ฟรีทุกอุปกรณ์)</span>
+              </div>
+              <span class="pill-tag blue-tag">ฟรี 100%</span>
+            </div>
+            <div class="card-body">
+              <div class="github-guide-steps">
+                <div class="guide-step">
+                  <div class="step-badge">1</div>
+                  <div class="step-content">
+                    <h4>สร้าง Repository บน GitHub</h4>
+                    <p>ไปที่ <a href="https://github.com/new" target="_blank" rel="noopener">github.com/new</a> ตั้งชื่อ
+                      Repo เช่น <code>water-pos</code> แล้วเลือก Public</p>
+                  </div>
+                </div>
+
+                <div class="guide-step">
+                  <div class="step-badge">2</div>
+                  <div class="step-content">
+                    <h4>อัปโหลดไฟล์ในโฟลเดอร์นี้ขึ้น GitHub</h4>
+                    <p>อัปโหลดไฟล์ <code>index.html</code>, <code>style.css</code>, <code>app.js</code>
+                      และไฟล์ที่เกี่ยวข้องขึ้นไปที่ branch <code>main</code></p>
+                  </div>
+                </div>
+
+                <div class="guide-step">
+                  <div class="step-badge">3</div>
+                  <div class="step-content">
+                    <h4>เปิดใช้งาน GitHub Pages</h4>
+                    <p>เข้าไปที่แถบ <strong>Settings</strong> &rarr; <strong>Pages</strong> &rarr; ที่หัวข้อ Build and
+                      deployment ให้เลือก Source เป็น <strong>Deploy from a branch</strong> แล้วเลือก Branch
+                      <strong>main / (root)</strong> แล้วกด <strong>Save</strong>
+                    </p>
+                  </div>
+                </div>
+
+                <div class="guide-step">
+                  <div class="step-badge">4</div>
+                  <div class="step-content">
+                    <h4>เข้าใช้งานเว็บไซต์ได้ทันที!</h4>
+                    <p>รอประมาณ 1 นาที จะได้ลิงก์ เช่น <code>https://username.github.io/water-pos/</code>
+                      สามารถเปิดบันทึกยอดขายบนโทรศัพท์มือถือ แท็บเล็ต หรือคอมพิวเตอร์ได้ตลอดเวลา</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Mobile Bottom Navigation (Fastwork Style) -->
+    <nav class="mobile-bottom-nav">
+      <button class="mobile-nav-item active" data-tab="dashboard">
+        <i data-lucide="layout-dashboard"></i>
+        <span>แดชบอร์ด</span>
+      </button>
+      <button class="mobile-nav-item" data-tab="today">
+        <i data-lucide="badge-dollar-sign"></i>
+        <span>ขายวันนี้</span>
+      </button>
+      <button class="mobile-nav-item" data-tab="pricing">
+        <i data-lucide="calculator"></i>
+        <span>คำนวณราคา</span>
+      </button>
+      <button class="mobile-nav-item" data-tab="calendar">
+        <i data-lucide="calendar"></i>
+        <span>ปฏิทิน</span>
+      </button>
+      <button class="mobile-nav-item" data-tab="recipes">
+        <i data-lucide="beaker"></i>
+        <span>สูตร 1 โหล</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- MODAL: ADD / EDIT SALE -->
+  <div class="modal-backdrop" id="saleModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title" id="saleModalTitle">บันทึกยอดขาย & ต้นทุนประจำวัน</h3>
+        <button class="close-modal-btn" data-close="saleModal">&times;</button>
+      </div>
+      <form id="saleForm" class="modal-body">
+        <input type="hidden" id="saleEditId">
+
+        <div class="form-group mb-3">
+          <label class="form-label" for="saleDateInput">วันที่ขาย</label>
+          <input type="date" id="saleDateInput" class="form-input" required>
+        </div>
+
+        <div class="form-row two-col mb-3">
+          <div class="form-group">
+            <label class="form-label" for="salePrice">ยอดเงินที่ขายได้ทั้งหมด (บาท) <span
+                class="text-danger">*</span></label>
+            <div class="input-with-affix">
+              <span class="affix-left">฿</span>
+              <input type="number" id="salePrice" class="form-input font-bold" placeholder="เช่น 2500" min="0" step="1"
+                required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="saleUnitCost">หักต้นทุนของวันนี้ (บาท)</label>
+            <div class="input-with-affix">
+              <span class="affix-left">฿</span>
+              <input type="number" id="saleUnitCost" class="form-input" placeholder="เช่น 800" min="0" step="1">
+            </div>
+          </div>
+        </div>
+
+        <!-- Calculated Preview in Modal -->
+        <div class="calc-preview-card mb-3">
+          <div class="calc-preview-row">
+            <span>ยอดขายที่ขายได้ทั้งหมด:</span>
+            <span class="font-bold text-primary" id="modalSaleTotalPreview">฿0</span>
+          </div>
+          <div class="calc-preview-row">
+            <span>หักต้นทุนของวันนี้:</span>
+            <span class="text-amber" id="modalCostTotalPreview">฿0</span>
+          </div>
+          <div class="calc-preview-row">
+            <span>กำไรสุทธิวันนี้ (เงินที่ได้จริง):</span>
+            <span class="font-bold text-green" id="modalProfitTotalPreview">+฿0</span>
+          </div>
+        </div>
+
+        <div class="form-group mb-3">
+          <label class="form-label" for="saleItemName">หมายเหตุเพิ่มเติม (ถ้ามี)</label>
+          <input type="text" id="saleItemName" class="form-input" placeholder="เช่น ขายดี, ฝนตก, คนเยอะ">
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" data-close="saleModal">ยกเลิก</button>
+          <button type="submit" class="btn-fastwork" id="btnSaveSale">บันทึกยอดเงินวันนี้</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD / EDIT EXPENSE -->
+  <div class="modal-backdrop" id="expenseModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title" id="expenseModalTitle">บันทึกค่าใช้จ่าย & ต้นทุนวัตถุดิบ</h3>
+        <button class="close-modal-btn" data-close="expenseModal">&times;</button>
+      </div>
+      <form id="expenseForm" class="modal-body">
+        <input type="hidden" id="expenseEditId">
+
+        <div class="form-row two-col mb-3">
+          <div class="form-group">
+            <label class="form-label font-bold" for="expDateInput">📅 วันที่ซื้อ / รับของเข้า</label>
+            <input type="date" id="expDateInput" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label font-bold" for="expCategory">🏷️ หมวดหมู่สินค้า</label>
+            <select id="expCategory" class="form-input">
+              <option value="INGREDIENT">🍵 วัตถุดิบชงน้ำ</option>
+              <option value="PACKAGING">🥤 บรรจุภัณฑ์</option>
+              <option value="STOCK">📦 สินค้าสำเร็จรูป</option>
+              <option value="OTHER">🛠️ ค่าใช้จ่ายอื่นๆ</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group mb-3">
+          <label class="form-label font-bold" for="expTitle">
+            ชื่อรายการสินค้า / วัตถุดิบ <span class="text-danger">*</span>
+          </label>
+          <input type="text" id="expTitle" class="form-input font-bold" placeholder="" required>
+          <span class="field-hint">หากพิมพ์ตรงกับสินค้าเดิมในสต๊อก ระบบจะบวกเพิ่มจำนวนและอัปเดตต้นทุนให้อัตโนมัติ</span>
+        </div>
+
+        <!-- Section: ยอดเงินและจำนวนรับเข้าสต๊อก + หน่วยนับ (แบบแถวเชื่อมต่อตามสไตล์สูตรแก้ว) -->
+        <div class="form-row two-col mb-3">
+          <div class="form-group mb-0">
+            <label class="form-label font-bold" for="expAmount">
+              💰 ยอดเงินรวมที่จ่ายซื้อ (บาท) <span class="text-danger">*</span>
+            </label>
+            <div class="input-with-affix">
+              <span class="affix-left">฿</span>
+              <input type="number" id="expAmount" class="form-input font-bold text-primary" placeholder="" min="0"
+                step="any" required>
+            </div>
+            <span class="field-hint" id="expUnitCostHint">ยอดเงินในบิลรวมทั้งหมด</span>
+          </div>
+
+          <div class="form-group mb-0">
+            <label class="form-label font-bold" for="expPackSize">
+              📦 จำนวนที่รับเข้าสต๊อก <span class="text-danger">*</span>
+            </label>
+            <div style="display:flex; gap:0.4rem; align-items:stretch;">
+              <input type="number" id="expPackSize" class="form-input font-bold text-primary"
+                style="flex: 1.1; min-width: 0;" placeholder="จำนวน เช่น 24, 10" min="0.01" step="any" required>
+              <select id="expPackUnit" class="form-input font-bold"
+                style="flex: 1.2; min-width: 130px; cursor:pointer; background-color:#ffffff;" title="เลือกหน่วยนับ"
+                required>
+                <option value="ลัง" selected>ลัง (ยกลัง)</option>
+                <option value="ขวด">ขวด</option>
+                <option value="กระป๋อง">กระป๋อง</option>
+                <option value="ถุง">ถุง</option>
+                <option value="ชุด">ชุด</option>
+                <option value="ใบ">ใบ</option>
+                <option value="แก้ว">แก้ว</option>
+                <option value="ชิ้น">ชิ้น</option>
+                <option value="กล่อง">กล่อง</option>
+                <option value="แพ็ค">แพ็ค</option>
+                <option value="ม้วน">ม้วน</option>
+                <option value="มัด">มัด</option>
+                <option value="g">กรัม (g)</option>
+                <option value="kg">กิโลกรัม (kg)</option>
+                <option value="ml">มล. (ml)</option>
+                <option value="ลิตร">ลิตร</option>
+                <option value="CUSTOM">➕ อื่นๆ...</option>
+              </select>
+            </div>
+            <input type="text" id="expPackUnitCustom" class="form-input mt-1" style="display:none;"
+              placeholder="พิมพ์ระบุหน่วย เช่น ถัง, แกลลอน">
+            <span class="field-hint" id="expPackUnitHint">ระบุจำนวนและเลือกหน่วยนับ (หากเลือก "ลัง"
+              จะมีช่องขวดต่อลัง)</span>
+          </div>
+        </div>
+
+        <!-- Section: กรณีเลือกหน่วยเป็น "ลัง" -> กรอกจำนวนขวดใน 1 ลัง เพื่อคำนวณตัดสต๊อกเป็นขวด -->
+        <div id="expCrateBottlesContainer"
+          style="display:none; background:#eff6ff; border:1.5px dashed #93c5fd; border-radius:var(--radius-md); padding:0.75rem 1rem; margin-bottom:1rem;">
+          <div class="form-row two-col mb-0" style="align-items:center;">
+            <div class="form-group mb-0">
+              <label class="form-label font-bold" for="expCrateBottles" style="color:#1d4ed8; font-size:0.85rem;">
+                🍾 จำนวนขวดใน 1 ลัง <span class="text-danger">*</span>
+              </label>
+              <div class="input-with-affix">
+                <input type="number" id="expCrateBottles" class="form-input font-bold" style="color:#1d4ed8;"
+                  placeholder="เช่น 24 หรือ 12" min="1" step="1" value="24">
+                <span class="affix-right">ขวด/ลัง</span>
+              </div>
+              <span class="field-hint" style="color:#3b82f6;">ระบุจำนวนขวดต่อลัง เพื่อแปลงเป็นสต๊อกขวดจริง</span>
+            </div>
+            <div
+              style="background:#ffffff; border-radius:var(--radius-sm); padding:0.6rem 0.85rem; border:1px solid #bfdbfe;">
+              <div style="font-size:0.75rem; color:#64748b; font-weight:600;">สรุปการรับเข้าคลัง:</div>
+              <div id="expCrateTotalBottlesSummary" style="font-size:0.95rem; font-weight:700; color:#1d4ed8;">
+                (ตกขวดละ ฿0.00)
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section: เกณฑ์แจ้งเตือนสต๊อกต่ำ -->
+        <div class="form-group mb-3">
+          <label class="form-label font-bold" for="expMinQty" id="expMinQtyLabel" style="color:var(--danger);">
+            ⚠️ เกณฑ์เตือนสั่งซื้อขั้นต่ำ (Min Qty)
+          </label>
+          <input type="number" id="expMinQty" class="form-input font-bold"
+            style="color:var(--danger); border-color:#fecaca; background:#fffbfb;" placeholder="เช่น 5 หรือ 10" min="0"
+            step="any">
+        </div>
+
+        <!-- Live Stock & Unit Cost Auto-Calculation Preview -->
+        <div class="calc-preview-card mb-3"
+          style="background:linear-gradient(135deg, rgba(0,80,240,0.04) 0%, rgba(16,185,129,0.05) 100%); border:1.5px solid var(--border-color); border-radius:var(--radius-md); padding:0.75rem 1rem;">
+          <div class="calc-preview-row mb-1">
+            <span style="font-size:0.85rem; color:var(--text-muted);">ต้นทุนเฉลี่ยต่อหน่วยที่ได้:</span>
+            <span class="font-bold text-primary" id="expCalculatedUnitCostPreview" style="font-size:1.05rem;">฿0.00 /
+              หน่วย</span>
+          </div>
+          <div class="calc-preview-row">
+            <span style="font-size:0.85rem; color:var(--text-muted);">การอัปเดตสต๊อกร้านค้า:</span>
+            <span id="expStockStatusSyncPreview" class="pill-tag green-tag"
+              style="font-size:0.75rem; font-weight:700;">พร้อมซิงค์เข้าคลังอัตโนมัติ</span>
+          </div>
+        </div>
+
+        <div class="form-group mb-3">
+          <label class="form-label font-bold" for="expSupplier">
+            🛒 ซื้อจาก (ร้านค้า / แหล่งซื้อ)
+          </label>
+          <input type="text" id="expSupplier" class="form-input" list="expSupplierSuggestions"
+            placeholder="เช่น Makro, Shopee, Lazada, ตลาดสด, โลตัส, ไทวัสดุ">
+          <datalist id="expSupplierSuggestions">
+            <option value="Makro (แม็คโคร)">
+            <option value="Shopee">
+            <option value="Lazada">
+            <option value="Lotus's (โลตัส)">
+            <option value="Big C">
+            <option value="ตลาดสด / ร้านค้าส่ง">
+            <option value="7-Eleven">
+            <option value="โรงงาน / ร้านผลิตส่ง">
+          </datalist>
+          <span class="field-hint">ระบุแหล่งซื้อ เช่น Makro หรือ Shopee
+            เพื่อช่วยสรุปรายการเตือนสั่งซื้อแยกตามร้าน</span>
+        </div>
+
+        <div class="form-group mb-3">
+          <label class="form-label" for="expNote">หมายเหตุเพิ่มเติม</label>
+          <textarea id="expNote" class="form-input" rows="2"
+            placeholder="เช่น ล็อตโปรโมชั่น, เบอร์ติดต่อร้าน"></textarea>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" data-close="expenseModal">ยกเลิก</button>
+          <button type="submit" class="btn-fastwork" id="btnSaveExpense">
+            <i data-lucide="check-circle-2"></i>
+            <span>บันทึกรายจ่าย & รับเข้าสต๊อก</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD / EDIT RECIPE (สูตร 1 โหล) -->
+  <div class="modal-backdrop" id="recipeModal">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-header">
+        <h3 class="modal-title" id="recipeModalTitle">สูตรชงน้ำต่อ 1 โหล (Batch Recipe)</h3>
+        <button class="close-modal-btn" data-close="recipeModal">&times;</button>
+      </div>
+      <form id="recipeForm" class="modal-body">
+        <input type="hidden" id="recipeEditId">
+        <input type="hidden" id="recMode" value="jar">
+
+        <!-- Recipe Mode Switcher (ต่อ 1 แก้ว vs ต่อ 1 โหล) -->
+        <div class="mb-3"
+          style="display:flex; gap:0.5rem; background:#f1f5f9; padding:0.35rem; border-radius:var(--radius-md); border:1px solid var(--border-color);">
+          <button type="button" class="recipe-mode-tab-btn" id="btnModeJar"
+            style="flex:1; border:none; padding:0.6rem 1rem; border-radius:var(--radius-sm); font-weight:700; font-size:0.875rem; cursor:pointer; background:#ffffff; color:var(--primary); box-shadow:0 1px 3px rgba(0,0,0,0.1); display:flex; align-items:center; justify-content:center; gap:0.4rem; transition:all 0.2s;">
+            <span>🏺 สูตรชงต่อ 1 โหล / ถัง</span>
+            <span class="pill-tag green-tag" style="font-size:0.7rem; padding:0.15rem 0.4rem;">ชงขายได้หลายแก้ว</span>
+          </button>
+          <button type="button" class="recipe-mode-tab-btn" id="btnModeCup"
+            style="flex:1; border:none; padding:0.6rem 1rem; border-radius:var(--radius-sm); font-weight:600; font-size:0.875rem; cursor:pointer; background:transparent; color:var(--text-muted); display:flex; align-items:center; justify-content:center; gap:0.4rem; transition:all 0.2s;">
+            <span>🥤 สูตรชงต่อ 1 แก้ว</span>
+            <span class="pill-tag"
+              style="font-size:0.7rem; padding:0.15rem 0.4rem; background:#e2e8f0; color:#475569;">ชงสดทีละแก้ว</span>
+          </button>
+        </div>
+
+        <div class="form-row mb-3">
+          <div class="form-group">
+            <label class="form-label" for="recName">ชื่อเมนูเครื่องดื่ม <span class="text-danger">*</span></label>
+            <input type="text" id="recName" class="form-input" placeholder="เช่น ชาไทยโบราณ, ชาเขียวนมสด, โกโก้เข้มข้น"
+              required>
+          </div>
+        </div>
+
+        <!-- Automatic Capacity & Yield Calculation (โหมดต่อ 1 โหล) -->
+        <div id="recipeJarYieldSection" class="form-row three-col mb-3"
+          style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.85rem;">
+          <div class="form-group">
+            <label class="form-label" for="recJarLiters">ปริมาตรชงต่อโหล/ถัง (ลิตร)</label>
+            <div class="input-with-affix">
+              <input type="number" id="recJarLiters" class="form-input font-bold" value="6" min="0.5" step="0.5"
+                required>
+              <span class="affix-right">ลิตร</span>
+            </div>
+            <span class="field-hint">เช่น 5 ลิตร หรือ 6 ลิตร</span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="recCupSizeOz">ขนาดแก้วที่เสิร์ฟ</label>
+            <select id="recCupSizeOz" class="form-input">
+              <option value="10">แก้ว 10 oz (ใช้น้ำชา ~38 ml / รวมส่วนผสม ~110 ml)</option>
+              <option value="12">แก้ว 12 oz (ใช้น้ำชา ~45 ml / รวมส่วนผสม ~135 ml)</option>
+              <option value="16" selected>แก้ว 16 oz (ใช้น้ำชา 60 ml [2 oz] / รวมส่วนผสม 180 ml)</option>
+              <option value="20">แก้ว 20 oz (ใช้น้ำชา ~70 ml / รวมส่วนผสม ~210 ml)</option>
+              <option value="22">แก้ว 22 oz (ใช้น้ำชา ~80 ml / รวมส่วนผสม ~240 ml)</option>
+              <option value="32">แก้ว/ถัง 32 oz (ใช้น้ำชา ~120 ml / รวมส่วนผสม ~350 ml)</option>
+            </select>
+            <span class="field-hint">แก้ว 16 oz ใส่น้ำแข็งเต็ม ใช้น้ำชาสกัด 60 ml รวมนมข้น/นมจืดอีก 4 oz (120 ml)
+              รวมของเหลว 180 ml เทใส่น้ำแข็งเต็มแก้วพอดี</span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="recYieldCups">ชงเสิร์ฟได้ประมาณ</label>
+            <div class="input-with-affix">
+              <input type="number" id="recYieldCups" class="form-input font-bold" value="25" min="1" step="1" readonly
+                style="background-color: #ffffff; color: var(--primary); font-size: 1.1rem;">
+              <span class="affix-right">แก้ว</span>
+            </div>
+            <span class="field-hint" id="recYieldHintText">ถัง 6 ลิตร เทได้ ~25 แก้ว</span>
+          </div>
+        </div>
+
+        <input type="hidden" id="recJarCapacity" value="โหล 6 ลิตร (25 แก้ว)">
+
+        <!-- SECTION: น้ำชงต่อ 1 แก้ว (Single Cup Recipe Proportion) -->
+        <div id="recipeSingleCupSection"
+          style="background: #ffffff; border: 1.5px solid var(--primary-border); border-radius: var(--radius-sm); padding: 0.85rem; margin-bottom: 1.25rem; box-shadow: var(--shadow-sm);">
+          <div class="space-between align-center mb-2">
+            <div>
+              <label class="form-label mb-0 font-bold" style="color: var(--primary); font-size: 0.95rem;">
+                🥤 สัดส่วนน้ำชงต่อ 1 แก้ว (มาตรฐานชงสด):
+              </label>
+              <span class="field-hint" id="singleCupSectionHint" style="margin-top: 2px; display: block;">
+                กำหนดส่วนผสมของ 1 แก้ว ระบบจะคูณสเกลขยายเป็นสูตรต่อโหล/ถัง (ชงได้ <span id="cupScaleCountBadge"
+                  class="font-bold text-primary">25</span> แก้ว) ให้ด้านล่างอัตโนมัติ
+              </span>
+            </div>
+            <button type="button" class="btn-fastwork-sm" id="btnAddSingleCupRow"
+              style="background:#eef6ff; color:var(--primary); border:1px solid #bfdbfe;">
+              <i data-lucide="plus"></i>
+              <span>+ เพิ่มวัตถุดิบแก้ว</span>
+            </button>
+          </div>
+
+          <div class="single-cup-table mb-2" id="singleCupContainer">
+            <!-- Dynamic rows of single cup ingredients -->
+          </div>
+
+          <div id="syncCupToBatchWrapper" style="text-align: right;">
+            <button type="button" class="btn-fastwork-sm" id="btnSyncCupToBatch"
+              title="คำนวณและอัปเดตสัดส่วนลงสูตรโหลทันที">
+              <span>⚡ คำนวณขยายสูตรลง 1 โหล</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="divider-hr" id="recipeDivider"></div>
+
+        <div id="recipeBatchSection">
+          <div class="space-between align-center mb-1">
+            <div>
+              <label class="form-label mb-0 font-bold" id="batchSectionTitle">รายการส่วนผสมต่อ 1 โหล/ถัง (คำนวณจากสูตร 1
+                แก้ว):</label>
+              <span class="field-hint" id="batchSectionHint" style="margin-top:2px; display:block;">ดึงและคูณขยายจากสูตร
+                1
+                แก้วด้านบนให้อัตโนมัติ (สามารถกด 🧮 เพื่อผูกกับค่าใช้จ่ายที่ซื้อจริง หรือปรับแก้ได้อิสระ)</span>
+            </div>
+            <button type="button" class="btn-fastwork-sm" id="btnAddIngredientRow">
+              <i data-lucide="plus"></i>
+              <span id="btnAddIngredientRowText">เพิ่มส่วนผสมในโหล</span>
+            </button>
+          </div>
+
+          <div class="ingredients-list-table mb-3" id="recipeIngredientsContainer">
+            <!-- Rows dynamically added -->
+          </div>
+        </div>
+
+        <!-- Recipe Cost Summary in Modal -->
+        <div class="calc-preview-card mb-3">
+          <div class="calc-preview-row" id="modalRecipeJarCostRow">
+            <span id="modalRecipeJarCostLabel">ต้นทุนวัตถุดิบรักษาระดับต่อ 1 โหล:</span>
+            <span class="font-bold text-amber" id="modalRecipeTotalJarCost">฿0.00</span>
+          </div>
+          <div class="calc-preview-row">
+            <span id="modalRecipeUnitCostLabel">ต้นทุนเฉลี่ยต่อแก้ว:</span>
+            <span class="font-bold text-amber" id="modalRecipeUnitCost">฿0.00</span>
+          </div>
+        </div>
+
+        <!-- User Input Selling Price & Live Profit Analysis -->
+        <div class="calc-preview-card mb-3"
+          style="background:linear-gradient(135deg, rgba(0, 80, 240, 0.04) 0%, rgba(16, 185, 129, 0.05) 100%); border:1.5px solid var(--border-color); border-radius:var(--radius-md); padding:1rem 1.25rem;">
+          <div
+            style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem; flex-wrap:wrap; gap:0.5rem;">
+            <label class="form-label mb-0 font-bold" for="recSellingPrice"
+              style="color:var(--text-main); font-size:0.95rem; display:flex; align-items:center; gap:0.35rem;">
+              💰 ตั้งราคาขายต่อแก้ว:
+            </label>
+            <span class="pill-tag green-tag" style="font-size:0.75rem; font-weight:700;">คำนวณกำไรตามราคาจริง</span>
+          </div>
+
+          <div style="display:grid; grid-template-columns: 1.2fr 1fr 1fr 1fr; gap:0.75rem; align-items:center;">
+            <div>
+              <div class="input-with-affix" style="width:100%;">
+                <span class="affix-left" style="font-weight:700; color:var(--primary);">฿</span>
+                <input type="number" id="recSellingPrice" class="form-input" placeholder="ราคาขาย" value="25" min="0"
+                  step="any"
+                  style="font-size:1.15rem; font-weight:800; color:var(--primary); height:42px; padding-left:2.2rem;"
+                  required>
+              </div>
+            </div>
+
+            <div
+              style="background:#ffffff; border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:0.45rem 0.65rem; text-align:center;">
+              <div style="font-size:0.725rem; color:var(--text-muted); font-weight:600;">กำไรต่อแก้ว</div>
+              <div class="font-bold text-success" id="modalRecipeProfitPerCup" style="font-size:1.05rem;">+฿0.00</div>
+            </div>
+
+            <div
+              style="background:#ffffff; border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:0.45rem 0.65rem; text-align:center;">
+              <div style="font-size:0.725rem; color:var(--text-muted); font-weight:600;">กำไร (%)</div>
+              <div class="font-bold text-primary" id="modalRecipeMarginPercent" style="font-size:1.05rem;">0%</div>
+            </div>
+
+            <div id="modalRecipeTotalJarProfitBox"
+              style="background:#ffffff; border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:0.45rem 0.65rem; text-align:center;">
+              <div id="modalRecipeTotalJarProfitLabel"
+                style="font-size:0.725rem; color:var(--text-muted); font-weight:600;">ขายหมดโหลได้กำไร</div>
+              <div class="font-bold text-amber" id="modalRecipeTotalJarProfit" style="font-size:1.05rem;">฿0.00</div>
+            </div>
+          </div>
+
+          <div id="recipeAdviceContainer" style="display:none; margin-top:0.75rem;">
+            <!-- Rendered dynamically when profit/margin is low or needs optimization -->
+          </div>
+        </div>
+
+        <div class="form-group mb-3">
+          <label class="form-label" for="recInstructions">วิธีชง / เคล็ดลับ</label>
+          <textarea id="recInstructions" class="form-input" rows="3"
+            placeholder="เช่น แช่ผงชาในน้ำร้อน 5 นาที กรองกากออก ใส่นมข้นหวานคนให้ละลาย เติมนมข้นจืดตาม คนให้เข้ากันแล้วเทลงโหลแช่เย็น"></textarea>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" data-close="recipeModal">ยกเลิก</button>
+          <button type="submit" class="btn-fastwork" id="btnSaveRecipe">บันทึกสูตรชง</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: Stock Item Create / Edit (Redesigned Fastwork Theme) -->
+  <div class="modal-backdrop" id="stockItemModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div style="display:flex; align-items:center; gap:0.6rem;">
+          <div
+            style="width:36px; height:36px; background:linear-gradient(135deg, var(--primary) 0%, #2563eb 100%); color:#ffffff; border-radius:var(--radius-sm); display:flex; align-items:center; justify-content:center; box-shadow:0 2px 8px rgba(0,80,240,0.25);">
+            <i data-lucide="package" style="width:20px; height:20px;"></i>
+          </div>
+          <div>
+            <h3 class="modal-title" id="stockItemModalTitle" style="margin-bottom:0;">แก้ไขข้อมูลสต๊อกสินค้า</h3>
+            <span class="field-hint" style="margin:0; font-size:0.75rem;">จัดการปริมาณคงเหลือ จุดเตือน
+              และต้นทุนต่อหน่วย</span>
+          </div>
+        </div>
+        <button class="close-modal-btn" data-close="stockItemModal">&times;</button>
+      </div>
+      <form id="stockItemForm" class="modal-body">
+        <input type="hidden" id="stockItemId">
+
+        <div class="form-group mb-3">
+          <label class="form-label" for="stockItemName">ชื่อสินค้า / วัตถุดิบ <span class="text-danger">*</span></label>
+          <input type="text" id="stockItemName" class="form-input font-bold"
+            placeholder="เช่น นมข้นหวาน ตรามะลิ, ผงชาเขียว, แก้ว 22 oz" required>
+        </div>
+
+        <div class="form-row two-col mb-3">
+          <div class="form-group">
+            <label class="form-label" for="stockItemCategory">หมวดหมู่สินค้า</label>
+            <select id="stockItemCategory" class="form-input">
+              <option value="INGREDIENT">วัตถุดิบเครื่องดื่ม (นม/ชา/ผงชง)</option>
+              <option value="PACKAGING">บรรจุภัณฑ์ (แก้ว/หลอด/ฝา/ถุง)</option>
+              <option value="STOCK">สินค้าสำเร็จรูป/ยกลัง (พร้อมขาย)</option>
+              <option value="OTHER">อุปกรณ์และอื่นๆ</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="stockItemUnit">หน่วยนับ</label>
+            <input type="text" id="stockItemUnit" class="form-input" placeholder="เช่น กระป๋อง, ถุง, ชุด, ชิ้น"
+              value="กระป๋อง" required>
+          </div>
+        </div>
+
+        <div class="form-row three-col mb-3">
+          <div class="form-group">
+            <label class="form-label font-bold" for="stockItemQty">
+              📦 ปริมาณคงเหลือ
+            </label>
+            <input type="number" id="stockItemQty" class="form-input font-bold text-primary" placeholder="0" min="0"
+              step="any" value="10" required>
+            <span class="field-hint">จำนวนในร้านตอนนี้</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label font-bold" for="stockItemMin" style="color:var(--danger);">
+              ⚠️ จุดเตือนขั้นต่ำ
+            </label>
+            <input type="number" id="stockItemMin" class="form-input font-bold"
+              style="color:var(--danger); border-color:#fecaca; background:#fff7f7;" placeholder="5" min="0" step="any"
+              value="5" required>
+            <span class="field-hint">น้อยกว่านี้จะเตือนซื้อ</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label font-bold" for="stockItemCost">
+              💰 ต้นทุน/หน่วย
+            </label>
+            <div class="input-with-affix">
+              <span class="affix-left">฿</span>
+              <input type="number" id="stockItemCost" class="form-input font-bold text-amber" placeholder="0.00" min="0"
+                step="any" value="25" required>
+            </div>
+            <span class="field-hint">ราคาซื้อเฉลี่ย</span>
+          </div>
+        </div>
+
+        <!-- Live Stock Value Preview Card (Theme matching other modals) -->
+        <div class="calc-preview-card mb-3"
+          style="background:linear-gradient(135deg, rgba(0, 80, 240, 0.04) 0%, rgba(16, 185, 129, 0.05) 100%); border:1.5px solid var(--border-color); border-radius:var(--radius-md); padding:0.85rem 1rem;">
+          <div class="calc-preview-row mb-1">
+            <span style="font-size:0.85rem; color:var(--text-muted);">มูลค่าสต๊อกคงเหลือรวม:</span>
+            <span class="font-bold text-primary" id="stockModalTotalValuePreview"
+              style="font-size:1.15rem;">฿250.00</span>
+          </div>
+          <div class="calc-preview-row">
+            <span style="font-size:0.85rem; color:var(--text-muted);">สถานะความปลอดภัย:</span>
+            <span id="stockModalStatusPreview" class="pill-tag green-tag"
+              style="font-size:0.75rem; font-weight:700;">สต๊อกปลอดภัย</span>
+          </div>
+        </div>
+
+        <div class="form-group mb-3">
+          <label class="form-label font-bold" for="stockItemSupplier">
+            🛒 ซื้อจาก (ร้านค้า / แหล่งซื้อประจำ)
+          </label>
+          <input type="text" id="stockItemSupplier" class="form-input" list="expSupplierSuggestions"
+            placeholder="เช่น Makro, Shopee, Lazada, ตลาดสด">
+        </div>
+
+        <div class="form-group mb-3">
+          <label class="form-label" for="stockItemNote">หมายเหตุเพิ่มเติม</label>
+          <input type="text" id="stockItemNote" class="form-input"
+            placeholder="เช่น ยี่ห้อประจำ, พิกัดร้าน, เบอร์ติดต่อ">
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" data-close="stockItemModal">ยกเลิก</button>
+          <button type="submit" class="btn-fastwork" id="btnSaveStockItem">
+            <i data-lucide="check"></i>
+            <span>บันทึกข้อมูลสต๊อก</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Holiday Management Modal (กำหนดวันหยุดพิเศษ / เลือกหลายวันจากปฏิทิน) -->
+  <div class="modal-backdrop" id="customHolidayModal">
+    <div class="modal-dialog modal-holiday-redesign" style="max-width: 620px;">
+      <!-- Mobile Pull Indicator & Header -->
+      <div class="modal-mobile-handle"></div>
+      <div class="modal-header holiday-modal-header">
+        <div class="modal-title-group">
+          <div class="holiday-header-badge">
+            <i data-lucide="calendar-off" class="text-amber"></i>
+            <span>จัดการวันหยุดพิเศษ</span>
+          </div>
+          <h3 class="modal-title holiday-modal-title">กำหนดวันหยุดพิเศษ (เช่น น้ำท่วม)</h3>
+          <p class="modal-subtitle">แตะเลือกวันที่ในปฏิทินเพื่อเพิ่มหรือนำออกได้หลายวันพร้อมกัน</p>
+        </div>
+        <button class="close-modal-btn" data-close="customHolidayModal" aria-label="ปิด">&times;</button>
+      </div>
+
+      <form id="customHolidayForm" class="modal-body holiday-modal-body">
+        <!-- Preset Reasons Chips Section -->
+        <div class="holiday-form-section mb-3">
+          <label class="form-label font-bold d-flex align-center gap-1.5 mb-1.5">
+            <i data-lucide="tag" style="width:14px;height:14px;color:var(--amber);"></i>
+            <span>ระบุเหตุผล / ประเภทวันหยุดพิเศษ</span>
+          </label>
+
+          <div class="holiday-preset-scroll-container mb-2" id="holidayReasonPresets">
+            <button type="button" class="preset-reason-pill active" data-reason="น้ำท่วม โรงเรียนสั่งหยุดเรียน">
+              <span class="preset-icon">🌧️</span> น้ำท่วม
+            </button>
+            <button type="button" class="preset-reason-pill" data-reason="โรงเรียนมีกิจกรรมภายใน / กีฬาสี (งดขาย)">
+              <span class="preset-icon">🏫</span> กิจกรรมโรงเรียน
+            </button>
+            <button type="button" class="preset-reason-pill" data-reason="วันสอบปลายภาค / สอบกลางภาค">
+              <span class="preset-icon">📝</span> สอบปลายภาค
+            </button>
+            <button type="button" class="preset-reason-pill" data-reason="ร้านหยุดทำความสะอาด / ปรับปรุงร้าน">
+              <span class="preset-icon">🧹</span> บิ๊กคลีนนิ่ง
+            </button>
+            <button type="button" class="preset-reason-pill" data-reason="ธุระส่วนตัว / ลาหยุด">
+              <span class="preset-icon">☕</span> ธุระส่วนตัว
+            </button>
+          </div>
+
+          <div class="input-with-icon">
+            <input type="text" id="holidayModalReasonInput" class="form-input holiday-reason-input"
+              placeholder="พิมพ์ระบุเหตุผล เช่น น้ำท่วม ทางเข้าโรงเรียนถูกตัดขาด" value="น้ำท่วม โรงเรียนสั่งหยุดเรียน"
+              required>
+          </div>
+          <span class="field-hint" style="font-size:0.75rem; margin-top:4px;">
+            <i data-lucide="info" style="width:12px;height:12px;display:inline-block;vertical-align:middle;"></i>
+            วันที่เป็นวันหยุดพิเศษจะ <strong>ไม่ถูกนำไปคิดค่าเช่าร้าน</strong> และแสดงสัญลักษณ์สีส้มในปฏิทิน
+          </span>
+        </div>
+
+        <!-- Month Navigator & Quick Action Toolbar -->
+        <div class="holiday-calendar-toolbar mb-2">
+          <div class="holiday-toolbar-month">
+            <button type="button" class="holiday-nav-arrow-btn" id="holidayModalPrevMonthBtn" title="เดือนก่อนหน้า">
+              <i data-lucide="chevron-left"></i>
+            </button>
+            <span class="holiday-toolbar-month-text" id="holidayModalMonthLabel">ตุลาคม 2026</span>
+            <button type="button" class="holiday-nav-arrow-btn" id="holidayModalNextMonthBtn" title="เดือนถัดไป">
+              <i data-lucide="chevron-right"></i>
+            </button>
+          </div>
+
+          <div class="holiday-toolbar-actions">
+            <button type="button" class="btn-holiday-action" id="holidayModalSelectSchoolDaysBtn">
+              <i data-lucide="calendar-check-2" style="width:13px;height:13px;"></i>
+              <span>เลือก จ.-ศ. ทั้งเดือน</span>
+            </button>
+            <button type="button" class="btn-holiday-action text-danger" id="holidayModalClearSelectedBtn">
+              <i data-lucide="trash-2" style="width:13px;height:13px;"></i>
+              <span>ล้าง</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Interactive Calendar Grid for Multi-Select -->
+        <div class="holiday-calendar-card mb-3">
+          <div class="holiday-weekdays-row">
+            <span class="text-danger">อา.</span>
+            <span>จ.</span>
+            <span>อ.</span>
+            <span>พ.</span>
+            <span>พฤ.</span>
+            <span>ศ.</span>
+            <span class="text-purple">ส.</span>
+          </div>
+          <div class="holiday-picker-grid" id="holidayPickerGrid">
+            <!-- Dynamically populated day buttons -->
+          </div>
+        </div>
+
+        <!-- Selected Days Chips Box -->
+        <div class="holiday-chips-panel mb-2">
+          <div class="space-between align-center mb-1.5">
+            <div class="font-semibold text-xs text-muted d-flex align-center gap-1">
+              <i data-lucide="calendar" style="width:13px;height:13px;color:var(--primary);"></i>
+              <span>วันที่เลือกไว้:</span>
+            </div>
+            <span class="badge-pill-item blue-tag" id="holidayModalSelectedCount"
+              style="font-size:0.75rem; font-weight:700;">เลือกแล้ว 0 วัน</span>
+          </div>
+          <div class="holiday-chips-scroll-area" id="holidaySelectedChipsList">
+            <span class="text-muted text-xs">ยังไม่ได้เลือกวัน (แตะเลือกวันที่ในปฏิทินด้านบน)</span>
+          </div>
+        </div>
+
+        <!-- Sticky Modal Footer -->
+        <div class="modal-footer holiday-modal-footer">
+          <button type="button" class="btn-secondary" data-close="customHolidayModal">ยกเลิก</button>
+          <button type="submit" class="btn-fastwork holiday-submit-btn" id="btnSaveBatchHolidays">
+            <i data-lucide="check-circle-2"></i>
+            <span>ตกลง บันทึกวันหยุดพิเศษ</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="app.js"></script>
+</body>
+
+</html>
