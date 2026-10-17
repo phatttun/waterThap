@@ -184,7 +184,7 @@ class WaterFlowApp {
 
   updateShopBranding() {
     const shopName = (this.data.shopSettings && this.data.shopSettings.name) ? this.data.shopSettings.name : 'ร้านน้ำยายแต๊ป';
-    
+
     // อัปเดต Title ของเบราว์เซอร์
     document.title = shopName;
 
@@ -986,7 +986,7 @@ class WaterFlowApp {
     // Update Header description
     const descElem = document.getElementById('dashHeaderDesc');
     if (descElem) {
-      descElem.textContent = `${period.label} | หักค่าเช่าร้านรวม ${this.formatCurrency(totalRentForPeriod)} (${this.formatCurrency(monthlyRentRate)} × ${period.monthsCount} เดือน)`;
+      descElem.textContent = `${period.label}`;
     }
 
     // Filter daily sales and expenses for the selected period
@@ -1193,22 +1193,13 @@ class WaterFlowApp {
 
       let topItems = Object.values(usageMap).sort((a, b) => b.qty - a.qty);
 
-      // 2. If no logs yet or fewer than 3, fill with top crate drinks from stock / presets
       if (topItems.length === 0) {
-        const stockCrates = stockItems.filter(s => s.category === 'STOCK' || (s.name || '').includes('ลัง'));
-        if (stockCrates.length > 0) {
-          topItems = stockCrates.map((s, i) => ({
-            name: s.name,
-            qty: Math.max(1, 10 - (i * 3)),
-            unit: s.unit || 'ลัง'
-          }));
-        } else {
-          topItems = [
-            { name: 'น้ำเก๊กฮวยสำเร็จรูป ยกลัง', qty: 15, unit: 'ลัง (24 ขวด)' },
-            { name: 'น้ำกระเจี๊ยบสำเร็จรูป ยกลัง', qty: 9, unit: 'ลัง (24 ขวด)' },
-            { name: 'น้ำมะตูมสำเร็จรูป ยกลัง', qty: 6, unit: 'ลัง (24 ขวด)' }
-          ];
-        }
+        topStockListElem.innerHTML = `
+          <div class="text-center text-muted py-3" style="font-size:0.8rem; background:#f8fafc; border:1px dashed var(--border-color); border-radius:var(--radius-sm);">
+            ยังไม่มีประวัติการเบิกขายน้ำยกลังในเดือนนี้
+          </div>
+        `;
+        return;
       }
 
       const top3 = topItems.slice(0, 3);
@@ -3587,9 +3578,9 @@ class WaterFlowApp {
           originalUnit: unit
         };
       } else {
-        const isWaterOrFree = lowerName.includes('น้ำร้อน') || lowerName.includes('น้ำเปล่า') || 
-                              lowerName.includes('น้ำสะอาด') || lowerName.includes('น้ำต้ม') || 
-                              lowerName.includes('น้ำกรอง') || lowerName === 'น้ำ';
+        const isWaterOrFree = lowerName.includes('น้ำร้อน') || lowerName.includes('น้ำเปล่า') ||
+          lowerName.includes('น้ำสะอาด') || lowerName.includes('น้ำต้ม') ||
+          lowerName.includes('น้ำกรอง') || lowerName === 'น้ำ';
 
         if (isWaterOrFree) {
           cost = 0;
@@ -4337,7 +4328,7 @@ class WaterFlowApp {
 
       const lowerName = name.toLowerCase();
       const isPkg = lowerName.includes('แก้ว') || lowerName.includes('ฝา') || lowerName.includes('หลอด') ||
-                    lowerName.includes('ถุง') || unit === 'ชุด' || unit === 'ใบ' || unit === 'ชิ้น';
+        lowerName.includes('ถุง') || unit === 'ชุด' || unit === 'ใบ' || unit === 'ชิ้น';
       const isZeroCost = cost <= 0;
 
       currentTotalCost += cost;
@@ -4541,9 +4532,9 @@ class WaterFlowApp {
               </thead>
               <tbody>
                 ${opt.items.map((item, idx) => {
-                  const isBgEven = idx % 2 === 0 ? '#ffffff' : '#fffbeb';
-                  if (item.isZeroCost) {
-                    return `
+        const isBgEven = idx % 2 === 0 ? '#ffffff' : '#fffbeb';
+        if (item.isZeroCost) {
+          return `
                       <tr style="background:${isBgEven}; border-bottom:1px solid #fef3c7;">
                         <td style="padding:0.45rem 0.6rem; font-weight:600; color:#374151;">
                           ${this.escapeHtml(item.name)} <span style="font-size:0.68rem; color:#10b981; font-weight:700;">(฿0 ฟรี)</span>
@@ -4553,9 +4544,9 @@ class WaterFlowApp {
                         <td style="padding:0.45rem 0.6rem; text-align:right; color:#10b981; font-size:0.72rem; font-weight:600;">0 บาท (คงเดิม ไม่ปรับ)</td>
                       </tr>
                     `;
-                  }
-                  if (item.isPkg) {
-                    return `
+        }
+        if (item.isPkg) {
+          return `
                       <tr style="background:${isBgEven}; border-bottom:1px solid #fef3c7;">
                         <td style="padding:0.45rem 0.6rem; font-weight:600; color:#374151;">
                           ${this.escapeHtml(item.name)} <span style="font-size:0.68rem; color:#9ca3af;">(บรรจุภัณฑ์)</span>
@@ -4565,8 +4556,8 @@ class WaterFlowApp {
                         <td style="padding:0.45rem 0.6rem; text-align:right; color:#9ca3af; font-size:0.72rem;">คงที่ (ไม่ปรับ)</td>
                       </tr>
                     `;
-                  }
-                  return `
+        }
+        return `
                     <tr style="background:${isBgEven}; border-bottom:1px solid #fef3c7;">
                       <td style="padding:0.45rem 0.6rem; font-weight:700; color:#1f2937;">
                         ${this.escapeHtml(item.name)}
@@ -4582,7 +4573,7 @@ class WaterFlowApp {
                       </td>
                     </tr>
                   `;
-                }).join('')}
+      }).join('')}
               </tbody>
               <tfoot>
                 <tr style="background:#fef3c7; font-weight:800; border-top:1.5px solid #fed7aa; color:#78350f;">
