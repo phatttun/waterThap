@@ -455,79 +455,126 @@
           </div>
         </div>
 
-        <!-- Daily Revenue Entry Card (บันทึกยอดเงินที่ขายได้วันนี้ทั้งหมด) -->
-        <div class="card mb-4 daily-entry-card">
-          <div class="card-header space-between">
-            <div class="card-header-title">
-              <i data-lucide="calculator"></i>
-              <span id="dailyFormHeaderTitle">กรอกยอดเงินที่ขายได้ประจำวัน</span>
+        <!-- Daily Revenue Entry Card (Redesigned Mobile-First & Touch Friendly) -->
+        <div class="card mb-4 daily-entry-card-modern">
+          <div class="card-header space-between align-center" style="padding: 1rem 1.25rem;">
+            <div class="card-header-title" style="display:flex; align-items:center; gap:0.5rem;">
+              <span class="icon-round-badge blue"><i data-lucide="calculator"></i></span>
+              <div>
+                <span id="dailyFormHeaderTitle" style="font-weight:700; font-size:1.05rem;">กรอกยอดเงินที่ขายได้ประจำวัน</span>
+                <div class="text-xs text-muted" style="font-weight:normal; margin-top:1px;">กรอกยอดเงินสด/โอนรวม ระบบคำนวณกำไรสุทธิทันที</div>
+              </div>
             </div>
-            <span class="pill-tag blue-tag" id="dailyFormModeTag">บันทึกยอดวันปัจจุบัน</span>
+            <span class="pill-tag blue-tag" id="dailyFormModeTag" style="font-size:0.75rem;">บันทึกยอดวันปัจจุบัน</span>
           </div>
-          <div class="card-body">
+
+          <div class="card-body" style="padding: 1.25rem;">
             <form id="dailyRevenueForm">
               <input type="hidden" id="dailyRecordId">
 
-              <div class="form-row three-col mb-3">
-                <div class="form-group">
-                  <label class="form-label" for="dailyFormDate">วันที่ขาย</label>
-                  <input type="date" id="dailyFormDate" class="form-input" required>
+              <!-- Top Row: Date Picker with Quick Nav -->
+              <div class="daily-form-top-row mb-3">
+                <div class="form-group mb-0" style="flex:1;">
+                  <label class="form-label text-xs font-semibold mb-1" for="dailyFormDate">
+                    <i data-lucide="calendar" style="width:14px; height:14px; display:inline-block; vertical-align:-2px; margin-right:3px;"></i>
+                    วันที่บันทึกยอดขาย
+                  </label>
+                  <input type="date" id="dailyFormDate" class="form-input mobile-touch-input" required>
                 </div>
-                <div class="form-group">
-                  <label class="form-label" for="dailyFormRevenue">ยอดเงินที่ขายได้ทั้งหมดวันนี้ (บาท) <span
-                      class="text-danger">*</span></label>
-                  <div class="input-with-affix">
-                    <span class="affix-left">฿</span>
-                    <input type="number" id="dailyFormRevenue" class="form-input font-bold"
-                      placeholder="กรอกยอดเงินที่ขายได้ประจำวัน" min="0" step="1" required>
-                  </div>
-                  <span class="field-hint">กรอกยอดขายวันนี้ ระบบจะนำไปหักกับต้นทุนคงที่ประจำวันให้อัตโนมัติ</span>
-                </div>
-                <div class="form-group">
-                  <div class="space-between mb-1">
-                    <label class="form-label mb-0" for="dailyFormCost">ต้นทุนรวมวันนี้ (วัตถุดิบ + ค่าเช่า)</label>
-                    <span class="pill-tag blue-tag" style="font-size: 0.7rem;"
-                      id="costSourceBadge">ดึงจากระบบอัตโนมัติ</span>
+                <div class="form-group mb-0" style="flex:1;">
+                  <div class="space-between mb-1 align-center">
+                    <label class="form-label text-xs font-semibold mb-0" for="dailyFormCost">
+                      <i data-lucide="shopping-bag" style="width:14px; height:14px; display:inline-block; vertical-align:-2px; margin-right:3px;"></i>
+                      ต้นทุนรวมวันนี้
+                    </label>
+                    <span class="pill-tag blue-tag" style="font-size: 0.65rem; padding: 2px 6px;" id="costSourceBadge">หักอัตโนมัติ</span>
                   </div>
                   <div class="input-with-affix">
-                    <span class="affix-left">฿</span>
-                    <input type="number" id="dailyFormCost" class="form-input" placeholder="0" min="0" step="1" readonly
-                      style="background-color: #f8fafc; font-weight: 600;">
+                    <span class="affix-left font-bold text-amber">฿</span>
+                    <input type="number" id="dailyFormCost" class="form-input mobile-touch-input" placeholder="0" min="0" step="any" readonly
+                      style="background-color: #f8fafc; font-weight: 700; color: var(--amber);">
                   </div>
-                  <span class="field-hint" id="dailyCostSourceHint">วัตถุดิบเฉลี่ยเปิดเทอม +
-                    ค่าเช่าร้านเฉลี่ยวันเปิดเรียน</span>
                 </div>
               </div>
 
-              <!-- Live Profit or Loss Calculation Display -->
-              <div class="daily-profit-preview-banner mb-3" id="dailyProfitBanner">
-                <div class="preview-item">
-                  <span class="text-muted">ยอดขายรวม:</span>
-                  <span class="font-bold text-primary" id="previewDailyRevenue">฿0</span>
+              <!-- Hero Revenue Input Section -->
+              <div class="daily-revenue-hero-box mb-3">
+                <div class="hero-box-header space-between align-center mb-1">
+                  <label class="form-label font-bold mb-0" for="dailyFormRevenue" style="font-size:0.95rem; color:#1e3a8a;">
+                    💰 ยอดเงินที่ขายได้ทั้งหมดวันนี้ (บาท) <span class="text-danger">*</span>
+                  </label>
+                  <span class="text-xs text-muted" id="dailyCostSourceHint">หักวัตถุดิบเฉลี่ย + ค่าเช่าร้าน</span>
                 </div>
-                <div class="preview-operator">−</div>
-                <div class="preview-item">
-                  <span class="text-muted">ต้นทุนรวม (วัตถุดิบ+ค่าเช่า):</span>
-                  <span class="font-bold text-amber" id="previewDailyCost">฿0</span>
+
+                <div class="hero-revenue-input-wrap">
+                  <span class="hero-currency-symbol">฿</span>
+                  <input type="number" id="dailyFormRevenue" class="hero-revenue-input"
+                    inputmode="decimal" placeholder="0.00" min="0" step="any" autofocus required>
+                  <button type="button" class="btn-clear-revenue" id="btnClearDailyRevenue" title="ล้างตัวเลข" style="display:none;">&times;</button>
                 </div>
-                <div class="preview-operator">=</div>
-                <div class="preview-item highlight" id="previewDailyResultBox">
-                  <span class="text-muted" id="previewResultLabel">กำไร/ขาดทุนสุทธิวันนี้:</span>
-                  <span class="font-bold text-green" id="previewDailyProfit">฿0</span>
-                  <span class="preview-margin-badge" id="previewDailyMargin">(0%)</span>
+
+                <!-- Quick Addition Chips (กดปุ่มลัดเพื่อเพิ่มเงินอย่างรวดเร็วบนมือถือ) -->
+                <div class="quick-add-chips-wrap mt-2">
+                  <span class="text-xs text-muted font-semibold" style="align-self:center; margin-right:2px;">กดเพิ่มเงินด่วน:</span>
+                  <button type="button" class="btn-chip-add" data-add="50">+฿50</button>
+                  <button type="button" class="btn-chip-add" data-add="100">+฿100</button>
+                  <button type="button" class="btn-chip-add" data-add="500">+฿500</button>
+                  <button type="button" class="btn-chip-add" data-add="1000">+฿1,000</button>
+                  <button type="button" class="btn-chip-add btn-chip-round" id="btnPresetExact2000" data-set="2000">฿2,000</button>
                 </div>
               </div>
 
+              <!-- Live Profit/Loss Modern Preview Card -->
+              <div class="daily-modern-profit-card mb-3" id="dailyProfitBanner">
+                <div class="profit-calc-grid">
+                  <div class="calc-col">
+                    <span class="calc-label text-muted">ยอดขายรวม</span>
+                    <span class="calc-val text-primary" id="previewDailyRevenue">฿0</span>
+                  </div>
+                  <div class="calc-col-divider">−</div>
+                  <div class="calc-col">
+                    <span class="calc-label text-muted">ต้นทุนรวมวันนี้</span>
+                    <span class="calc-val text-amber" id="previewDailyCost">฿0</span>
+                  </div>
+                  <div class="calc-col-divider">=</div>
+                  <div class="calc-col highlight-result" id="previewDailyResultBox">
+                    <span class="calc-label font-semibold" id="previewResultLabel">กำไรสุทธิวันนี้</span>
+                    <div class="result-number-group">
+                      <span class="calc-val text-green font-extrabold" id="previewDailyProfit">฿0</span>
+                      <span class="preview-margin-badge" id="previewDailyMargin">(0%)</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Notes Input -->
               <div class="form-group mb-3">
-                <label class="form-label" for="dailyFormNote">หมายเหตุเพิ่มเติม (ถ้ามี)</label>
-                <input type="text" id="dailyFormNote" class="form-input"
-                  placeholder="เช่น วันนี้ลูกค้าเยอะ, ฝนตก, วัตถุดิบหมดไว">
+                <label class="form-label text-xs font-semibold mb-1" for="dailyFormNote">
+                  <i data-lucide="edit-3" style="width:13px; height:13px; display:inline-block; vertical-align:-2px;"></i>
+                  หมายเหตุเพิ่มเติม (ถ้ามี)
+                </label>
+                <div class="input-with-quick-notes">
+                  <input type="text" id="dailyFormNote" class="form-input mobile-touch-input"
+                    placeholder="เช่น วันนี้ลูกค้าแน่นช่วงเลิกเรียน, ฝนตกช่วงบ่าย, กิจกรรมกีฬาสี">
+                </div>
+                <!-- Quick tags for mobile -->
+                <div class="quick-note-tags mt-1">
+                  <button type="button" class="btn-note-tag" data-note="เปิดเทอมวันแรก นักเรียนแน่น">เปิดเทอม</button>
+                  <button type="button" class="btn-note-tag" data-note="ฝนตกช่วงบ่าย ลูกค้าบางตา">ฝนตก</button>
+                  <button type="button" class="btn-note-tag" data-note="มีกิจกรรมโรงเรียน/กีฬาสี">กีฬาสี</button>
+                  <button type="button" class="btn-note-tag" data-note="วันศุกร์ ยอดขายดีมาก">วันศุกร์ขายดี</button>
+                </div>
               </div>
 
-              <div class="form-actions-right">
-                <button type="button" class="btn-secondary" id="btnResetDailyForm"
-                  style="display:none;">ยกเลิกแก้ไข</button>
-                <button type="submit" class="btn-fastwork" id="btnSaveDailyRevenue">
+              <!-- Actions Bottom Buttons -->
+              <div class="daily-form-actions-wrap">
+                <button type="button" class="btn-secondary mobile-btn" id="btnResetDailyForm"
+                  style="display:none; flex:1;">
+                  <i data-lucide="x"></i>
+                  <span>ยกเลิก</span>
+                </button>
+                <button type="submit" class="btn-fastwork mobile-btn mobile-submit-btn" id="btnSaveDailyRevenue"
+                  style="flex:2;">
                   <i data-lucide="check-circle-2"></i>
                   <span>บันทึกยอดเงินวันนี้</span>
                 </button>
@@ -1380,16 +1427,6 @@
                 </div>
                 <span class="field-hint">ระบบจะนำไปหักอัตโนมัติในแดชบอร์ดสรุปยอดประจำเดือน</span>
               </div>
-              <div class="form-group mb-3">
-                <label class="form-label" for="settingSchoolDays">จำนวนวันเปิดขายจริงต่อเดือน (หักวันหยุดเสาร์-อาทิตย์ &
-                  นักขัตฤกษ์)</label>
-                <div class="input-with-affix">
-                  <span class="affix-left"><i data-lucide="calendar" style="width:16px;height:16px;"></i></span>
-                  <input type="number" id="settingSchoolDays" class="form-input" value="20" min="1" max="31" step="1">
-                </div>
-                <span class="field-hint" id="schoolDaysHint">เปิดขายเฉพาะวันธรรมดา ~20 วัน/เดือน &rarr; ค่าเช่าเฉลี่ย
-                  <strong>฿500/วันเปิดขาย</strong> (฿10,000 ÷ 20 วัน)</span>
-              </div>
               <button class="btn-fastwork" id="btnSaveShopSettings">บันทึกการตั้งค่า</button>
             </div>
           </div>
@@ -1417,62 +1454,6 @@
                   <span>นำเข้าไฟล์สำรองข้อมูล (Import JSON)</span>
                   <input type="file" id="importFileInput" accept=".json" style="display:none;">
                 </label>
-                <button class="btn-danger-outline" id="btnResetDemoData">
-                  <i data-lucide="rotate-ccw"></i>
-                  <span>คืนค่าข้อมูลตัวอย่าง (Reset Demo Data)</span>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- GitHub Deployment Guide -->
-          <div class="card full-width">
-            <div class="card-header">
-              <div class="card-header-title">
-                <i data-lucide="globe"></i>
-                <span>คู่มือการนำเว็บไซต์ขึ้น GitHub Pages (ดูได้ฟรีทุกอุปกรณ์)</span>
-              </div>
-              <span class="pill-tag blue-tag">ฟรี 100%</span>
-            </div>
-            <div class="card-body">
-              <div class="github-guide-steps">
-                <div class="guide-step">
-                  <div class="step-badge">1</div>
-                  <div class="step-content">
-                    <h4>สร้าง Repository บน GitHub</h4>
-                    <p>ไปที่ <a href="https://github.com/new" target="_blank" rel="noopener">github.com/new</a> ตั้งชื่อ
-                      Repo เช่น <code>water-pos</code> แล้วเลือก Public</p>
-                  </div>
-                </div>
-
-                <div class="guide-step">
-                  <div class="step-badge">2</div>
-                  <div class="step-content">
-                    <h4>อัปโหลดไฟล์ในโฟลเดอร์นี้ขึ้น GitHub</h4>
-                    <p>อัปโหลดไฟล์ <code>index.html</code>, <code>style.css</code>, <code>app.js</code>
-                      และไฟล์ที่เกี่ยวข้องขึ้นไปที่ branch <code>main</code></p>
-                  </div>
-                </div>
-
-                <div class="guide-step">
-                  <div class="step-badge">3</div>
-                  <div class="step-content">
-                    <h4>เปิดใช้งาน GitHub Pages</h4>
-                    <p>เข้าไปที่แถบ <strong>Settings</strong> &rarr; <strong>Pages</strong> &rarr; ที่หัวข้อ Build and
-                      deployment ให้เลือก Source เป็น <strong>Deploy from a branch</strong> แล้วเลือก Branch
-                      <strong>main / (root)</strong> แล้วกด <strong>Save</strong>
-                    </p>
-                  </div>
-                </div>
-
-                <div class="guide-step">
-                  <div class="step-badge">4</div>
-                  <div class="step-content">
-                    <h4>เข้าใช้งานเว็บไซต์ได้ทันที!</h4>
-                    <p>รอประมาณ 1 นาที จะได้ลิงก์ เช่น <code>https://username.github.io/water-pos/</code>
-                      สามารถเปิดบันทึกยอดขายบนโทรศัพท์มือถือ แท็บเล็ต หรือคอมพิวเตอร์ได้ตลอดเวลา</p>
-                  </div>
-                </div>
               </div>
             </div>
           </div>

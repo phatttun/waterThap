@@ -4,7 +4,7 @@
  */
 
 // Global Storage Key
-const STORAGE_KEY = 'waterflow_shop_data_v4';
+const STORAGE_KEY = 'waterflow_shop_data_v5';
 
 // วันหยุดนักขัตฤกษ์ประจำปี 2026 (หรือวันหยุดโรงเรียน) ตัวอย่าง
 const THAI_PUBLIC_HOLIDAYS_2026 = [
@@ -20,126 +20,19 @@ const THAI_PUBLIC_HOLIDAYS_2026 = [
   '2026-12-05', '2026-12-10', '2026-12-31'
 ];
 
-// Default Seed Data (Combined Cost: Material Cost + Daily Rent for School Open Days)
+// Initial Clean Data (เริ่มต้นค่าว่าง พร้อมใช้งาน)
 const DEFAULT_DATA = {
   shopSettings: {
-    name: 'ร้านชา-กาแฟชงสด',
+    name: 'ร้านน้ำยายแต๊ป',
     monthlyRent: 10000,
-    schoolOpenDays: 20 // วันเปิดเรียนเฉลี่ยต่อเดือน (ตัดเสาร์-อาทิตย์ และวันหยุดนักขัตฤกษ์)
+    schoolOpenDays: 20 // วันเปิดเรียนเฉลี่ยต่อเดือน
   },
-  dailySales: [
-    { id: 'd_12', date: '2026-10-12', revenue: 1950, materialCost: 680, dailyRent: 500, cost: 1180, profit: 770, note: 'วันจันทร์ เปิดเทอมนักเรียนแน่น' },
-    { id: 'd_09', date: '2026-10-09', revenue: 1850, materialCost: 650, dailyRent: 500, cost: 1150, profit: 700, note: 'วันศุกร์ ขายดีช่วงเลิกเรียน' },
-    { id: 'd_08', date: '2026-10-08', revenue: 1750, materialCost: 610, dailyRent: 500, cost: 1110, profit: 640, note: 'วันพฤหัสบดี ยอดขายปกติ' },
-    { id: 'd_07', date: '2026-10-07', revenue: 1900, materialCost: 660, dailyRent: 500, cost: 1160, profit: 740, note: 'วันพุธ อากาศร้อนนักเรียนซื้อน้ำเยอะ' },
-    { id: 'd_06', date: '2026-10-06', revenue: 1650, materialCost: 580, dailyRent: 500, cost: 1080, profit: 570, note: 'วันอังคาร บ่ายมีกิจกรรมโรงเรียน' },
-    { id: 'd_05', date: '2026-10-05', revenue: 2100, materialCost: 730, dailyRent: 500, cost: 1230, profit: 870, note: 'วันจันทร์ ยอดพุ่งต้นสัปดาห์' },
-    { id: 'd_02', date: '2026-10-02', revenue: 1800, materialCost: 630, dailyRent: 500, cost: 1130, profit: 670, note: 'วันศุกร์ สั่งน้ำโหลแก้วไปห้องพักครู' },
-    { id: 'd_01', date: '2026-10-01', revenue: 2000, materialCost: 700, dailyRent: 500, cost: 1200, profit: 800, note: 'วันพฤหัสบดี เปิดร้านวันแรกของเดือน' }
-  ],
-  expenses: [
-    { id: 'e_01', date: '2026-10-01', title: 'โหลแก้วบรรจุน้ำ ขนาด 5 ลิตร', category: 'PACKAGING', amount: 840, qtyDesc: '12 ใบ', packSize: 12, packUnit: 'ใบ', note: 'ซื้อที่สำเพ็ง ใบละ 70 บ.' },
-    { id: 'e_02', date: '2026-10-02', title: 'นมข้นหวาน ตรามะลิ (1 ลัง = 48 กป.)', category: 'INGREDIENT', amount: 1150, qtyDesc: '1 ลัง (48 กป.)', packSize: 48, packUnit: 'กระป๋อง', note: 'แม็คโคร ตกกระป๋องละ ~23.95 บ.' },
-    { id: 'e_03', date: '2026-10-02', title: 'นมข้นจืด คาร์เนชัน (1 ลัง = 48 กป.)', category: 'INGREDIENT', amount: 1080, qtyDesc: '1 ลัง (48 กป.)', packSize: 48, packUnit: 'กระป๋อง', note: 'แม็คโคร ตกกระป๋องละ 22.50 บ.' },
-    { id: 'e_04', date: '2026-10-03', title: 'ผงชาไทยตรามือ สีทอง (1 ถุง 400g)', category: 'INGREDIENT', amount: 120, qtyDesc: '1 ถุง (400g)', packSize: 400, packUnit: 'g', note: 'ถุงละ 120 บ. (ตกกรัมละ 0.30 บ.)' },
-    { id: 'e_05', date: '2026-10-03', title: 'ผงโกโก้ ดัทช์ (1 ถุง 500g)', category: 'INGREDIENT', amount: 195, qtyDesc: '1 ถุง (500g)', packSize: 500, packUnit: 'g', note: 'ถุงละ 195 บ. (ตกกรัมละ 0.39 บ.)' },
-    { id: 'e_06', date: '2026-10-04', title: 'น้ำเก๊กฮวยสำเร็จรูป ยกลัง (24 ขวด)', category: 'STOCK', amount: 349, qtyDesc: '1 ลัง (24 ขวด)', packSize: 24, packUnit: 'ขวด', note: 'ลังละ 349 บ. ตกขวดละ 14.54 บ.' },
-    { id: 'e_07', date: '2026-10-05', title: 'แก้วพลาสติก 16 oz + ฝา + หลอด', category: 'PACKAGING', amount: 450, qtyDesc: '1 ลัง (1,000 ชุด)', packSize: 1000, packUnit: 'ชุด', note: 'ชุดละ 0.45 บ.' },
-    { id: 'e_08', date: '2026-10-10', title: 'น้ำแข็งยูนิตและน้ำแข็งบด (สั่งประจำสัปดาห์)', category: 'OTHER', amount: 250, qtyDesc: '1 สัปดาห์', packSize: 1, packUnit: 'สัปดาห์', note: 'โรงน้ำแข็งส่ง' }
-  ],
-  recipes: [
-    {
-      id: 'r_01',
-      name: 'ชาไทยโบราณ (สูตร 1 โหล)',
-      yieldCups: 12,
-      jarCapacity: 'โหลแก้ว 5 ลิตร (12 แก้ว)',
-      suggestedPrice: 30,
-      instructions: '1. ต้มน้ำ 3.5 ลิตร ให้เดือด ใส่ผงชาไทยแช่ทิ้งไว้ 5 นาที แล้วกรองด้วยถุงชง\n2. ใส่นมข้นหวานและน้ำตาลทราย คนให้ละลายจนหมด\n3. ใส่นมข้นจืดคนให้เข้ากัน\n4. พักให้เย็นแล้วเทลงโหลแช่เย็นหรือตักใส่น้ำแข็งเสิร์ฟ',
-      ingredients: [
-        {
-          name: 'ผงชาไทยตรามือ',
-          amount: '228 กรัม',
-          cost: 45.6,
-          calcData: { packPrice: 80, packSize: 400, packUnit: 'g', useAmount: 228 }
-        },
-        { name: 'น้ำร้อนสะอาด', amount: '3.5 ลิตร', cost: 5 },
-        {
-          name: 'นมข้นหวาน ตรามะลิ',
-          amount: '1 กระป๋อง (388g)',
-          cost: 23.96,
-          calcData: { packPrice: 1150, packSize: 48, packUnit: 'กป.', useAmount: 1 }
-        },
-        {
-          name: 'นมข้นจืด คาร์เนชัน',
-          amount: '1 กระป๋อง (385g)',
-          cost: 22.5,
-          calcData: { packPrice: 1080, packSize: 48, packUnit: 'กป.', useAmount: 1 }
-        },
-        { name: 'น้ำตาลทราย', amount: '150 กรัม', cost: 5 },
-        {
-          name: 'แก้ว 22 ออนซ์ + ฝา + หลอด',
-          amount: '20 แก้ว',
-          cost: 4.82,
-          calcData: { packPrice: 241, packSize: 1000, packUnit: 'ใบ', useAmount: 20 }
-        }
-      ]
-    },
-    {
-      id: 'r_02',
-      name: 'ชาเขียวนมสด (สูตร 1 โหล)',
-      yieldCups: 12,
-      jarCapacity: 'โหลแก้ว 5 ลิตร (12 แก้ว)',
-      suggestedPrice: 30,
-      instructions: '1. ต้มน้ำร้อน 3.5 ลิตร ใส่ผงชาเขียวแช่ไว้ 3-4 นาที (อย่าแช่นานเกินจะฝาด) กรองกากออก\n2. ใส่นมข้นหวาน คนจนละลาย\n3. เติมนมข้นจืดและนมสดพาสเจอร์ไรส์เพื่อความหอมมัน\n4. บรรจุโหลพร้อมเสิร์ฟ',
-      ingredients: [
-        { name: 'ผงชาเขียวตรามือ', amount: '200 กรัม', cost: 50 },
-        { name: 'น้ำร้อน', amount: '3.5 ลิตร', cost: 5 },
-        { name: 'นมข้นหวาน', amount: '1 กระป๋อง', cost: 24 },
-        { name: 'นมข้นจืด', amount: '1 กระป๋อง', cost: 23 },
-        { name: 'น้ำเชื่อม/น้ำตาล', amount: '120 กรัม', cost: 4 },
-        { name: 'แก้ว + ฝา + หลอด (12 ชุด)', amount: '12 ชุด', cost: 24 }
-      ]
-    },
-    {
-      id: 'r_03',
-      name: 'โกโก้เข้มข้นดัทช์ (สูตร 1 โหล)',
-      yieldCups: 12,
-      jarCapacity: 'โหลแก้ว 5 ลิตร (12 แก้ว)',
-      suggestedPrice: 35,
-      instructions: '1. ละลายผงโกโก้แท้ในน้ำร้อนจัด คนจนเนียนไม่เป็นก้อน\n2. ใส่นมข้นหวานคนให้เข้ากัน\n3. เติมนมข้นจืด คนจนเนื้อเงาหอมเข้มข้น\n4. เทลงโหลแก้ว แช่เย็นจัด รสชาติจะยิ่งนุ่มนวล',
-      ingredients: [
-        { name: 'ผงโกโก้ 100%', amount: '180 กรัม', cost: 65 },
-        { name: 'น้ำร้อน', amount: '3.5 ลิตร', cost: 5 },
-        { name: 'นมข้นหวาน', amount: '1.5 กระป๋อง', cost: 36 },
-        { name: 'นมข้นจืด', amount: '1 กระป๋อง', cost: 23 },
-        { name: 'แก้ว + ฝา + หลอด (12 ชุด)', amount: '12 ชุด', cost: 24 }
-      ]
-    },
-    {
-      id: 'r_04',
-      name: 'กาแฟโบราณยกล้อ (สูตร 1 โหล)',
-      yieldCups: 12,
-      jarCapacity: 'โหลแก้ว 5 ลิตร (12 แก้ว)',
-      suggestedPrice: 30,
-      instructions: '1. กรองผงกาแฟโบราณคั่วบดด้วยถุงชงในน้ำเดือด 3-4 รอบ\n2. ใส่นมข้นหวานและน้ำตาลทราย คนให้เข้ากัน\n3. พักให้เย็นก่อนเทลงโหล เมื่อเสิร์ฟราดหน้านมสดด้านบนแก้ว',
-      ingredients: [
-        { name: 'ผงโอเลี้ยง/กาแฟโบราณ', amount: '250 กรัม', cost: 40 },
-        { name: 'น้ำร้อน', amount: '3.5 ลิตร', cost: 5 },
-        { name: 'นมข้นหวาน', amount: '1.2 กระป๋อง', cost: 29 },
-        { name: 'นมสดสำหรับราดหน้า', amount: '500 มล.', cost: 25 },
-        { name: 'แก้ว + ฝา + หลอด (12 ชุด)', amount: '12 ชุด', cost: 24 }
-      ]
-    }
-  ],
-  stockItems: [
-    { id: 'stk_01', name: 'นมข้นหวาน ตรามะลิ', category: 'INGREDIENT', qty: 3, minQty: 6, unit: 'กระป๋อง', unitCost: 24.00, note: 'ใช้เฉลี่ยวันละ 2-3 กระป๋อง' },
-    { id: 'stk_02', name: 'ผงชาไทยตรามือ (สีทอง)', category: 'INGREDIENT', qty: 1, minQty: 2, unit: 'ถุง (400g)', unitCost: 120.00, note: 'เหลือประมาณ 1 ถุงเปิดใช้งาน' },
-    { id: 'stk_03', name: 'แก้ว 22 ออนซ์ + ฝาเรียบ', category: 'PACKAGING', qty: 80, minQty: 150, unit: 'ชุด', unitCost: 1.50, note: 'แพ็คสุดท้ายใกล้เปิดใช้หมด' },
-    { id: 'stk_04', name: 'นมข้นจืด คาร์เนชัน', category: 'INGREDIENT', qty: 18, minQty: 6, unit: 'กระป๋อง', unitCost: 22.50, note: 'ยกลังสำรองไว้' },
-    { id: 'stk_05', name: 'ผงโกโก้ ดัทช์ (500g)', category: 'INGREDIENT', qty: 3, minQty: 1, unit: 'ถุง', unitCost: 195.00, note: 'สำรองในตู้' },
-    { id: 'stk_06', name: 'น้ำเก๊กฮวยสำเร็จรูป ยกลัง', category: 'STOCK', qty: 2, minQty: 1, unit: 'ลัง (24 ขวด)', unitCost: 349.00, note: 'ขายดีหน้าร้อน' },
-    { id: 'stk_07', name: 'หลอดดูดน้ำหุ้มฟิล์ม', category: 'PACKAGING', qty: 500, minQty: 200, unit: 'ชิ้น', unitCost: 0.15, note: 'สั่งยกลัง' }
-  ]
+  dailySales: [],
+  expenses: [],
+  recipes: [],
+  stockItems: [],
+  savedProducts: [],
+  customHolidays: []
 };
 
 class WaterFlowApp {
@@ -173,26 +66,13 @@ class WaterFlowApp {
         return JSON.parse(JSON.stringify(DEFAULT_DATA));
       }
       if (!Array.isArray(parsed.savedProducts)) {
-        parsed.savedProducts = [
-          {
-            id: 'sp_01',
-            name: 'น้ำเก๊กฮวยสำเร็จรูป ยกลัง',
-            packPrice: 349,
-            unitsPerPack: 24,
-            extraCost: 1,
-            unitCost: 15.54,
-            sellingPrice: 25,
-            unitProfit: 9.46,
-            packProfit: 227.04,
-            savedAt: '2026-10-15'
-          }
-        ];
+        parsed.savedProducts = [];
       }
       if (!Array.isArray(parsed.customHolidays)) {
         parsed.customHolidays = [];
       }
-      if (!Array.isArray(parsed.stockItems) || parsed.stockItems.length === 0) {
-        parsed.stockItems = JSON.parse(JSON.stringify(DEFAULT_DATA.stockItems));
+      if (!Array.isArray(parsed.stockItems)) {
+        parsed.stockItems = [];
       }
       return parsed;
     } catch (e) {
@@ -302,18 +182,25 @@ class WaterFlowApp {
     return '฿' + n.toLocaleString('th-TH', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
   }
 
-  updateSchoolDaysHint() {
-    const rent = parseFloat(document.getElementById('settingMonthlyRent')?.value) || 10000;
-    const currentYM = this.formatDate(new Date()).substring(0, 7);
-    const actualOpenDays = this.getSchoolOpenDaysCount(currentYM);
-    const dailyRate = Math.round(rent / (actualOpenDays > 0 ? actualOpenDays : 20));
-    const hint = document.getElementById('schoolDaysHint');
-    if (hint) {
-      hint.innerHTML = `ระบบคำนวณวันเปิดเรียนจริงอัตโนมัติ: เดือนนี้เปิดขายจริง <strong>${actualOpenDays} วัน</strong> (หักเสาร์-อาทิตย์, วันหยุดนักขัตฤกษ์ และวันหยุดพิเศษน้ำท่วม) &rarr; ค่าเช่าเฉลี่ย <strong>฿${dailyRate.toLocaleString()}/วันเปิดขาย</strong> (฿${rent.toLocaleString()} ÷ ${actualOpenDays} วัน)`;
-    }
+  updateShopBranding() {
+    const shopName = (this.data.shopSettings && this.data.shopSettings.name) ? this.data.shopSettings.name : 'ร้านน้ำยายแต๊ป';
+    
+    // อัปเดต Title ของเบราว์เซอร์
+    document.title = shopName;
+
+    // อัปเดตชื่อใน Sidebar
+    document.querySelectorAll('.brand-title').forEach(el => {
+      el.textContent = shopName;
+    });
+
+    // อัปเดตชื่อใน Mobile Top Header
+    document.querySelectorAll('.mobile-brand .brand-name').forEach(el => {
+      el.textContent = shopName;
+    });
   }
 
   initElements() {
+    this.updateShopBranding();
     const now = new Date();
     const todayStr = this.formatDate(now);
 
@@ -352,17 +239,12 @@ class WaterFlowApp {
     // Set shop settings inputs
     const shopNameInput = document.getElementById('settingShopName');
     const rentInput = document.getElementById('settingMonthlyRent');
-    const schoolDaysInput = document.getElementById('settingSchoolDays');
     if (shopNameInput && this.data.shopSettings) {
-      shopNameInput.value = this.data.shopSettings.name;
+      shopNameInput.value = this.data.shopSettings.name || 'ร้านน้ำยายแต๊ป';
     }
     if (rentInput && this.data.shopSettings) {
-      rentInput.value = this.data.shopSettings.monthlyRent;
+      rentInput.value = this.data.shopSettings.monthlyRent || 10000;
     }
-    if (schoolDaysInput && this.data.shopSettings) {
-      schoolDaysInput.value = this.data.shopSettings.schoolOpenDays || 20;
-    }
-    this.updateSchoolDaysHint();
   }
 
   bindEvents() {
@@ -523,8 +405,64 @@ class WaterFlowApp {
     // Live calculation listeners for daily revenue form
     const revInput = document.getElementById('dailyFormRevenue');
     const costInput = document.getElementById('dailyFormCost');
-    if (revInput) revInput.addEventListener('input', () => this.updateDailyLivePreview());
+    const btnClearRevenue = document.getElementById('btnClearDailyRevenue');
+
+    const toggleClearRevenueBtn = () => {
+      if (btnClearRevenue && revInput) {
+        btnClearRevenue.style.display = revInput.value ? 'flex' : 'none';
+      }
+    };
+
+    if (revInput) {
+      revInput.addEventListener('input', () => {
+        toggleClearRevenueBtn();
+        this.updateDailyLivePreview();
+      });
+    }
     if (costInput) costInput.addEventListener('input', () => this.updateDailyLivePreview());
+
+    if (btnClearRevenue && revInput) {
+      btnClearRevenue.addEventListener('click', () => {
+        revInput.value = '';
+        toggleClearRevenueBtn();
+        revInput.focus();
+        this.updateDailyLivePreview();
+      });
+    }
+
+    // Quick Addition Chips (+50, +100, +500, +1000)
+    document.querySelectorAll('.btn-chip-add').forEach(chip => {
+      chip.addEventListener('click', (e) => {
+        const addVal = parseFloat(e.currentTarget.dataset.add);
+        const setVal = parseFloat(e.currentTarget.dataset.set);
+        if (!revInput) return;
+
+        let cur = parseFloat(revInput.value) || 0;
+        if (!isNaN(addVal)) {
+          cur += addVal;
+        } else if (!isNaN(setVal)) {
+          cur = setVal;
+        }
+        revInput.value = cur;
+        toggleClearRevenueBtn();
+        this.updateDailyLivePreview();
+      });
+    });
+
+    // Quick Note Tags
+    document.querySelectorAll('.btn-note-tag').forEach(tag => {
+      tag.addEventListener('click', (e) => {
+        const noteInput = document.getElementById('dailyFormNote');
+        const text = e.currentTarget.dataset.note || '';
+        if (!noteInput || !text) return;
+        if (noteInput.value.trim()) {
+          noteInput.value += `, ${text}`;
+        } else {
+          noteInput.value = text;
+        }
+        noteInput.focus();
+      });
+    });
 
     // Quick Cost Preset Buttons (30%, 35%, 40%, etc.)
     document.querySelectorAll('.btn-preset-cost').forEach(btn => {
@@ -758,26 +696,19 @@ class WaterFlowApp {
     const btnSaveShopSettings = document.getElementById('btnSaveShopSettings');
     if (btnSaveShopSettings) {
       btnSaveShopSettings.addEventListener('click', () => {
-        const name = document.getElementById('settingShopName').value.trim();
-        const rent = parseFloat(document.getElementById('settingMonthlyRent').value) || 0;
-        const schoolDays = parseInt(document.getElementById('settingSchoolDays').value) || 20;
+        const name = document.getElementById('settingShopName')?.value.trim() || 'ร้านน้ำยายแต๊ป';
+        const rent = parseFloat(document.getElementById('settingMonthlyRent')?.value) || 0;
         this.data.shopSettings.name = name;
         this.data.shopSettings.monthlyRent = rent;
-        this.data.shopSettings.schoolOpenDays = schoolDays;
         this.saveData();
-        this.updateSchoolDaysHint();
-        this.showToast(`บันทึกการตั้งค่าแล้ว! ค่าเช่าวันเปิดเรียน = ฿${Math.round(rent / schoolDays)}/วัน (${schoolDays} วัน/เดือน)`, 'success');
+        this.updateShopBranding();
+        this.showToast(`บันทึกการตั้งค่าร้านค้าเรียบร้อยแล้ว (ชื่อร้าน: ${name})`, 'success');
         this.renderDashboard();
         const todayDate = document.getElementById('dailyFormDate')?.value || this.formatDate(new Date());
         this.loadDailyFormForDate(todayDate);
         this.renderTodaySummary(todayDate);
       });
     }
-
-    const schoolDaysInput = document.getElementById('settingSchoolDays');
-    const rentInput = document.getElementById('settingMonthlyRent');
-    if (schoolDaysInput) schoolDaysInput.addEventListener('input', () => this.updateSchoolDaysHint());
-    if (rentInput) rentInput.addEventListener('input', () => this.updateSchoolDaysHint());
 
     // Export Data JSON
     const btnExportData = document.getElementById('btnExportData');
@@ -821,19 +752,6 @@ class WaterFlowApp {
           }
         };
         reader.readAsText(file);
-      });
-    }
-
-    // Reset Demo Data
-    const btnResetDemoData = document.getElementById('btnResetDemoData');
-    if (btnResetDemoData) {
-      btnResetDemoData.addEventListener('click', () => {
-        if (confirm('คุณต้องการรีเซ็ตข้อมูลเป็นตัวอย่างตั้งต้นใช่หรือไม่? ข้อมูลปัจจุบันจะถูกแทนที่')) {
-          this.data = JSON.parse(JSON.stringify(DEFAULT_DATA));
-          this.saveData();
-          this.initViews();
-          this.showToast('รีเซ็ตข้อมูลตัวอย่างเรียบร้อยแล้ว', 'success');
-        }
       });
     }
 
@@ -1628,29 +1546,34 @@ class WaterFlowApp {
       if (resultLabel) resultLabel.textContent = 'กำไรสุทธิวันนี้:';
       if (prevProfit) {
         prevProfit.textContent = `+${this.formatCurrency(profit)}`;
-        prevProfit.className = 'font-bold text-green';
+        prevProfit.className = 'calc-val text-green font-extrabold';
       }
       if (prevMargin) {
         prevMargin.textContent = `(กำไร ${margin.toFixed(1)}%)`;
         prevMargin.style.color = '#047857';
       }
       if (resultBox) {
-        resultBox.className = 'preview-item highlight';
+        resultBox.className = 'calc-col highlight-result';
       }
     } else {
       if (resultLabel) resultLabel.textContent = 'ขาดทุนวันนี้:';
       const absLoss = Math.abs(profit);
       if (prevProfit) {
         prevProfit.textContent = `-${this.formatCurrency(absLoss)}`;
-        prevProfit.className = 'font-bold text-danger';
+        prevProfit.className = 'calc-val text-danger font-extrabold';
       }
       if (prevMargin) {
         prevMargin.textContent = `(ขาดทุน)`;
         prevMargin.style.color = '#dc2626';
       }
       if (resultBox) {
-        resultBox.className = 'preview-item highlight-loss';
+        resultBox.className = 'calc-col highlight-result loss';
       }
+    }
+
+    const btnClearRevenue = document.getElementById('btnClearDailyRevenue');
+    if (btnClearRevenue) {
+      btnClearRevenue.style.display = rev > 0 ? 'flex' : 'none';
     }
   }
 
@@ -1660,6 +1583,8 @@ class WaterFlowApp {
     document.getElementById('dailyFormCost').value = '';
     document.getElementById('dailyFormNote').value = '';
     document.getElementById('btnResetDailyForm').style.display = 'none';
+    const btnClearRevenue = document.getElementById('btnClearDailyRevenue');
+    if (btnClearRevenue) btnClearRevenue.style.display = 'none';
     document.getElementById('dailyFormModeTag').textContent = 'บันทึกยอดใหม่';
     document.getElementById('dailyFormModeTag').className = 'pill-tag blue-tag';
     document.querySelector('#btnSaveDailyRevenue span').textContent = 'บันทึกยอดเงินวันนี้';
@@ -5946,7 +5871,8 @@ class WaterFlowApp {
       return;
     }
 
-    let text = `📋 [ใบสั่งซื้อของด่วน - ร้านน้ำยายแต๊ป]\nประจำวันที่ ${this.formatThaiDate(this.formatDate(new Date()))}\n=========================\n`;
+    const shopTitle = (this.data.shopSettings && this.data.shopSettings.name) ? this.data.shopSettings.name : 'ร้านน้ำยายแต๊ป';
+    let text = `📋 [ใบสั่งซื้อของด่วน - ${shopTitle}]\nประจำวันที่ ${this.formatThaiDate(this.formatDate(new Date()))}\n=========================\n`;
     let totalEst = 0;
 
     // Group items by supplier
