@@ -238,7 +238,7 @@ class WaterFlowApp {
 
   renderAllViews() {
     this.renderDashboard();
-    this.renderTodayView();
+    this.renderTodaySummary();
     this.renderExpenses();
     this.renderSavedProducts();
     this.renderCalendar();
@@ -429,11 +429,11 @@ class WaterFlowApp {
 
     const toggleSidebar = (show) => {
       if (show) {
-        sidebar.classList.add('mobile-open');
-        sidebarBackdrop.style.display = 'block';
+        if (sidebar) sidebar.classList.add('mobile-open');
+        if (sidebarBackdrop) sidebarBackdrop.style.display = 'block';
       } else {
-        sidebar.classList.remove('mobile-open');
-        sidebarBackdrop.style.display = 'none';
+        if (sidebar) sidebar.classList.remove('mobile-open');
+        if (sidebarBackdrop) sidebarBackdrop.style.display = 'none';
       }
     };
 
@@ -555,12 +555,21 @@ class WaterFlowApp {
         const singleBox = document.getElementById('dashSingleMonthBox');
         const customBox = document.getElementById('dashCustomRangeBox');
 
+        // Update active class on pill buttons
+        document.querySelectorAll('#dashPeriodPresets .figma-pill-label').forEach(label => {
+          const input = label.querySelector('input[name="dashPeriodMode"]');
+          const pill = label.querySelector('.figma-pill-filter');
+          if (pill) {
+            pill.classList.toggle('active', !!(input && input.checked));
+          }
+        });
+
         if (mode === 'single') {
           if (singleBox) singleBox.style.display = 'inline-flex';
           if (customBox) customBox.style.display = 'none';
         } else if (mode === 'custom') {
           if (singleBox) singleBox.style.display = 'none';
-          if (customBox) customBox.style.display = 'inline-flex';
+          if (customBox) customBox.style.display = 'flex';
         } else {
           // 3months, 6months, all
           if (singleBox) singleBox.style.display = 'none';
@@ -1279,19 +1288,32 @@ class WaterFlowApp {
     if (salesCardLabel) {
       salesCardLabel.textContent = `ยอดขายรวม (${period.shortLabel})`;
     }
-    document.getElementById('dashTotalSales').textContent = this.formatCurrency(totalRevenue);
-    document.getElementById('dashSalesOrdersCount').textContent = `บันทึกยอดขายแล้ว ${filteredDailySales.length} วัน (${period.monthsCount} เดือน)`;
+    const totalSalesElem = document.getElementById('dashTotalSales');
+    const totalSalesSubElem = document.getElementById('dashTotalSalesSub');
+    if (totalSalesElem) totalSalesElem.textContent = this.formatCurrency(totalRevenue);
+    if (totalSalesSubElem) totalSalesSubElem.textContent = this.formatCurrency(totalRevenue);
+
+    const salesCountBadge = document.getElementById('dashSalesOrdersCount');
+    if (salesCountBadge) salesCountBadge.textContent = `${filteredDailySales.length} วันที่บันทึก`;
+
+    // Margin % for Hero Card
+    const marginPct = totalRevenue > 0 ? ((netProfit / totalRevenue) * 100).toFixed(0) : 0;
+    const marginPctElem = document.getElementById('dashProfitMarginPct');
+    if (marginPctElem) marginPctElem.textContent = `${marginPct}%`;
 
     // Update Stat Card 2: ต้นทุนรวมทั้งหมด
-    document.getElementById('dashTotalCost').textContent = this.formatCurrency(totalCombinedCost);
-    document.getElementById('dashCostRatio').textContent = `วัตถุดิบ ${this.formatCurrency(materialCost)} + ค่าเช่าร้าน ${this.formatCurrency(totalRentForPeriod)}`;
+    const totalCostElem = document.getElementById('dashTotalCost');
+    if (totalCostElem) totalCostElem.textContent = this.formatCurrency(totalCombinedCost);
+    const costRatioElem = document.getElementById('dashCostRatio');
+    if (costRatioElem) costRatioElem.textContent = `วัตถุดิบ ${this.formatCurrency(materialCost)} + ค่าเช่าร้าน ${this.formatCurrency(totalRentForPeriod)}`;
 
     // Update Stat Card 3: ค่าเช่าร้าน
     const rentCardLabel = document.querySelector('.rent-card .stat-label');
     if (rentCardLabel) {
       rentCardLabel.textContent = `ค่าเช่าร้านรวม (${period.monthsCount} เดือน)`;
     }
-    document.getElementById('dashRentDisplay').textContent = this.formatCurrency(totalRentForPeriod);
+    const rentDisplayElem = document.getElementById('dashRentDisplay');
+    if (rentDisplayElem) rentDisplayElem.textContent = this.formatCurrency(totalRentForPeriod);
     const rentCardSub = document.querySelector('.rent-card .stat-subtext');
     if (rentCardSub) {
       rentCardSub.textContent = period.monthsCount > 1 ? `เดือนละ ${this.formatCurrency(monthlyRentRate)} × ${period.monthsCount} เดือน` : 'รวมอยู่ในต้นทุนทั้งหมดแล้ว';
@@ -1313,7 +1335,7 @@ class WaterFlowApp {
       if (netProfit < 0) {
         const absLoss = Math.abs(netProfit);
         netProfitElem.textContent = `-${this.formatCurrency(absLoss)}`;
-        netProfitElem.className = 'stat-value text-danger';
+        netProfitElem.className = 'fdh-amount text-danger';
         if (profitIconWrapper) profitIconWrapper.className = 'stat-icon-wrapper red';
         if (profitCard) {
           profitCard.style.borderTop = '4px solid var(--danger)';
@@ -1321,7 +1343,7 @@ class WaterFlowApp {
         }
       } else {
         netProfitElem.textContent = `${netProfit > 0 ? '+' : ''}${this.formatCurrency(netProfit)}`;
-        netProfitElem.className = 'stat-value text-green';
+        netProfitElem.className = 'fdh-amount';
         if (profitIconWrapper) profitIconWrapper.className = 'stat-icon-wrapper green';
         if (profitCard) {
           profitCard.style.borderTop = '4px solid var(--success)';
@@ -1362,41 +1384,94 @@ class WaterFlowApp {
 
   renderDashboardRecentSales(monthDailySales) {
     const tbody = document.getElementById('dashRecentSalesTableBody');
-    if (!tbody) return;
+    const cardsFeed = document.getElementById('dashRecentSalesCardsFeed');
 
     const sorted = [...monthDailySales].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 6);
 
-    if (sorted.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4">ไม่มีข้อมูลการขายในเดือนนี้</td></tr>`;
-      return;
+    // 1. Render Mobile & Desktop Unified Cards Stream
+    if (cardsFeed) {
+      if (sorted.length === 0) {
+        cardsFeed.innerHTML = `
+          <div class="figma-tx-empty">
+            <div class="figma-empty-icon"><i data-lucide="calendar-x"></i></div>
+            <div class="figma-empty-text">ยังไม่มีข้อมูลการขายในเดือนนี้</div>
+            <div class="figma-empty-sub">แตะปุ่ม "+ บันทึกยอดวันนี้" ด้านบนเพื่อเริ่มบันทึก</div>
+          </div>
+        `;
+      } else {
+        cardsFeed.innerHTML = sorted.map(d => {
+          const profit = Number(d.profit) || 0;
+          const isProfit = profit >= 0;
+          const profitFormatted = isProfit ? `+${this.formatCurrency(profit)}` : `-${this.formatCurrency(Math.abs(profit))}`;
+          const isOpen = !this.isWeekend(d.date) && !this.isPublicHoliday(d.date) && !this.getCustomHoliday(d.date);
+
+          return `
+            <div class="figma-tx-card ${isProfit ? 'is-profit' : 'is-loss'}">
+              <div class="figma-tx-main">
+                <div class="figma-tx-left">
+                  <div class="figma-tx-avatar">
+                    <i data-lucide="${isProfit ? 'trending-up' : 'trending-down'}"></i>
+                  </div>
+                  <div class="figma-tx-meta">
+                    <div class="figma-tx-date-row">
+                      <span class="figma-tx-date">${this.formatThaiDate(d.date)}</span>
+                      <span class="figma-tx-pill ${isOpen ? 'open' : 'holiday'}">
+                        ${isOpen ? 'วันเปิดเรียน' : 'วันหยุด'}
+                      </span>
+                    </div>
+                    <div class="figma-tx-sub">
+                      <span>ทุน: <strong class="figma-tx-cost-num">${this.formatCurrency(d.cost)}</strong></span>
+                      ${d.note ? `<span>• ${this.escapeHtml(d.note)}</span>` : ''}
+                    </div>
+                  </div>
+                </div>
+                <div class="figma-tx-right">
+                  <span class="figma-tx-revenue">${this.formatCurrency(d.revenue)}</span>
+                  <span class="figma-tx-profit-pill ${isProfit ? 'profit' : 'loss'}">
+                    ${profitFormatted}
+                  </span>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
     }
 
-    tbody.innerHTML = sorted.map(d => {
-      const profit = Number(d.profit) || 0;
-      const isProfit = profit >= 0;
-      const profitFormatted = isProfit ? `+${this.formatCurrency(profit)}` : `-${this.formatCurrency(Math.abs(profit))}`;
-      const profitBadgeClass = isProfit ? 'pill-tag green-tag' : 'pill-tag red-tag';
+    // 2. Fallback Table (for compatibility)
+    if (tbody) {
+      if (sorted.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4">ไม่มีข้อมูลการขายในเดือนนี้</td></tr>`;
+        return;
+      }
 
-      return `
-        <tr>
-          <td>
-            <div class="font-bold text-main" style="font-size:0.9rem;">${this.formatThaiDate(d.date)}</div>
-          </td>
-          <td>
-            <span class="font-bold text-primary" style="font-size:0.95rem;">${this.formatCurrency(d.revenue)}</span>
-          </td>
-          <td>
-            <span class="font-semibold text-amber" style="font-size:0.9rem;">${this.formatCurrency(d.cost)}</span>
-          </td>
-          <td>
-            <span class="${profitBadgeClass}" style="font-weight:700; font-size:0.8rem;">${profitFormatted}</span>
-          </td>
-          <td>
-            <span class="text-sm text-muted">${this.escapeHtml(d.note || '-')}</span>
-          </td>
-        </tr>
-      `;
-    }).join('');
+      tbody.innerHTML = sorted.map(d => {
+        const profit = Number(d.profit) || 0;
+        const isProfit = profit >= 0;
+        const profitFormatted = isProfit ? `+${this.formatCurrency(profit)}` : `-${this.formatCurrency(Math.abs(profit))}`;
+        const profitBadgeClass = isProfit ? 'pill-tag green-tag' : 'pill-tag red-tag';
+
+        return `
+          <tr>
+            <td>
+              <div class="font-bold text-main" style="font-size:0.9rem;">${this.formatThaiDate(d.date)}</div>
+            </td>
+            <td>
+              <span class="font-bold text-primary" style="font-size:0.95rem;">${this.formatCurrency(d.revenue)}</span>
+            </td>
+            <td>
+              <span class="font-semibold text-amber" style="font-size:0.9rem;">${this.formatCurrency(d.cost)}</span>
+            </td>
+            <td>
+              <span class="${profitBadgeClass}" style="font-weight:700; font-size:0.8rem;">${profitFormatted}</span>
+            </td>
+            <td>
+              <span class="text-sm text-muted">${this.escapeHtml(d.note || '-')}</span>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
   }
 
   renderDashboardPerformance(monthDailySales, totalRevenue, grossProfit) {
@@ -3457,14 +3532,14 @@ class WaterFlowApp {
               </div>
               <div class="frc-chips-wrap">
                 ${ingredientsList.map(ing => {
-                  return `
+        return `
                     <span class="frc-chip" title="ต้นทุน ฿${Number(ing.cost || 0).toFixed(2)}">
                       <span>${this.escapeHtml(ing.name)}</span>
                       <small class="text-muted">(${this.escapeHtml(ing.amount)})</small>
                       <strong>฿${Number(ing.cost || 0).toFixed(1)}</strong>
                     </span>
                   `;
-                }).join('')}
+      }).join('')}
               </div>
             </div>
           ` : ''}

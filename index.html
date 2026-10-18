@@ -133,9 +133,9 @@
           </div>
           <div class="rent-amount">฿10,000 / เดือน</div>
           <div class="rent-progress-bar">
-            <div class="rent-progress-fill" id="rentProgressBar" style="width: 0%;"></div>
+            <div class="rent-progress-fill" id="rentProgressBarSidebar" style="width: 0%;"></div>
           </div>
-          <div class="rent-caption" id="rentProgressText">เป้าหมายยอดกำไรคุ้มค่าเช่า</div>
+          <div class="rent-caption">เป้าหมายยอดกำไรคุ้มค่าเช่า</div>
         </div>
       </div>
     </aside>
@@ -159,256 +159,215 @@
         </div>
       </div>
 
-      <!-- TAB 1: DASHBOARD -->
+      <!-- TAB 1: DASHBOARD (Figma Mobile Design System) -->
       <section id="tab-dashboard" class="tab-pane active">
-        <!-- Modern Executive Dashboard Hero (Fastwork Inventory Theme) -->
-        <div class="stock-main-hero mb-4"
-          style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0050f0 100%);">
-          <div class="stock-main-hero-content">
-            <div class="stock-main-icon-ring"
-              style="background: rgba(0, 80, 240, 0.25); border: 2px solid rgba(255, 255, 255, 0.35);">
-              <i data-lucide="layout-dashboard"></i>
-            </div>
-            <div>
-              <div class="stock-main-badge-top">📊 FINANCIAL PERFORMANCE OVERVIEW</div>
-              <h2 class="stock-main-title">แดชบอร์ดสรุปผลประกอบการร้านค้า</h2>
-              <p class="stock-main-desc" id="dashHeaderDesc">สรุปยอดขายจริง หักต้นทุนวัตถุดิบและค่าเช่าร้าน
-                คำนวณกำไรสุทธิ และวิเคราะห์แนวโน้มธุรกิจ</p>
-            </div>
-          </div>
-          <div class="stock-main-hero-actions">
-            <button class="btn-fastwork"
-              style="background: rgba(255, 255, 255, 0.15); border: 1.5px solid rgba(255, 255, 255, 0.3); color:#ffffff; font-weight:600;"
-              onclick="app.switchTab('today')">
+        <div class="figma-mobile-container">
+
+          <!-- Top Quick Action Bar (Mobile-friendly) -->
+          <div class="figma-dash-header mb-3">
+            <button class="figma-btn-action primary" onclick="app.switchTab('today')">
               <i data-lucide="plus-circle"></i>
-              <span>+ บันทึกยอดขายวันนี้</span>
+              <span>+ บันทึกยอดวันนี้</span>
             </button>
-            <button class="btn-fastwork"
-              style="background: #ffffff; color: var(--primary); font-weight: 700; box-shadow: 0 4px 14px rgba(0,80,240,0.25);"
-              onclick="app.openExpenseModal()">
+            <button class="figma-btn-action secondary" onclick="app.openExpenseModal()">
               <i data-lucide="receipt"></i>
-              <span>+ บันทึกรายจ่าย</span>
+              <span>+ เพิ่มรายจ่าย</span>
             </button>
           </div>
-        </div>
 
-        <!-- Period Filter & Time Selector Card -->
-        <div class="card mb-4" style="border: 1px solid var(--border-color); box-shadow: 0 2px 10px rgba(0,0,0,0.03);">
-          <div class="card-header space-between"
-            style="flex-wrap:wrap; gap:0.75rem; background:#fbfcfe; padding:0.85rem 1.25rem;">
-            <div class="card-header-title">
-              <i data-lucide="calendar" style="color:var(--primary);"></i>
-              <span>ช่วงเวลาที่ต้องการดูข้อมูล</span>
-            </div>
-            <div class="filter-group dashboard-filter-group" style="margin-left: auto;">
-              <!-- Quick Preset Period Tabs -->
-              <div class="radio-tab-group period-tab-group" id="dashPeriodPresets">
-                <label class="radio-tab">
-                  <input type="radio" name="dashPeriodMode" value="single" checked>
-                  <span>เดือนเดียว</span>
-                </label>
-                <label class="radio-tab">
-                  <input type="radio" name="dashPeriodMode" value="3months">
-                  <span>3 เดือน</span>
-                </label>
-                <label class="radio-tab">
-                  <input type="radio" name="dashPeriodMode" value="6months">
-                  <span>6 เดือน</span>
-                </label>
-                <label class="radio-tab">
-                  <input type="radio" name="dashPeriodMode" value="all">
-                  <span>ทุกเดือน</span>
-                </label>
-                <label class="radio-tab">
-                  <input type="radio" name="dashPeriodMode" value="custom">
-                  <span>กำหนดเอง</span>
-                </label>
+          <!-- Hero Highlight Card (Financial Overview Banner) -->
+          <div class="figma-dash-hero-card mb-3">
+            <div class="fdh-top">
+              <div class="fdh-label">
+                <i data-lucide="sparkles"></i>
+                <span>กำไรสุทธิคงเหลือ (Net Profit)</span>
               </div>
+              <span class="fdh-status-badge" id="dashSalesOrdersCount">0 บิล</span>
+            </div>
+            <div class="fdh-amount-wrap">
+              <span class="fdh-amount" id="dashNetProfit">฿0</span>
+            </div>
+            <div class="fdh-breakdown-row">
+              <div class="fdh-stat-pill">
+                <span class="pill-dot blue"></span>
+                <span class="pill-lbl">ยอดขาย</span>
+                <span class="pill-val text-primary" id="dashTotalSales">฿0</span>
+              </div>
+              <div class="fdh-stat-pill">
+                <span class="pill-dot amber"></span>
+                <span class="pill-lbl">ต้นทุนรวม</span>
+                <span class="pill-val text-amber" id="dashTotalCost">฿0</span>
+              </div>
+              <div class="fdh-stat-pill">
+                <span class="pill-dot green"></span>
+                <span class="pill-lbl">Margin</span>
+                <span class="pill-val text-green" id="dashProfitMarginPct">0%</span>
+              </div>
+            </div>
+          </div>
 
+          <!-- Period Filter Selector (Segmented Tabs / Scrollable Pills) -->
+          <div class="figma-dash-period-card mb-3">
+            <div class="fdp-header mb-2">
+              <div class="fdp-title">
+                <i data-lucide="calendar"></i>
+                <span>ช่วงเวลาที่ต้องการดูข้อมูล</span>
+              </div>
               <!-- Single Month Selector -->
-              <div id="dashSingleMonthBox" style="display:inline-flex; align-items:center; gap:0.4rem;">
-                <input type="month" id="dashboardMonthSelect" class="form-input-sm">
-              </div>
-
-              <!-- Custom Range Month Selector (From - To) -->
-              <div id="dashCustomRangeBox" style="display:none; align-items:center; gap:0.4rem;">
-                <input type="month" id="dashRangeStartMonth" class="form-input-sm">
-                <span class="text-muted text-sm">ถึง</span>
-                <input type="month" id="dashRangeEndMonth" class="form-input-sm">
+              <div id="dashSingleMonthBox" style="display:inline-flex; align-items:center;">
+                <input type="month" id="dashboardMonthSelect" class="form-input-sm figma-month-input">
               </div>
             </div>
-          </div>
-        </div>
 
-        <!-- Metric Stat Cards (5 Cards - Styled like Stock System) -->
-        <div class="stats-grid five-col" id="dashStatsGrid">
-          <div class="stat-card revenue-card"
-            style="border-top: 4px solid var(--primary); background: linear-gradient(180deg, #eff6ff 0%, #ffffff 60%);">
-            <div class="stat-icon-wrapper blue">
-              <i data-lucide="trending-up"></i>
+            <!-- Preset Period Pills -->
+            <div class="figma-pills-scroll-row" id="dashPeriodPresets">
+              <label class="figma-pill-label">
+                <input type="radio" name="dashPeriodMode" value="single" checked style="display:none;">
+                <span class="figma-pill-filter active">เดือนนี้</span>
+              </label>
+              <label class="figma-pill-label">
+                <input type="radio" name="dashPeriodMode" value="3months" style="display:none;">
+                <span class="figma-pill-filter">3 เดือน</span>
+              </label>
+              <label class="figma-pill-label">
+                <input type="radio" name="dashPeriodMode" value="6months" style="display:none;">
+                <span class="figma-pill-filter">6 เดือน</span>
+              </label>
+              <label class="figma-pill-label">
+                <input type="radio" name="dashPeriodMode" value="all" style="display:none;">
+                <span class="figma-pill-filter">ทุกเดือน</span>
+              </label>
+              <label class="figma-pill-label">
+                <input type="radio" name="dashPeriodMode" value="custom" style="display:none;">
+                <span class="figma-pill-filter">กำหนดเอง</span>
+              </label>
             </div>
-            <div class="stat-meta">
-              <div class="stat-label">ยอดขายรวมตลอดเดือน</div>
-              <div class="stat-value text-primary" id="dashTotalSales">฿0</div>
-              <div class="stat-subtext" id="dashSalesOrdersCount">0 บิลที่ขายได้</div>
-            </div>
-          </div>
 
-          <div class="stat-card cost-card"
-            style="border-top: 4px solid #f59e0b; background: linear-gradient(180deg, #fffbeb 0%, #ffffff 60%);">
-            <div class="stat-icon-wrapper amber">
-              <i data-lucide="package-search"></i>
-            </div>
-            <div class="stat-meta">
-              <div class="stat-label">ต้นทุนรวมทั้งหมด (วัตถุดิบ + ค่าเช่าร้าน)</div>
-              <div class="stat-value text-amber" id="dashTotalCost">฿0</div>
-              <div class="stat-subtext" id="dashCostRatio">วัตถุดิบ ฿0 + ค่าเช่าร้าน ฿10,000</div>
-            </div>
-          </div>
-
-          <div class="stat-card rent-card"
-            style="border-top: 4px solid #8b5cf6; background: linear-gradient(180deg, #f5f3ff 0%, #ffffff 60%);">
-            <div class="stat-icon-wrapper purple">
-              <i data-lucide="home"></i>
-            </div>
-            <div class="stat-meta">
-              <div class="stat-label">ค่าเช่าร้านคงที่ประจำเดือน</div>
-              <div class="stat-value text-purple" id="dashRentDisplay">฿10,000</div>
-              <div class="stat-subtext">รวมอยู่ในต้นทุนทั้งหมดแล้ว</div>
+            <!-- Custom Range Month Selector (From - To) -->
+            <div id="dashCustomRangeBox" class="mt-2" style="display:none; align-items:center; gap:0.4rem; justify-content:center;">
+              <input type="month" id="dashRangeStartMonth" class="form-input-sm figma-month-input">
+              <span class="text-muted text-sm">ถึง</span>
+              <input type="month" id="dashRangeEndMonth" class="form-input-sm figma-month-input">
             </div>
           </div>
 
-          <div class="stat-card expense-card"
-            style="border-top: 4px solid #ea580c; background: linear-gradient(180deg, #fff7ed 0%, #ffffff 60%);">
-            <div class="stat-icon-wrapper orange">
-              <i data-lucide="receipt"></i>
+          <!-- Metric Stat Cards Grid (2x2 Mobile Layout) -->
+          <div class="figma-dash-stats-grid mb-3" id="dashStatsGrid">
+            <div class="figma-stat-box blue">
+              <div class="fsb-icon"><i data-lucide="trending-up"></i></div>
+              <div class="fsb-info">
+                <span class="fsb-label">ยอดขายรวม</span>
+                <span class="fsb-val text-primary" id="dashTotalSalesSub">฿0</span>
+              </div>
             </div>
-            <div class="stat-meta">
-              <div class="stat-label">ต้นทุนวัตถุดิบ</div>
-              <div class="stat-value text-amber" id="dashMaterialExpense">฿0</div>
-              <div class="stat-subtext" id="dashExpenseCount">0 รายการในเดือนนี้</div>
+            <div class="figma-stat-box amber">
+              <div class="fsb-icon"><i data-lucide="shopping-cart"></i></div>
+              <div class="fsb-info">
+                <span class="fsb-label">ต้นทุนวัตถุดิบ</span>
+                <span class="fsb-val text-amber" id="dashMaterialExpense">฿0</span>
+              </div>
+            </div>
+            <div class="figma-stat-box purple">
+              <div class="fsb-icon"><i data-lucide="home"></i></div>
+              <div class="fsb-info">
+                <span class="fsb-label">ค่าเช่าร้าน</span>
+                <span class="fsb-val text-purple" id="dashRentDisplay">฿10,000</span>
+              </div>
+            </div>
+            <div class="figma-stat-box green">
+              <div class="fsb-icon"><i data-lucide="badge-check"></i></div>
+              <div class="fsb-info">
+                <span class="fsb-label">กำไรเฉลี่ย/วัน</span>
+                <span class="fsb-val text-green" id="statAvgDailyProfit">฿0</span>
+              </div>
             </div>
           </div>
 
-          <div class="stat-card profit-card" id="dashProfitCard"
-            style="border-top: 4px solid var(--success); background: linear-gradient(180deg, #ecfdf5 0%, #ffffff 60%);">
-            <div class="stat-icon-wrapper green" id="dashProfitIconWrapper">
-              <i data-lucide="sparkles"></i>
+          <!-- Rent Coverage Progress Bar Card -->
+          <div class="figma-pos-card mb-3" id="dashRentCoverageCard">
+            <div class="space-between align-center mb-1">
+              <div style="font-size:0.8rem; font-weight:700; color:var(--text-main); display:flex; align-items:center; gap:0.35rem;">
+                <i data-lucide="shield-check" style="width:15px;height:15px;color:var(--primary);"></i>
+                <span>ความคุ้มค่าเช่าร้านคงที่</span>
+              </div>
+              <span id="rentProgressText" style="font-size:0.75rem; font-weight:700; color:#7e22ce;">0%</span>
             </div>
-            <div class="stat-meta">
-              <div class="stat-label">กำไรสุทธิคงเหลือ</div>
-              <div class="stat-value text-green" id="dashNetProfit">฿0</div>
-              <div class="stat-subtext" id="dashProfitStatus" style="display: none;"></div>
+            <div class="rent-progress-track" style="height:8px; background:var(--bg-subtle); border-radius:var(--radius-full); overflow:hidden;">
+              <div id="rentProgressBar" style="height:100%; width:0%; background:linear-gradient(90deg, #8b5cf6 0%, #10b981 100%); transition:width 0.4s ease;"></div>
             </div>
           </div>
-        </div>
 
-        <!-- Charts Section -->
-        <div class="charts-grid">
-          <div class="card chart-card">
-            <div class="card-header">
-              <div class="card-header-title">
+          <!-- Charts Accordion / Container -->
+          <div class="figma-pos-card mb-3">
+            <div class="figma-card-header mb-2">
+              <div class="figma-card-title">
                 <i data-lucide="bar-chart-3"></i>
-                <span id="dashTrendChartTitle">กราฟแนวโน้มยอดขาย & กำไรสุทธิ</span>
+                <span id="dashTrendChartTitle">แนวโน้มยอดขาย & กำไร</span>
               </div>
             </div>
-            <div class="card-body chart-container">
+            <div class="chart-container" style="height: 240px; position:relative;">
               <canvas id="monthlyTrendChart"></canvas>
             </div>
           </div>
 
-          <div class="card chart-card">
-            <div class="card-header">
-              <div class="card-header-title">
+          <div class="figma-pos-card mb-3">
+            <div class="figma-card-header mb-2">
+              <div class="figma-card-title">
                 <i data-lucide="pie-chart"></i>
                 <span>สัดส่วนค่าใช้จ่าย & กำไร</span>
               </div>
             </div>
-            <div class="card-body chart-container doughnut-wrapper">
+            <div class="chart-container doughnut-wrapper" style="height: 220px; position:relative;">
               <canvas id="costBreakdownChart"></canvas>
             </div>
           </div>
-        </div>
 
-        <!-- Recent Sales & Top Items Summary -->
-        <div class="summary-two-col">
-          <div class="card">
-            <div class="card-header space-between">
-              <div class="card-header-title">
-                <i data-lucide="history"></i>
-                <span>สรุปยอดขายรายวันล่าสุดในเดือนนี้</span>
-              </div>
-              <button class="text-btn" data-action="goToToday">ไปหน้าบันทึกยอดรายวัน &rarr;</button>
-            </div>
-            <div class="card-body p-0">
-              <div class="table-responsive">
-                <table class="fastwork-table dash-recent-sales-table">
-                  <thead>
-                    <tr>
-                      <th style="width: 140px;">วันที่</th>
-                      <th style="width: 120px;">ยอดขายที่ได้</th>
-                      <th style="width: 120px;">หักต้นทุน</th>
-                      <th style="width: 130px;">กำไรสุทธิ</th>
-                      <th>หมายเหตุ</th>
-                    </tr>
-                  </thead>
-                  <tbody id="dashRecentSalesTableBody">
-                    <tr>
-                      <td colspan="5" class="text-center text-muted py-4">ยังไม่มีข้อมูลการขายในเดือนนี้</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-          <div class="card">
-            <div class="card-header">
-              <div class="card-header-title">
+          <!-- Performance Insights Card (Figma Style) -->
+          <div class="figma-pos-card mb-3">
+            <div class="figma-card-header mb-2">
+              <div class="figma-card-title">
                 <i data-lucide="award"></i>
                 <span>สถิติประสิทธิภาพประจำเดือน</span>
               </div>
             </div>
-            <div class="card-body">
-              <div class="monthly-stats-summary" id="monthlyStatsSummary">
-                <div class="summary-stat-row">
-                  <span class="text-muted">จำนวนวันที่เปิดร้าน/บันทึกยอด:</span>
-                  <span class="font-bold text-main" id="statDaysRecorded">0 วัน</span>
-                </div>
-                <div class="summary-stat-row">
-                  <span class="text-muted">ยอดขายเฉลี่ยต่อวัน:</span>
-                  <span class="font-bold text-primary" id="statAvgDailySales">฿0</span>
-                </div>
-                <div class="summary-stat-row">
-                  <span class="text-muted">กำไรเฉลี่ยต่อวัน:</span>
-                  <span class="font-bold text-green" id="statAvgDailyProfit">฿0</span>
-                </div>
-                <div class="summary-stat-row">
-                  <span class="text-muted">อัตรากำไรเฉลี่ย (Profit Margin):</span>
-                  <span class="font-bold text-green" id="statAvgMargin">0%</span>
-                </div>
-                <div class="summary-stat-row highlight-box">
-                  <span class="text-muted">วันที่ขายดีที่สุดในเดือน:</span>
-                  <span class="font-bold text-primary" id="statBestDay">-</span>
-                </div>
+            <div class="monthly-stats-summary" id="monthlyStatsSummary">
+              <div class="summary-stat-row">
+                <span class="text-muted">จำนวนวันที่เปิดร้าน/บันทึกยอด:</span>
+                <span class="font-bold text-main" id="statDaysRecorded">0 วัน</span>
+              </div>
+              <div class="summary-stat-row">
+                <span class="text-muted">ยอดขายเฉลี่ยต่อวัน:</span>
+                <span class="font-bold text-primary" id="statAvgDailySales">฿0</span>
+              </div>
+              <div class="summary-stat-row">
+                <span class="text-muted">อัตรากำไรเฉลี่ย (Margin):</span>
+                <span class="font-bold text-green" id="statAvgMargin">0%</span>
+              </div>
+              <div class="summary-stat-row highlight-box">
+                <span class="text-muted">วันที่ขายดีที่สุดในเดือน:</span>
+                <span class="font-bold text-primary" id="statBestDay">-</span>
+              </div>
 
-                <!-- Top 3 Most Used / Fast-Moving Stock Items (เฉพาะน้ำยกลัง) -->
-                <div style="margin-top: 1rem; padding-top: 0.85rem; border-top: 1.5px dashed var(--border-color);">
-                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.6rem;">
-                    <div
-                      style="font-weight:700; font-size:0.875rem; color:var(--text-main); display:flex; align-items:center; gap:0.35rem;">
-                      <i data-lucide="package" style="width:16px; height:16px; color:var(--primary);"></i>
-                      <span>3 อันดับน้ำยกลัง เบิกขายดีที่สุด</span>
-                    </div>
-                    <span class="pill-tag purple-tag" style="font-size:0.7rem; font-weight:700;">น้ำสำเร็จรูป/ลัง</span>
+              <!-- Top 3 Most Used / Fast-Moving Stock Items (เฉพาะน้ำยกลัง) -->
+              <div style="margin-top: 1rem; padding-top: 0.85rem; border-top: 1.5px dashed var(--border-color);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.6rem;">
+                  <div
+                    style="font-weight:700; font-size:0.875rem; color:var(--text-main); display:flex; align-items:center; gap:0.35rem;">
+                    <i data-lucide="package" style="width:16px; height:16px; color:var(--primary);"></i>
+                    <span>3 อันดับน้ำยกลัง เบิกขายดีที่สุด</span>
                   </div>
-                  <div id="dashTopStockItemsList" style="display:flex; flex-direction:column; gap:0.45rem;">
-                    <!-- Dynamically populated top 3 items -->
-                  </div>
+                  <span class="pill-tag purple-tag" style="font-size:0.7rem; font-weight:700;">น้ำสำเร็จรูป/ลัง</span>
+                </div>
+                <div id="dashTopStockItemsList" style="display:flex; flex-direction:column; gap:0.45rem;">
+                  <!-- Dynamically populated top 3 items -->
                 </div>
               </div>
             </div>
           </div>
+
+          <!-- Fallback Desktop Table for compatibility (hidden) -->
+          <table style="display:none;"><tbody id="dashRecentSalesTableBody"></tbody></table>
+
         </div>
       </section>
 
@@ -571,7 +530,7 @@
       <section id="tab-expenses" class="tab-pane">
         <div class="figma-mobile-container">
 
-          <!-- Top Action Bar (Header Title Removed as Requested) -->
+          <!-- Top Action Bar -->
           <div class="figma-expense-header mb-3">
             <button class="figma-btn-add-expense" id="btnOpenExpenseModal" title="เพิ่มรายการค่าใช้จ่าย">
               <i data-lucide="plus"></i>
@@ -848,17 +807,19 @@
 
       <!-- TAB 5: CALENDAR -->
       <section id="tab-calendar" class="tab-pane">
-        <div class="section-header" style="justify-content: flex-end; margin-bottom: 0.75rem;">
-          <div class="calendar-controls">
-            <button class="icon-btn-border" id="calPrevMonthBtn" title="เดือนก่อนหน้า">
-              <i data-lucide="chevron-left"></i>
-            </button>
-            <span class="calendar-month-label" id="calCurrentMonthLabel">ตุลาคม 2026</span>
-            <button class="icon-btn-border" id="calNextMonthBtn" title="เดือนถัดไป">
-              <i data-lucide="chevron-right"></i>
-            </button>
-            <button class="btn-outline-fastwork btn-sm" id="calTodayBtn">เดือนนี้</button>
+        <!-- Top Floating Month Capsule (Matching Tab 2 Date Capsule) -->
+        <div class="figma-date-capsule mb-3" style="max-width: 680px; margin-left: auto; margin-right: auto;">
+          <button type="button" class="figma-capsule-nav" id="calPrevMonthBtn" aria-label="เดือนก่อนหน้า" title="เดือนก่อนหน้า">
+            <i data-lucide="chevron-left"></i>
+          </button>
+          <div class="figma-capsule-center" id="calTodayBtn" title="แตะเพื่อกลับมาเดือนนี้">
+            <span class="figma-capsule-dot"></span>
+            <span class="figma-capsule-text" id="calCurrentMonthLabel">ตุลาคม 2026</span>
+            <span class="figma-capsule-tag blue">ปฏิทินรายวัน</span>
           </div>
+          <button type="button" class="figma-capsule-nav" id="calNextMonthBtn" aria-label="เดือนถัดไป" title="เดือนถัดไป">
+            <i data-lucide="chevron-right"></i>
+          </button>
         </div>
 
         <div class="calendar-layout">

@@ -3029,6 +3029,87 @@ body {
 .figma-capsule-tag.open { background: var(--primary-light); color: var(--primary); border-color: var(--primary-border); }
 .figma-capsule-tag.holiday { background: var(--danger-light); color: var(--danger-hover); border-color: #fecaca; }
 .figma-capsule-tag.weekend { background: var(--bg-subtle); color: var(--text-muted); border-color: var(--border-color); }
+.figma-capsule-tag.blue { background: var(--primary-light); color: var(--primary); border-color: var(--primary-border); }
+.figma-capsule-tag.amber { background: #fef3c7; color: #b45309; border-color: #fde68a; }
+.figma-capsule-tag.purple { background: #f3e8ff; color: #7e22ce; border-color: #e9d5ff; }
+.figma-capsule-tag.green { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+
+/* Unified Subhead / Page Capsule Header across Sub-systems */
+.figma-page-capsule-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  padding: 0.4rem 0.65rem 0.4rem 0.85rem;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 0.85rem;
+  transition: var(--transition);
+}
+
+.figma-page-capsule-header:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.figma-capsule-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.figma-capsule-icon-wrap {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.figma-capsule-icon-wrap.blue { background: var(--primary-light); color: var(--primary); }
+.figma-capsule-icon-wrap.amber { background: #fef3c7; color: #b45309; }
+.figma-capsule-icon-wrap.purple { background: #f3e8ff; color: #7e22ce; }
+.figma-capsule-icon-wrap.green { background: #ecfdf5; color: #047857; }
+
+.figma-capsule-icon-wrap i {
+  width: 16px;
+  height: 16px;
+}
+
+.figma-capsule-titles {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.figma-capsule-heading {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.25;
+}
+
+.figma-capsule-subtext {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.figma-capsule-right {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
 
 .hub-hidden-date-input {
   position: absolute;
@@ -4029,15 +4110,27 @@ body {
   border-color: #cbd5e1;
 }
 
-.figma-pill-filter.active {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: #ffffff;
-  box-shadow: 0 2px 8px rgba(0, 80, 240, 0.25);
+.figma-pill-label {
+  display: inline-flex;
+  cursor: pointer;
+  margin: 0;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
+.figma-pill-label input[type="radio"]:checked + .figma-pill-filter,
+.figma-pill-label:has(input[type="radio"]:checked) .figma-pill-filter,
+.figma-pill-filter.active {
+  background: var(--primary) !important;
+  border-color: var(--primary) !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(0, 80, 240, 0.25) !important;
+}
+
+.figma-pill-label input[type="radio"]:checked + .figma-pill-filter i,
+.figma-pill-label:has(input[type="radio"]:checked) .figma-pill-filter i,
 .figma-pill-filter.active i {
-  color: #ffffff;
+  color: #ffffff !important;
 }
 
 /* Expense Transaction Card (.figma-exp-card) */
@@ -4553,6 +4646,239 @@ body {
   border-top: 1px solid var(--border-subtle);
   padding-top: 0.45rem;
   margin-top: 0.15rem;
+}
+
+/* ==========================================================
+   Figma Mobile Design System: Tab 1 (Executive Dashboard)
+   ========================================================== */
+
+/* Quick Action Header */
+.figma-dash-header {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.figma-btn-action {
+  height: 44px;
+  border-radius: var(--radius-sm);
+  font-size: 0.88rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: var(--transition);
+  touch-action: manipulation;
+}
+
+.figma-btn-action.primary {
+  background: var(--primary);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 80, 240, 0.25);
+}
+
+.figma-btn-action.primary:active {
+  background: var(--primary-hover);
+  transform: scale(0.98);
+}
+
+.figma-btn-action.secondary {
+  background: var(--bg-card);
+  color: var(--text-main);
+  border-color: var(--border-color);
+  box-shadow: var(--shadow-sm);
+}
+
+.figma-btn-action.secondary:active {
+  background: var(--bg-subtle);
+  transform: scale(0.98);
+}
+
+.figma-btn-action i {
+  width: 17px;
+  height: 17px;
+}
+
+/* Dashboard Hero Card */
+.figma-dash-hero-card {
+  background: linear-gradient(135deg, #090d16 0%, #1e293b 100%);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.35rem;
+  color: #ffffff;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.fdh-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.35rem;
+}
+
+.fdh-label {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.fdh-label i {
+  width: 16px;
+  height: 16px;
+  color: #34d399;
+}
+
+.fdh-status-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.12);
+  color: #f1f5f9;
+  padding: 2px 10px;
+  border-radius: var(--radius-full);
+}
+
+.fdh-amount-wrap {
+  margin-bottom: 0.85rem;
+}
+
+.fdh-amount {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.5px;
+  line-height: 1.1;
+}
+
+.fdh-breakdown-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm);
+  padding: 0.55rem 0.65rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.fdh-stat-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+}
+
+/* Dashboard Period Card */
+.figma-dash-period-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.fdp-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.fdp-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.fdp-title i {
+  width: 15px;
+  height: 15px;
+  color: var(--primary);
+}
+
+.figma-month-input {
+  height: 34px;
+  padding: 0 0.55rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-subtle);
+  color: var(--text-main);
+}
+
+/* 2x2 Metric Stats Grid */
+.figma-dash-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.6rem;
+}
+
+.figma-stat-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 0.85rem 0.95rem;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  transition: var(--transition);
+}
+
+.figma-stat-box:hover {
+  border-color: var(--primary-border);
+}
+
+.figma-stat-box.blue { border-left: 3.5px solid var(--primary); }
+.figma-stat-box.amber { border-left: 3.5px solid var(--warning); }
+.figma-stat-box.purple { border-left: 3.5px solid #8b5cf6; }
+.figma-stat-box.green { border-left: 3.5px solid var(--success); }
+
+.fsb-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.figma-stat-box.blue .fsb-icon { background: var(--primary-light); color: var(--primary); }
+.figma-stat-box.amber .fsb-icon { background: var(--warning-light); color: var(--warning-text); }
+.figma-stat-box.purple .fsb-icon { background: #f5f3ff; color: #7e22ce; }
+.figma-stat-box.green .fsb-icon { background: var(--success-light); color: var(--success-text); }
+
+.fsb-icon i {
+  width: 18px;
+  height: 18px;
+}
+
+.fsb-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.fsb-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.fsb-val {
+  font-size: 1.15rem;
+  font-weight: 800;
+  line-height: 1.1;
 }
 
 /* Cloud Sync Badge Indicator */
@@ -5998,34 +6324,54 @@ body {
     box-shadow: 0 1px 3px rgba(0, 80, 240, 0.15) !important;
   }
 
-  #dashSingleMonthBox {
-    width: 100% !important;
-    display: flex !important;
-  }
-
   #dashSingleMonthBox input[type="month"] {
     width: 100% !important;
-    flex: 1 !important;
-    min-width: 0 !important;
+    min-width: 140px !important;
     box-sizing: border-box !important;
-    height: 38px !important;
-    font-size: 0.875rem !important;
+    height: 40px !important;
+    font-size: 0.9rem !important;
+    font-weight: 600 !important;
+    color: var(--text-main) !important;
+    background-color: #ffffff !important;
+    padding: 0.35rem 0.6rem !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: var(--radius-sm) !important;
   }
 
   #dashCustomRangeBox {
-    width: 100% !important;
-    display: flex !important;
+    display: flex;
     align-items: center !important;
+    justify-content: space-between !important;
     gap: 0.5rem !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  #dashCustomRangeBox[style*="display: none"] {
+    display: none !important;
   }
 
   #dashCustomRangeBox input[type="month"] {
-    flex: 1 !important;
-    width: 0 !important;
+    flex: 1 1 0 !important;
     min-width: 0 !important;
+    width: 100% !important;
+    max-width: calc(50% - 14px) !important;
     box-sizing: border-box !important;
-    height: 38px !important;
-    font-size: 0.825rem !important;
+    height: 40px !important;
+    font-size: 0.85rem !important;
+    font-weight: 600 !important;
+    color: var(--text-main) !important;
+    background-color: #ffffff !important;
+    padding: 0.35rem 0.5rem !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: var(--radius-sm) !important;
+  }
+
+  #dashCustomRangeBox span {
+    flex-shrink: 0 !important;
+    font-weight: 600 !important;
+    color: var(--text-muted) !important;
+    font-size: 0.85rem !important;
   }
 }
 
