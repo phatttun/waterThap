@@ -2455,20 +2455,13 @@ class WaterFlowApp {
         const scope = e.target.value;
         const affix = document.getElementById('affixProfitScope');
         const hint = document.getElementById('hintProfitScope');
-        const profitInput = document.getElementById('calcDesiredProfitBaht');
 
         if (scope === 'pack') {
           if (affix) affix.textContent = 'บาท / ลัง';
           if (hint) hint.textContent = 'ระบุกำไรที่ต้องการรวมต่อ 1 ลัง → ระบบจะเฉลี่ยกำไรต่อขวดและคำนวณราคาขายให้ทันที';
-          if (profitInput && (!profitInput.value || profitInput.value === '10')) {
-            profitInput.value = '200';
-          }
         } else {
           if (affix) affix.textContent = 'บาท / ขวด';
           if (hint) hint.textContent = 'ระบุกำไรที่ต้องการต่อ 1 ขวด → ระบบจะคำนวณราคาขายต่อขวดให้ทันที';
-          if (profitInput && profitInput.value === '200') {
-            profitInput.value = '10';
-          }
         }
         updateCalc();
       });
@@ -2501,14 +2494,14 @@ class WaterFlowApp {
     if (btnSaveCalcPreset) {
       btnSaveCalcPreset.addEventListener('click', () => {
         const name = document.getElementById('calcItemName')?.value.trim() || 'น้ำขวดสำเร็จรูป';
-        const packPrice = parseFloat(document.getElementById('calcPackPrice')?.value) || 349;
-        const unitsPerPack = parseInt(document.getElementById('calcUnitsPerPack')?.value) || 24;
+        const packPrice = parseFloat(document.getElementById('calcPackPrice')?.value) || 0;
+        const unitsPerPack = parseInt(document.getElementById('calcUnitsPerPack')?.value) || 1;
         const extraCost = parseFloat(document.getElementById('calcExtraCostPerUnit')?.value) || 0;
 
         const rawCostPerUnit = unitsPerPack > 0 ? (packPrice / unitsPerPack) : 0;
         const totalCostPerUnit = rawCostPerUnit + extraCost;
 
-        const price = parseFloat(document.getElementById('resSellingPrice')?.textContent.replace(/[^0-9.]/g, '')) || 25;
+        const price = parseFloat(document.getElementById('resSellingPrice')?.textContent.replace(/[^0-9.]/g, '')) || 0;
         const profitPerUnit = price - totalCostPerUnit;
         const packProfit = profitPerUnit * unitsPerPack;
 
@@ -2544,16 +2537,24 @@ class WaterFlowApp {
   }
 
   calculatePricing() {
-    const packPrice = parseFloat(document.getElementById('calcPackPrice')?.value) || 349;
-    const unitsPerPack = parseInt(document.getElementById('calcUnitsPerPack')?.value) || 24;
-    const extraCost = parseFloat(document.getElementById('calcExtraCostPerUnit')?.value) || 0;
+    const packPriceRaw = document.getElementById('calcPackPrice')?.value;
+    const unitsPerPackRaw = document.getElementById('calcUnitsPerPack')?.value;
+    const extraCostRaw = document.getElementById('calcExtraCostPerUnit')?.value;
+
+    const packPrice = parseFloat(packPriceRaw) || 0;
+    // If packPrice is provided but units is left empty, default to 24 (the standard pack size shown in placeholder)
+    let unitsPerPack = parseInt(unitsPerPackRaw);
+    if (isNaN(unitsPerPack) || unitsPerPack <= 0) {
+      unitsPerPack = packPrice > 0 ? 24 : 0;
+    }
+    const extraCost = parseFloat(extraCostRaw) || 0;
 
     const rawCostPerUnit = unitsPerPack > 0 ? (packPrice / unitsPerPack) : 0;
     const totalCostPerUnit = rawCostPerUnit + extraCost;
 
     const mode = document.querySelector('input[name="calcMode"]:checked')?.value || 'profitBaht';
 
-    let sellingPrice = 25;
+    let sellingPrice = 0;
     let profitPerUnit = 0;
     let marginPercent = 0;
 
@@ -2562,23 +2563,21 @@ class WaterFlowApp {
       const desiredProfitVal = parseFloat(document.getElementById('calcDesiredProfitBaht')?.value) || 0;
 
       if (scope === 'pack') {
-        // Profit specified per pack/ลัง -> profit per unit is divided by unitsPerPack
-        profitPerUnit = unitsPerPack > 0 ? (desiredProfitVal / unitsPerPack) : 0;
+        profitPerUnit = (unitsPerPack > 0) ? (desiredProfitVal / unitsPerPack) : desiredProfitVal;
       } else {
-        // Profit specified per bottle/ขวด
         profitPerUnit = desiredProfitVal;
       }
 
-      sellingPrice = totalCostPerUnit + profitPerUnit;
+      sellingPrice = (totalCostPerUnit > 0 || profitPerUnit > 0) ? (totalCostPerUnit + profitPerUnit) : 0;
       marginPercent = sellingPrice > 0 ? ((profitPerUnit / sellingPrice) * 100) : 0;
     } else {
-      const desiredMargin = parseFloat(document.getElementById('calcDesiredMargin')?.value) || 45;
-      sellingPrice = Math.ceil(totalCostPerUnit * (1 + desiredMargin / 100));
+      const desiredMargin = parseFloat(document.getElementById('calcDesiredMargin')?.value) || 0;
+      sellingPrice = totalCostPerUnit > 0 ? Math.ceil(totalCostPerUnit * (1 + desiredMargin / 100)) : 0;
       profitPerUnit = sellingPrice - totalCostPerUnit;
       marginPercent = sellingPrice > 0 ? ((profitPerUnit / sellingPrice) * 100) : 0;
     }
 
-    const totalPackProfit = profitPerUnit * unitsPerPack;
+    const totalPackProfit = profitPerUnit * (unitsPerPack || 1);
 
     const resSellingPrice = document.getElementById('resSellingPrice');
     const resProfitTag = document.getElementById('resProfitPerUnitTag');
@@ -2593,10 +2592,10 @@ class WaterFlowApp {
     if (resProfitTag) {
       if (profitPerUnit >= 0) {
         resProfitTag.textContent = `กำไรขวดละ +${this.formatCurrency(profitPerUnit)}`;
-        resProfitTag.style.color = '#047857';
+        resProfitTag.style.color = '#34d399';
       } else {
         resProfitTag.textContent = `ขาดทุนขวดละ ${this.formatCurrency(profitPerUnit)}`;
-        resProfitTag.style.color = '#dc2626';
+        resProfitTag.style.color = '#f87171';
       }
     }
 
@@ -2607,12 +2606,25 @@ class WaterFlowApp {
     if (resMargin) resMargin.textContent = `${marginPercent.toFixed(1)}%`;
     if (resTotalPackProfit) resTotalPackProfit.textContent = `฿${totalPackProfit.toFixed(2)}`;
 
-    this.renderPriceTiers(totalCostPerUnit, unitsPerPack, sellingPrice);
+    // Update Live Formula Equation Banner
+    const resFormulaCost = document.getElementById('resFormulaCost');
+    const resFormulaProfit = document.getElementById('resFormulaProfit');
+    const resFormulaSell = document.getElementById('resFormulaSell');
+    if (resFormulaCost) resFormulaCost.textContent = `฿${totalCostPerUnit.toFixed(2)}`;
+    if (resFormulaProfit) resFormulaProfit.textContent = `฿${profitPerUnit.toFixed(2)}`;
+    if (resFormulaSell) resFormulaSell.textContent = `฿${sellingPrice.toFixed(2)}`;
+
+    this.renderPriceTiers(totalCostPerUnit, unitsPerPack || 1, sellingPrice);
   }
 
   renderPriceTiers(costPerUnit, unitsPerPack, currentSelectedPrice) {
     const grid = document.getElementById('pricingTiersGrid');
     if (!grid) return;
+
+    if (costPerUnit <= 0) {
+      grid.innerHTML = '<div class="text-muted text-sm p-3 w-full text-center" style="grid-column: 1 / -1;">กรอกข้อมูลราคาต่อลังและจำนวนขวดเพื่อแสดงตัวเลือกราคาแนะนำ</div>';
+      return;
+    }
 
     let tiers = [20, 25, 30];
     if (costPerUnit > 20) {
@@ -2652,8 +2664,8 @@ class WaterFlowApp {
     if (tabMargin) tabMargin.classList.remove('active');
 
     // Calculate profit in Baht for this target selling price
-    const packPrice = parseFloat(document.getElementById('calcPackPrice')?.value) || 349;
-    const unitsPerPack = parseInt(document.getElementById('calcUnitsPerPack')?.value) || 24;
+    const packPrice = parseFloat(document.getElementById('calcPackPrice')?.value) || 0;
+    const unitsPerPack = parseInt(document.getElementById('calcUnitsPerPack')?.value) || 1;
     const extraCost = parseFloat(document.getElementById('calcExtraCostPerUnit')?.value) || 0;
     const totalCostPerUnit = (unitsPerPack > 0 ? (packPrice / unitsPerPack) : 0) + extraCost;
     const profitUnit = Math.max(0, parseFloat((price - totalCostPerUnit).toFixed(2)));

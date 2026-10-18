@@ -633,37 +633,42 @@
                 <i data-lucide="badge-percent"></i>
                 ราคาขายแนะนำต่อขวด
               </span>
-              <span class="fph-margin-tag" id="resMarginPercent">37.8% Margin</span>
+              <span class="fph-margin-tag" id="resMarginPercent">0.0% Margin</span>
             </div>
 
             <div class="fph-price-display">
-              <span class="fph-price" id="resSellingPrice">฿25.00</span>
+              <span class="fph-price" id="resSellingPrice">฿0.00</span>
               <span class="fph-unit">/ ขวด</span>
             </div>
 
             <!-- Profit Summary Pill -->
             <div class="fph-profit-pill-wrap">
-              <span class="fph-profit-badge" id="resProfitPerUnitTag">กำไรขวดละ +฿9.46</span>
+              <span class="fph-profit-badge" id="resProfitPerUnitTag">กำไรขวดละ +฿0.00</span>
               <span class="fph-pack-profit">กำไรต่อลัง <strong class="text-green"
-                  id="resTotalPackProfit">฿227.04</strong></span>
+                  id="resTotalPackProfit">฿0.00</strong></span>
             </div>
 
             <!-- Mini Cost Breakdown Strip -->
             <div class="fph-breakdown-strip">
               <div class="fph-breakdown-col">
                 <span class="fph-bd-lbl">ทุนตัวสินค้า</span>
-                <span class="fph-bd-val" id="resRawCostPerUnit">฿14.54</span>
+                <span class="fph-bd-val" id="resRawCostPerUnit">฿0.00</span>
               </div>
               <div class="fph-breakdown-sep">+</div>
               <div class="fph-breakdown-col">
                 <span class="fph-bd-lbl">ค่าถุง/หลอด/แช่</span>
-                <span class="fph-bd-val" id="resExtraCostPerUnit">฿1.00</span>
+                <span class="fph-bd-val" id="resExtraCostPerUnit">฿0.00</span>
               </div>
               <div class="fph-breakdown-sep">=</div>
               <div class="fph-breakdown-col highlight">
                 <span class="fph-bd-lbl">ทุนรวมจริง</span>
-                <span class="fph-bd-val text-amber" id="resTotalCostPerUnit">฿15.54</span>
+                <span class="fph-bd-val text-amber" id="resTotalCostPerUnit">฿0.00</span>
               </div>
+            </div>
+
+            <!-- Clear Formula Equation Banner -->
+            <div id="pricingFormulaBanner" class="fph-formula-strip" style="margin-top: 0.6rem; background: rgba(59, 130, 246, 0.15); border: 1px dashed rgba(96, 165, 250, 0.4); border-radius: var(--radius-sm); padding: 0.5rem 0.75rem; font-size: 0.8rem; color: #e2e8f0; text-align: center;">
+              ทุนขวดละ <span id="resFormulaCost" style="font-weight:700; color:#fbbf24;">฿0.00</span> + กำไร <span id="resFormulaProfit" style="font-weight:700; color:#34d399;">฿0.00</span> = ราคาขาย <span id="resFormulaSell" style="font-weight:800; color:#ffffff;">฿0.00</span>
             </div>
           </div>
 
@@ -689,7 +694,7 @@
 
             <div class="form-group mb-3">
               <label class="form-label" for="calcItemName">ชื่อเครื่องดื่ม / สินค้า</label>
-              <input type="text" id="calcItemName" class="form-input" value="น้ำดื่ม / น้ำสมุนไพรแยกขวด"
+              <input type="text" id="calcItemName" class="form-input" value=""
                 placeholder="เช่น น้ำเก๊กฮวยขวด, ชาเขียวขวด">
             </div>
 
@@ -698,14 +703,14 @@
                 <label class="form-label" for="calcPackPrice">ราคาซื้อมาต่อลัง (บาท)</label>
                 <div class="input-with-affix">
                   <span class="affix-left">฿</span>
-                  <input type="number" id="calcPackPrice" class="form-input font-bold" value="349" min="1" step="0.5"
+                  <input type="number" id="calcPackPrice" class="form-input font-bold" value="" placeholder="0.00" min="0" step="0.5"
                     inputmode="decimal">
                 </div>
               </div>
               <div class="form-group">
                 <label class="form-label" for="calcUnitsPerPack">จำนวนขวดใน 1 ลัง (ขวด)</label>
                 <div class="input-with-affix">
-                  <input type="number" id="calcUnitsPerPack" class="form-input font-bold" value="24" min="1" step="1"
+                  <input type="number" id="calcUnitsPerPack" class="form-input font-bold" value="" placeholder="24" min="1" step="1"
                     inputmode="numeric">
                   <span class="affix-right">ขวด</span>
                 </div>
@@ -717,7 +722,7 @@
                 (บาท)</label>
               <div class="input-with-affix">
                 <span class="affix-left">฿</span>
-                <input type="number" id="calcExtraCostPerUnit" class="form-input" value="1.0" min="0" step="0.25"
+                <input type="number" id="calcExtraCostPerUnit" class="form-input" value="" placeholder="0.00" min="0" step="0.25"
                   inputmode="decimal">
               </div>
             </div>
@@ -754,8 +759,8 @@
               </div>
               <div class="input-with-affix">
                 <span class="affix-left">฿</span>
-                <input type="number" id="calcDesiredProfitBaht" class="form-input font-bold text-primary" value="10"
-                  min="0.5" step="0.5" inputmode="decimal">
+                <input type="number" id="calcDesiredProfitBaht" class="form-input font-bold text-primary" value=""
+                  placeholder="0.00" min="0" step="0.5" inputmode="decimal">
                 <span class="affix-right" id="affixProfitScope">บาท / ขวด</span>
               </div>
               <span class="field-hint" id="hintProfitScope">ระบุกำไรที่ต้องการต่อ 1 ขวด &rarr;
@@ -766,9 +771,9 @@
             <div id="calcModeMarginBox" class="form-group mb-3" style="display:none;">
               <label class="form-label" for="calcDesiredMargin">เปอร์เซ็นต์กำไรที่ต้องการ (%)</label>
               <div class="slider-group">
-                <input type="range" id="calcMarginSlider" min="10" max="150" value="45" class="form-range">
+                <input type="range" id="calcMarginSlider" min="0" max="150" value="0" class="form-range">
                 <div class="input-with-affix short-input">
-                  <input type="number" id="calcDesiredMargin" class="form-input font-bold" value="45" min="5" max="300"
+                  <input type="number" id="calcDesiredMargin" class="form-input font-bold" value="" placeholder="0" min="0" max="300"
                     inputmode="numeric">
                   <span class="affix-right">%</span>
                 </div>
