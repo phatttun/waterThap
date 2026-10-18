@@ -11,10 +11,10 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap"
     rel="stylesheet">
-  <!-- Lucide Icons -->
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Lucide Icons (Fast & Secure CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.469.0/dist/umd/lucide.min.js"></script>
   <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="ร้านน้ำยายแต๊ป.png">
   <link rel="apple-touch-icon" href="ร้านน้ำยายแต๊ป.png">
@@ -33,10 +33,7 @@
           style="width:34px; height:34px; object-fit:cover; border-radius:var(--radius-sm); box-shadow:0 2px 6px rgba(0,0,0,0.15);">
         <span class="brand-name">ร้านน้ำยายแต๊ป</span>
       </div>
-      <button id="quickSaleMobileBtn" class="btn-fastwork-sm" title="บันทึกการขาย">
-        <i data-lucide="plus"></i>
-        <span>ขาย</span>
-      </button>
+      <div style="width: 38px;"></div>
     </header>
 
     <!-- Sidebar (Fastwork Style) -->
@@ -88,7 +85,7 @@
           </button>
           <button class="nav-item nav-item-sub" data-tab="recipes">
             <i data-lucide="beaker"></i>
-            <span>สูตรชงน้ำ (ต่อ 1 โหล)</span>
+            <span>สูตรชงน้ำ</span>
           </button>
         </div>
 
@@ -406,544 +403,443 @@
         </div>
       </section>
 
-      <!-- TAB 2: TODAY SALES & SUMMARY (บันทึกยอดเงินรายวัน) -->
+      <!-- TAB 2: TODAY SALES & SUMMARY (Figma Mobile-First Design) -->
       <section id="tab-today" class="tab-pane">
-        <div class="section-header">
-          <div>
-            <h2 class="page-title">บันทึกยอดขายประจำวัน & สรุปกำไร</h2>
-            <p class="page-desc" id="todayDateSubtitle">บันทึกยอดเงินที่ขายได้ทั้งหมดในแต่ละวัน หักต้นทุน
-              และคำนวณกำไรสุทธิทันที</p>
-          </div>
-          <div class="action-buttons">
-            <input type="date" id="selectedTodayDateInput" class="form-input-sm">
-          </div>
-        </div>
+        <div class="figma-mobile-container">
 
-        <!-- Today Summary Stat Cards -->
-        <div class="stats-grid three-col">
-          <div class="stat-card revenue-card">
-            <div class="stat-icon-wrapper blue">
-              <i data-lucide="wallet"></i>
-            </div>
-            <div class="stat-meta">
-              <div class="stat-label">ยอดขายวันนี้ (รายรับทั้งหมด)</div>
-              <div class="stat-value" id="todaySalesAmount">฿0</div>
-              <div class="stat-subtext" id="todayItemsCount">ยอดเงินรวมที่ขายได้ทั้งวัน</div>
-            </div>
+          <!-- Top Floating Date Capsule -->
+          <div class="figma-date-capsule">
+            <button type="button" class="figma-capsule-nav" id="btnPrevDay" aria-label="วันก่อนหน้า">
+              <i data-lucide="chevron-left"></i>
+            </button>
+            <label class="figma-capsule-center" for="selectedTodayDateInput" title="แตะเพื่อเลือกวัน">
+              <span class="figma-capsule-dot"></span>
+              <span class="figma-capsule-text" id="displayThaiDateLarge">กำลังโหลด...</span>
+              <span class="figma-capsule-tag" id="dateHubStatusTag">วันเปิดเรียน</span>
+              <input type="date" id="selectedTodayDateInput" class="hub-hidden-date-input">
+            </label>
+            <button type="button" class="figma-capsule-nav" id="btnNextDay" aria-label="วันถัดไป">
+              <i data-lucide="chevron-right"></i>
+            </button>
           </div>
 
-          <div class="stat-card cost-card">
-            <div class="stat-icon-wrapper amber">
-              <i data-lucide="shopping-bag"></i>
-            </div>
-            <div class="stat-meta">
-              <div class="stat-label">ต้นทุนรวมวันนี้ (วัตถุดิบ + ค่าเช่าวันเปิดขาย)</div>
-              <div class="stat-value text-amber" id="todayCostAmount">฿0</div>
-              <div class="stat-subtext" id="todayCostSubtitle">วัตถุดิบ ฿0 + ค่าเช่าร้านวันขาย (โรงเรียน)</div>
-            </div>
+          <!-- Quick Day Jump Segmented Control -->
+          <div class="figma-segmented-control mb-3">
+            <button type="button" class="figma-segment-btn active" id="btnJumpToday">
+              <i data-lucide="sun"></i>
+              <span>วันนี้</span>
+            </button>
+            <button type="button" class="figma-segment-btn" id="btnJumpYesterday">
+              <i data-lucide="history"></i>
+              <span>เมื่อวาน</span>
+            </button>
+            <button type="button" class="figma-segment-btn" id="btnJumpPicker">
+              <i data-lucide="calendar"></i>
+              <span>เลือกวันอื่น</span>
+            </button>
           </div>
 
-          <div class="stat-card profit-card" id="todayProfitCard">
-            <div class="stat-icon-wrapper green" id="todayProfitIconWrapper">
-              <i data-lucide="badge-percent" id="todayProfitIcon"></i>
-            </div>
-            <div class="stat-meta">
-              <div class="stat-label" id="todayProfitLabel">กำไร / ขาดทุนสุทธิวันนี้</div>
-              <div class="stat-value text-green" id="todayProfitAmount">฿0</div>
-              <div class="stat-subtext" id="todayProfitMargin">ยอดเงินสุทธิหลังหักต้นทุนรวมทั้งหมด</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Daily Revenue Entry Card (Redesigned Mobile-First & Touch Friendly) -->
-        <div class="card mb-4 daily-entry-card-modern">
-          <div class="card-header space-between align-center" style="padding: 1rem 1.25rem;">
-            <div class="card-header-title" style="display:flex; align-items:center; gap:0.5rem;">
-              <span class="icon-round-badge blue"><i data-lucide="calculator"></i></span>
-              <div>
-                <span id="dailyFormHeaderTitle" style="font-weight:700; font-size:1.05rem;">กรอกยอดเงินที่ขายได้ประจำวัน</span>
-                <div class="text-xs text-muted" style="font-weight:normal; margin-top:1px;">กรอกยอดเงินสด/โอนรวม ระบบคำนวณกำไรสุทธิทันที</div>
-              </div>
-            </div>
-            <span class="pill-tag blue-tag" id="dailyFormModeTag" style="font-size:0.75rem;">บันทึกยอดวันปัจจุบัน</span>
-          </div>
-
-          <div class="card-body" style="padding: 1.25rem;">
+          <!-- Main Figma Interactive Cashier Card -->
+          <div class="figma-pos-card mb-4">
             <form id="dailyRevenueForm">
               <input type="hidden" id="dailyRecordId">
+              <input type="hidden" id="dailyFormDate">
+              <input type="hidden" id="dailyFormCost">
 
-              <!-- Top Row: Date Picker with Quick Nav -->
-              <div class="daily-form-top-row mb-3">
-                <div class="form-group mb-0" style="flex:1;">
-                  <label class="form-label text-xs font-semibold mb-1" for="dailyFormDate">
-                    <i data-lucide="calendar" style="width:14px; height:14px; display:inline-block; vertical-align:-2px; margin-right:3px;"></i>
-                    วันที่บันทึกยอดขาย
-                  </label>
-                  <input type="date" id="dailyFormDate" class="form-input mobile-touch-input" required>
-                </div>
-                <div class="form-group mb-0" style="flex:1;">
-                  <div class="space-between mb-1 align-center">
-                    <label class="form-label text-xs font-semibold mb-0" for="dailyFormCost">
-                      <i data-lucide="shopping-bag" style="width:14px; height:14px; display:inline-block; vertical-align:-2px; margin-right:3px;"></i>
-                      ต้นทุนรวมวันนี้
-                    </label>
-                    <span class="pill-tag blue-tag" style="font-size: 0.65rem; padding: 2px 6px;" id="costSourceBadge">หักอัตโนมัติ</span>
+              <!-- Hero Amount Display Card (Matching Screen 2 in redesign.jpg) -->
+              <div class="figma-amount-card mb-3">
+                <div class="figma-amount-card-top">
+                  <div class="figma-amount-label">
+                    <i data-lucide="wallet"></i>
+                    <span>ยอดขายประจำวัน (บาท)</span>
                   </div>
-                  <div class="input-with-affix">
-                    <span class="affix-left font-bold text-amber">฿</span>
-                    <input type="number" id="dailyFormCost" class="form-input mobile-touch-input" placeholder="0" min="0" step="any" readonly
-                      style="background-color: #f8fafc; font-weight: 700; color: var(--amber);">
+                  <span class="figma-mode-badge" id="dailyFormModeTag">บันทึกยอดใหม่</span>
+                </div>
+
+                <div class="figma-amount-hero">
+                  <span class="figma-currency-symbol">฿</span>
+                  <input type="text" id="dailyFormRevenue" class="figma-amount-hero-input" inputmode="decimal"
+                    placeholder="0" autofocus required autocomplete="off">
+                  <button type="button" class="figma-btn-clear" id="btnClearDailyRevenue" title="ล้างตัวเลข"
+                    style="display:none;">
+                    <i data-lucide="x"></i>
+                  </button>
+                </div>
+
+                <!-- Live Profit & Deducted Cost Preview inside Amount Hero -->
+                <div class="figma-hero-preview-row" id="dailyProfitBanner">
+                  <div class="figma-hero-preview-item">
+                    <span class="preview-lbl">หักต้นทุนระบบ</span>
+                    <span class="preview-val text-amber font-bold" id="previewDailyCost">฿0</span>
                   </div>
-                </div>
-              </div>
-
-              <!-- Hero Revenue Input Section -->
-              <div class="daily-revenue-hero-box mb-3">
-                <div class="hero-box-header space-between align-center mb-1">
-                  <label class="form-label font-bold mb-0" for="dailyFormRevenue" style="font-size:0.95rem; color:#1e3a8a;">
-                    💰 ยอดเงินที่ขายได้ทั้งหมดวันนี้ (บาท) <span class="text-danger">*</span>
-                  </label>
-                  <span class="text-xs text-muted" id="dailyCostSourceHint">หักวัตถุดิบเฉลี่ย + ค่าเช่าร้าน</span>
-                </div>
-
-                <div class="hero-revenue-input-wrap">
-                  <span class="hero-currency-symbol">฿</span>
-                  <input type="number" id="dailyFormRevenue" class="hero-revenue-input"
-                    inputmode="decimal" placeholder="0.00" min="0" step="any" autofocus required>
-                  <button type="button" class="btn-clear-revenue" id="btnClearDailyRevenue" title="ล้างตัวเลข" style="display:none;">&times;</button>
-                </div>
-
-                <!-- Quick Addition Chips (กดปุ่มลัดเพื่อเพิ่มเงินอย่างรวดเร็วบนมือถือ) -->
-                <div class="quick-add-chips-wrap mt-2">
-                  <span class="text-xs text-muted font-semibold" style="align-self:center; margin-right:2px;">กดเพิ่มเงินด่วน:</span>
-                  <button type="button" class="btn-chip-add" data-add="50">+฿50</button>
-                  <button type="button" class="btn-chip-add" data-add="100">+฿100</button>
-                  <button type="button" class="btn-chip-add" data-add="500">+฿500</button>
-                  <button type="button" class="btn-chip-add" data-add="1000">+฿1,000</button>
-                  <button type="button" class="btn-chip-add btn-chip-round" id="btnPresetExact2000" data-set="2000">฿2,000</button>
-                </div>
-              </div>
-
-              <!-- Live Profit/Loss Modern Preview Card -->
-              <div class="daily-modern-profit-card mb-3" id="dailyProfitBanner">
-                <div class="profit-calc-grid">
-                  <div class="calc-col">
-                    <span class="calc-label text-muted">ยอดขายรวม</span>
-                    <span class="calc-val text-primary" id="previewDailyRevenue">฿0</span>
-                  </div>
-                  <div class="calc-col-divider">−</div>
-                  <div class="calc-col">
-                    <span class="calc-label text-muted">ต้นทุนรวมวันนี้</span>
-                    <span class="calc-val text-amber" id="previewDailyCost">฿0</span>
-                  </div>
-                  <div class="calc-col-divider">=</div>
-                  <div class="calc-col highlight-result" id="previewDailyResultBox">
-                    <span class="calc-label font-semibold" id="previewResultLabel">กำไรสุทธิวันนี้</span>
-                    <div class="result-number-group">
-                      <span class="calc-val text-green font-extrabold" id="previewDailyProfit">฿0</span>
-                      <span class="preview-margin-badge" id="previewDailyMargin">(0%)</span>
+                  <div class="figma-hero-preview-sep"></div>
+                  <div class="figma-hero-preview-item" id="previewDailyResultBox">
+                    <span class="preview-lbl" id="previewResultLabel">กำไรสุทธิ</span>
+                    <div class="figma-profit-wrap">
+                      <span class="preview-val text-green font-extrabold" id="previewDailyProfit">฿0</span>
+                      <span class="figma-badge-margin" id="previewDailyMargin">(0%)</span>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <!-- Notes Input -->
-              <div class="form-group mb-3">
-                <label class="form-label text-xs font-semibold mb-1" for="dailyFormNote">
-                  <i data-lucide="edit-3" style="width:13px; height:13px; display:inline-block; vertical-align:-2px;"></i>
-                  หมายเหตุเพิ่มเติม (ถ้ามี)
-                </label>
-                <div class="input-with-quick-notes">
-                  <input type="text" id="dailyFormNote" class="form-input mobile-touch-input"
-                    placeholder="เช่น วันนี้ลูกค้าแน่นช่วงเลิกเรียน, ฝนตกช่วงบ่าย, กิจกรรมกีฬาสี">
-                </div>
-                <!-- Quick tags for mobile -->
-                <div class="quick-note-tags mt-1">
-                  <button type="button" class="btn-note-tag" data-note="เปิดเทอมวันแรก นักเรียนแน่น">เปิดเทอม</button>
-                  <button type="button" class="btn-note-tag" data-note="ฝนตกช่วงบ่าย ลูกค้าบางตา">ฝนตก</button>
-                  <button type="button" class="btn-note-tag" data-note="มีกิจกรรมโรงเรียน/กีฬาสี">กีฬาสี</button>
-                  <button type="button" class="btn-note-tag" data-note="วันศุกร์ ยอดขายดีมาก">วันศุกร์ขายดี</button>
+              <!-- Quick Add Preset Chips -->
+              <div class="figma-chips-row mb-3">
+                <button type="button" class="figma-chip-btn" data-add="50">+50</button>
+                <button type="button" class="figma-chip-btn" data-add="100">+100</button>
+                <button type="button" class="figma-chip-btn" data-add="500">+500</button>
+                <button type="button" class="figma-chip-btn" data-add="1000">+1,000</button>
+                <button type="button" class="figma-chip-btn exact" data-set="2000">฿2,000</button>
+              </div>
+
+              <!-- Embedded Figma Touch Number Pad (Screen 2 Keypad) -->
+              <div class="figma-keypad-wrapper mb-3">
+                <div class="figma-keypad-grid">
+                  <button type="button" class="figma-keypad-key" data-key="1">1</button>
+                  <button type="button" class="figma-keypad-key" data-key="2">2</button>
+                  <button type="button" class="figma-keypad-key" data-key="3">3</button>
+                  <button type="button" class="figma-keypad-key" data-key="4">4</button>
+                  <button type="button" class="figma-keypad-key" data-key="5">5</button>
+                  <button type="button" class="figma-keypad-key" data-key="6">6</button>
+                  <button type="button" class="figma-keypad-key" data-key="7">7</button>
+                  <button type="button" class="figma-keypad-key" data-key="8">8</button>
+                  <button type="button" class="figma-keypad-key" data-key="9">9</button>
+                  <button type="button" class="figma-keypad-key" data-key=".">.</button>
+                  <button type="button" class="figma-keypad-key" data-key="0">0</button>
+                  <button type="button" class="figma-keypad-key action-backspace" data-key="backspace" title="ลบตัวเลข">
+                    <i data-lucide="delete"></i>
+                  </button>
                 </div>
               </div>
 
-              <!-- Actions Bottom Buttons -->
-              <div class="daily-form-actions-wrap">
-                <button type="button" class="btn-secondary mobile-btn" id="btnResetDailyForm"
-                  style="display:none; flex:1;">
+              <!-- Compact Note Section with Fast Tags -->
+              <div class="figma-note-section mb-3">
+                <div class="figma-note-input-wrap">
+                  <i data-lucide="message-square" class="figma-note-icon"></i>
+                  <input type="text" id="dailyFormNote" class="figma-note-input"
+                    placeholder="บันทึกช่วยจำ (เช่น ฝนตก, กีฬาสี, เปิดเทอม)">
+                </div>
+                <div class="figma-note-tags mt-1">
+                  <button type="button" class="figma-tag-btn" data-note="เปิดเทอมวันแรก นักเรียนแน่น">เปิดเทอม</button>
+                  <button type="button" class="figma-tag-btn" data-note="ฝนตกช่วงบ่าย ลูกค้าบางตา">ฝนตก</button>
+                  <button type="button" class="figma-tag-btn" data-note="มีกิจกรรมโรงเรียน/กีฬาสี">กีฬาสี</button>
+                  <button type="button" class="figma-tag-btn" data-note="วันศุกร์ ยอดขายดีมาก">วันศุกร์</button>
+                </div>
+              </div>
+
+              <!-- Floating Action Button for Mobile -->
+              <div class="figma-actions-row">
+                <button type="button" class="figma-btn-cancel" id="btnResetDailyForm" style="display:none;">
                   <i data-lucide="x"></i>
                   <span>ยกเลิก</span>
                 </button>
-                <button type="submit" class="btn-fastwork mobile-btn mobile-submit-btn" id="btnSaveDailyRevenue"
-                  style="flex:2;">
+                <button type="submit" class="figma-btn-save" id="btnSaveDailyRevenue">
                   <i data-lucide="check-circle-2"></i>
-                  <span>บันทึกยอดเงินวันนี้</span>
+                  <span>บันทึกยอดขายวันนี้</span>
                 </button>
               </div>
             </form>
           </div>
-        </div>
 
-        <!-- Daily Sales Records History List -->
-        <div class="card">
-          <div class="card-header space-between">
-            <div class="card-header-title">
-              <i data-lucide="calendar-check"></i>
-              <span>ประวัติการบันทึกยอดเงินรายวัน</span>
+          <!-- History Section Header -->
+          <div class="figma-history-header mb-2">
+            <div class="figma-history-title">
+              <i data-lucide="history"></i>
+              <span>ประวัติการบันทึกยอดขาย</span>
             </div>
-            <div class="table-actions">
-              <span class="badge-counter" id="todayBillCountBadge">0 วัน</span>
-            </div>
+            <span class="figma-history-count" id="todayBillCountBadge">0 วัน</span>
           </div>
-          <div class="card-body p-0">
-            <div class="table-responsive">
-              <table class="fastwork-table">
-                <thead>
-                  <tr>
-                    <th>วันที่</th>
-                    <th>ยอดขายที่ได้ทั้งหมด</th>
-                    <th>หักต้นทุน</th>
-                    <th>กำไรสุทธิที่ได้จริง</th>
-                    <th>อัตรากำไร (%)</th>
-                    <th>หมายเหตุ</th>
-                    <th class="text-center">จัดการ</th>
-                  </tr>
-                </thead>
-                <tbody id="todaySalesTableBody">
-                  <tr>
-                    <td colspan="7" class="text-center text-muted py-4">ยังไม่มีรายการบันทึกยอดขาย</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+
+          <!-- Transaction History Stream (Unified Cards Feed, No Old Columns Table) -->
+          <div class="daily-tx-feed mb-4" id="todaySalesMobileCards">
+            <!-- Rendered via JS -->
           </div>
+
         </div>
       </section>
 
-      <!-- TAB 3: EXPENSES & INGREDIENT COSTS -->
+      <!-- TAB 3: EXPENSES & INGREDIENT COSTS (Figma Mobile Design System) -->
       <section id="tab-expenses" class="tab-pane">
-        <div class="section-header">
-          <div>
-            <h2 class="page-title">บันทึกค่าใช้จ่าย & ต้นทุนวัตถุดิบ</h2>
-            <p class="page-desc">บันทึกรายจ่ายต่างๆ เช่น โหลบรรจุน้ำ, นมข้นหวาน, ชา, โกโก้, น้ำแข็ง, แก้ว, หลอด</p>
-          </div>
-          <button class="btn-fastwork" id="btnOpenExpenseModal">
-            <i data-lucide="plus"></i>
-            <span>+ เพิ่มรายการค่าใช้จ่าย</span>
-          </button>
-        </div>
+        <div class="figma-mobile-container">
 
-        <!-- Expense Filter and Stats (Redesigned KPI Cards Grid) -->
-        <div class="stats-grid four-col mb-4" id="expenseStatsGrid">
-          <div class="stat-card" id="cardExpTotal"
-            style="border-top: 4px solid var(--danger); background: linear-gradient(180deg, #fef2f2 0%, #ffffff 60%); cursor:pointer;"
-            onclick="document.getElementById('expenseCategoryFilter').value='ALL'; app.renderExpenses();"
-            title="คลิกเพื่อดูค่าใช้จ่ายทั้งหมด">
-            <div class="stat-icon-wrapper red">
-              <i data-lucide="receipt"></i>
-            </div>
-            <div class="stat-meta">
-              <div class="stat-label">ยอดจ่ายรวมทั้งหมด</div>
-              <div class="stat-value text-danger" id="expCategoryTotal">฿0</div>
-              <div class="stat-subtext" id="expTotalCountSubtext">ทุกรายการค่าใช้จ่าย</div>
-            </div>
+          <!-- Top Action Bar (Header Title Removed as Requested) -->
+          <div class="figma-expense-header mb-3">
+            <button class="figma-btn-add-expense" id="btnOpenExpenseModal" title="เพิ่มรายการค่าใช้จ่าย">
+              <i data-lucide="plus"></i>
+              <span>+ เพิ่มค่าใช้จ่าย</span>
+            </button>
           </div>
 
-          <div class="stat-card" id="cardExpIngredients"
-            style="border-top: 4px solid var(--warning); background: linear-gradient(180deg, #fffbeb 0%, #ffffff 60%); cursor:pointer;"
-            onclick="document.getElementById('expenseCategoryFilter').value='INGREDIENT'; app.renderExpenses();"
-            title="คลิกเพื่อกรองวัตถุดิบชงน้ำ">
-            <div class="stat-icon-wrapper amber">
+          <!-- Total Spent Highlight Banner (Figma Hero Banner) -->
+          <div class="figma-expense-hero-card mb-3">
+            <div class="feh-top">
+              <div class="feh-label">
+                <i data-lucide="receipt"></i>
+                <span>ยอดจ่ายรวมทั้งหมด</span>
+              </div>
+              <span class="feh-count-badge" id="expTotalCountSubtext">0 รายการ</span>
+            </div>
+            <div class="feh-amount-wrap">
+              <span class="feh-amount" id="expCategoryTotal">฿0</span>
+            </div>
+            <div class="feh-breakdown-row">
+              <div class="feh-stat-pill" onclick="app.setExpenseCategory('INGREDIENT')">
+                <span class="pill-dot amber"></span>
+                <span class="pill-lbl">วัตถุดิบ</span>
+                <span class="pill-val text-amber" id="expCategoryIngredients">฿0</span>
+              </div>
+              <div class="feh-stat-pill" onclick="app.setExpenseCategory('PACKAGING')">
+                <span class="pill-dot blue"></span>
+                <span class="pill-lbl">บรรจุภัณฑ์</span>
+                <span class="pill-val text-primary" id="expCategoryPackaging">฿0</span>
+              </div>
+              <div class="feh-stat-pill" onclick="app.setExpenseCategory('STOCK')">
+                <span class="pill-dot purple"></span>
+                <span class="pill-lbl">ยกลัง</span>
+                <span class="pill-val text-purple" id="expCategoryStock">฿0</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Category Filter Pills (Screen 3 Pill Tags in redesign.jpg) -->
+          <div class="figma-pills-scroll-row mb-3" id="expensePillFilterGroup">
+            <button type="button" class="figma-pill-filter active" data-cat="ALL">
+              <i data-lucide="layers"></i>
+              <span>ทั้งหมด</span>
+            </button>
+            <button type="button" class="figma-pill-filter" data-cat="INGREDIENT">
               <i data-lucide="shopping-cart"></i>
-            </div>
-            <div class="stat-meta">
-              <div class="stat-label">วัตถุดิบชงน้ำ</div>
-              <div class="stat-value text-amber" id="expCategoryIngredients">฿0</div>
-              <div class="stat-subtext">นม, ชา, โกโก้, น้ำเชื่อม</div>
-            </div>
-          </div>
-
-          <div class="stat-card" id="cardExpPackaging"
-            style="border-top: 4px solid var(--primary); background: linear-gradient(180deg, #eff6ff 0%, #ffffff 60%); cursor:pointer;"
-            onclick="document.getElementById('expenseCategoryFilter').value='PACKAGING'; app.renderExpenses();"
-            title="คลิกเพื่อกรองบรรจุภัณฑ์">
-            <div class="stat-icon-wrapper blue">
+              <span>วัตถุดิบชงน้ำ</span>
+            </button>
+            <button type="button" class="figma-pill-filter" data-cat="PACKAGING">
               <i data-lucide="box"></i>
-            </div>
-            <div class="stat-meta">
-              <div class="stat-label">บรรจุภัณฑ์ & แก้ว</div>
-              <div class="stat-value text-primary" id="expCategoryPackaging">฿0</div>
-              <div class="stat-subtext">โหล, แก้ว, หลอด, ถุง</div>
-            </div>
-          </div>
-
-          <div class="stat-card" id="cardExpStock"
-            style="border-top: 4px solid var(--purple); background: linear-gradient(180deg, #f5f3ff 0%, #ffffff 60%); cursor:pointer;"
-            onclick="document.getElementById('expenseCategoryFilter').value='STOCK'; app.renderExpenses();"
-            title="คลิกเพื่อกรองสินค้ายกลัง">
-            <div class="stat-icon-wrapper purple">
+              <span>บรรจุภัณฑ์ & แก้ว</span>
+            </button>
+            <button type="button" class="figma-pill-filter" data-cat="STOCK">
               <i data-lucide="archive"></i>
-            </div>
-            <div class="stat-meta">
-              <div class="stat-label">ซื้อยกลัง/สำเร็จรูป</div>
-              <div class="stat-value text-purple" id="expCategoryStock">฿0</div>
-              <div class="stat-subtext">น้ำขวดสำเร็จรูปพร้อมขาย</div>
-            </div>
+              <span>ยกลัง/สำเร็จรูป</span>
+            </button>
+            <button type="button" class="figma-pill-filter" data-cat="OTHER">
+              <i data-lucide="more-horizontal"></i>
+              <span>ค่าใช้จ่ายอื่นๆ</span>
+            </button>
+            <select id="expenseCategoryFilter" style="display:none;">
+              <option value="ALL">ALL</option>
+              <option value="INGREDIENT">INGREDIENT</option>
+              <option value="PACKAGING">PACKAGING</option>
+              <option value="STOCK">STOCK</option>
+              <option value="OTHER">OTHER</option>
+            </select>
           </div>
-        </div>
 
-        <!-- Expense Table -->
-        <div class="card">
-          <div class="card-header space-between">
-            <div class="card-header-title">
+          <!-- History Feed Header -->
+          <div class="figma-history-header mb-2">
+            <div class="figma-history-title">
               <i data-lucide="receipt"></i>
-              <span>ประวัติการซื้อของ & ค่าใช้จ่ายทั้งหมด</span>
+              <span>รายการซื้อของ & ต้นทุน</span>
             </div>
-            <div class="filter-group">
-              <select id="expenseCategoryFilter" class="form-input-sm">
-                <option value="ALL">หมวดหมู่ทั้งหมด</option>
-                <option value="INGREDIENT">วัตถุดิบเครื่องดื่ม</option>
-                <option value="PACKAGING">บรรจุภัณฑ์ (โหล/ขวด/แก้ว)</option>
-                <option value="STOCK">สินค้าซื้อยกลัง/สำเร็จรูป</option>
-                <option value="OTHER">ค่าใช้จ่ายอื่นๆ</option>
-              </select>
-            </div>
+            <span class="figma-history-count" id="expenseFilteredCountBadge">0 รายการ</span>
           </div>
-          <div class="card-body p-0">
-            <div class="table-responsive">
-              <table class="fastwork-table">
-                <thead>
-                  <tr>
-                    <th>วันที่ซื้อ</th>
-                    <th>รายการวัตถุดิบ/ค่าใช้จ่าย</th>
-                    <th>หมวดหมู่</th>
-                    <th>จำนวนที่ซื้อ</th>
-                    <th>ราคาต่อหน่วย</th>
-                    <th>ยอดจ่ายรวม</th>
-                    <th>หมายเหตุ</th>
-                    <th class="text-center">จัดการ</th>
-                  </tr>
-                </thead>
-                <tbody id="expenseTableBody">
-                  <tr>
-                    <td colspan="8" class="text-center text-muted py-4">ไม่มีรายการค่าใช้จ่าย</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+
+          <!-- Unified Expenses Feed (Cards for Mobile & Desktop, No Columns Table) -->
+          <div class="daily-tx-feed mb-4" id="expenseCardsFeed">
+            <!-- Rendered via JS -->
           </div>
+
+          <!-- Fallback Desktop Table Container (Kept hidden or replaced) -->
+          <table style="display:none;">
+            <tbody id="expenseTableBody"></tbody>
+          </table>
+
         </div>
       </section>
 
-      <!-- TAB 4: PRICING CALCULATOR (น้ำแยกขวด / ยกลัง) -->
+      <!-- TAB 4: PRICING CALCULATOR (น้ำแยกขวด / ยกลัง) - Figma Mobile Design -->
       <section id="tab-pricing" class="tab-pane">
-        <div class="section-header">
-          <div>
-            <h2 class="page-title">เครื่องคิดเลขคำนวณราคาขาย (เฉพาะน้ำขวด / ซื้อยกลัง)</h2>
-            <p class="page-desc">คำนวณต้นทุนต่อขวดเมื่อซื้อยกลัง และแนะนำราคาขายที่ควรตั้งเพื่อให้ได้กำไรตามเป้าหมาย</p>
-          </div>
-        </div>
+        <div class="figma-mobile-container">
 
-        <div class="pricing-calc-layout">
-          <!-- Calculator Input Form -->
-          <div class="card calc-form-card">
-            <div class="card-header">
-              <div class="card-header-title">
+          <!-- Hero Pricing Result Card (Figma Screen 2/4 Style) -->
+          <div class="figma-pricing-hero-card mb-3">
+            <div class="fph-header">
+              <span class="fph-badge">
+                <i data-lucide="badge-percent"></i>
+                ราคาขายแนะนำต่อขวด
+              </span>
+              <span class="fph-margin-tag" id="resMarginPercent">37.8% Margin</span>
+            </div>
+
+            <div class="fph-price-display">
+              <span class="fph-price" id="resSellingPrice">฿25.00</span>
+              <span class="fph-unit">/ ขวด</span>
+            </div>
+
+            <!-- Profit Summary Pill -->
+            <div class="fph-profit-pill-wrap">
+              <span class="fph-profit-badge" id="resProfitPerUnitTag">กำไรขวดละ +฿9.46</span>
+              <span class="fph-pack-profit">กำไรต่อลัง <strong class="text-green"
+                  id="resTotalPackProfit">฿227.04</strong></span>
+            </div>
+
+            <!-- Mini Cost Breakdown Strip -->
+            <div class="fph-breakdown-strip">
+              <div class="fph-breakdown-col">
+                <span class="fph-bd-lbl">ทุนตัวสินค้า</span>
+                <span class="fph-bd-val" id="resRawCostPerUnit">฿14.54</span>
+              </div>
+              <div class="fph-breakdown-sep">+</div>
+              <div class="fph-breakdown-col">
+                <span class="fph-bd-lbl">ค่าถุง/หลอด/แช่</span>
+                <span class="fph-bd-val" id="resExtraCostPerUnit">฿1.00</span>
+              </div>
+              <div class="fph-breakdown-sep">=</div>
+              <div class="fph-breakdown-col highlight">
+                <span class="fph-bd-lbl">ทุนรวมจริง</span>
+                <span class="fph-bd-val text-amber" id="resTotalCostPerUnit">฿15.54</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Suggestion Tiers Grid (Figma Preset Buttons) -->
+          <div class="figma-tiers-wrapper mb-3">
+            <div class="figma-section-subtitle mb-2">
+              <i data-lucide="zap"></i>
+              <span>เลือกราคาขายตัวเลือกยอดฮิต</span>
+            </div>
+            <div class="figma-tiers-grid" id="pricingTiersGrid">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- Calculator Configuration Card -->
+          <div class="figma-pos-card mb-4">
+            <div class="figma-card-header mb-3">
+              <div class="figma-card-title">
                 <i data-lucide="calculator"></i>
                 <span>กรอกข้อมูลต้นทุนลังสินค้า</span>
               </div>
             </div>
-            <div class="card-body">
-              <div class="form-group mb-3">
-                <label class="form-label" for="calcItemName">ชื่อเครื่องดื่ม / สินค้า</label>
-                <input type="text" id="calcItemName" class="form-input" value="น้ำดื่ม / น้ำสมุนไพรแยกขวด"
-                  placeholder="เช่น น้ำเก๊กฮวยขวด, ชาเขียวขวด">
-              </div>
 
-              <div class="form-row two-col mb-3">
-                <div class="form-group">
-                  <label class="form-label" for="calcPackPrice">ราคาซื้อมาต่อลัง (บาท)</label>
-                  <div class="input-with-affix">
-                    <span class="affix-left">฿</span>
-                    <input type="number" id="calcPackPrice" class="form-input" value="349" min="1" step="0.5">
-                  </div>
-                  <span class="field-hint">ตัวอย่าง: ลังละ 349 บาท</span>
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="calcUnitsPerPack">จำนวนขวดใน 1 ลัง (ขวด)</label>
-                  <div class="input-with-affix">
-                    <input type="number" id="calcUnitsPerPack" class="form-input" value="24" min="1" step="1">
-                    <span class="affix-right">ขวด</span>
-                  </div>
-                  <span class="field-hint">ตัวอย่าง: 1 ลัง มี 24 ขวด</span>
-                </div>
-              </div>
+            <div class="form-group mb-3">
+              <label class="form-label" for="calcItemName">ชื่อเครื่องดื่ม / สินค้า</label>
+              <input type="text" id="calcItemName" class="form-input" value="น้ำดื่ม / น้ำสมุนไพรแยกขวด"
+                placeholder="เช่น น้ำเก๊กฮวยขวด, ชาเขียวขวด">
+            </div>
 
-              <div class="form-group mb-3">
-                <label class="form-label" for="calcExtraCostPerUnit">ต้นทุนเพิ่มต่อขวด (เช่น ถุงหิ้ว, หลอด, แช่เย็น)
-                  (บาท)</label>
+            <div class="form-row two-col mb-3">
+              <div class="form-group">
+                <label class="form-label" for="calcPackPrice">ราคาซื้อมาต่อลัง (บาท)</label>
                 <div class="input-with-affix">
                   <span class="affix-left">฿</span>
-                  <input type="number" id="calcExtraCostPerUnit" class="form-input" value="1.0" min="0" step="0.25">
+                  <input type="number" id="calcPackPrice" class="form-input font-bold" value="349" min="1" step="0.5"
+                    inputmode="decimal">
                 </div>
               </div>
-
-              <div class="divider-hr"></div>
-
-              <div class="form-group mb-3">
-                <label class="form-label">เลือกวิธีคำนวณราคาขาย:</label>
-                <div class="radio-tab-group">
-                  <label class="radio-tab">
-                    <input type="radio" name="calcMode" value="profitBaht" checked>
-                    <span>กำหนดกำไรที่ต้องการ (บาท/ขวด)</span>
-                  </label>
-                  <label class="radio-tab">
-                    <input type="radio" name="calcMode" value="margin">
-                    <span>กำหนด % กำไรที่ต้องการ</span>
-                  </label>
-                </div>
-              </div>
-
-              <!-- Mode 1: Desired Profit in Baht (per bottle or per pack) -->
-              <div id="calcModeProfitBahtBox" class="form-group mb-4">
-                <div class="space-between align-center mb-2">
-                  <label class="form-label mb-0" id="lblDesiredProfit">กำไรที่ต้องการ (บาท):</label>
-                  <div class="radio-tab-group" style="margin-bottom: 0;">
-                    <label class="radio-tab" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;">
-                      <input type="radio" name="profitBahtScope" value="unit" checked>
-                      <span>ต่อขวด</span>
-                    </label>
-                    <label class="radio-tab" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;">
-                      <input type="radio" name="profitBahtScope" value="pack">
-                      <span>ต่อลัง</span>
-                    </label>
-                  </div>
-                </div>
-
+              <div class="form-group">
+                <label class="form-label" for="calcUnitsPerPack">จำนวนขวดใน 1 ลัง (ขวด)</label>
                 <div class="input-with-affix">
-                  <span class="affix-left">฿</span>
-                  <input type="number" id="calcDesiredProfitBaht" class="form-input" value="10" min="0.5" step="0.5">
-                  <span class="affix-right" id="affixProfitScope">บาท / ขวด</span>
-                </div>
-                <span class="field-hint" id="hintProfitScope">ระบุกำไรที่ต้องการต่อ 1 ขวด &rarr;
-                  ระบบจะคำนวณราคาขายต่อขวดให้ทันที</span>
-              </div>
-
-              <!-- Mode 2: Desired Margin % -->
-              <div id="calcModeMarginBox" class="form-group mb-4" style="display:none;">
-                <label class="form-label" for="calcDesiredMargin">เปอร์เซ็นต์กำไรที่ต้องการ (%)</label>
-                <div class="slider-group">
-                  <input type="range" id="calcMarginSlider" min="10" max="150" value="45" class="form-range">
-                  <div class="input-with-affix short-input">
-                    <input type="number" id="calcDesiredMargin" class="form-input" value="45" min="5" max="300">
-                    <span class="affix-right">%</span>
-                  </div>
-                </div>
-              </div>
-
-              <button class="btn-fastwork w-full" id="btnSaveCalcPreset">
-                <i data-lucide="bookmark-check"></i>
-                <span>บันทึกราคานี้เข้าเมนูขาย</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- Calculator Results & Insights -->
-          <div class="card calc-result-card">
-            <div class="card-header">
-              <div class="card-header-title">
-                <i data-lucide="badge-percent"></i>
-                <span>ผลการวิเคราะห์ต้นทุน & กำไรที่ได้</span>
-              </div>
-              <span class="pill-tag green-tag">คำนวณเรียลไทม์</span>
-            </div>
-            <div class="card-body">
-              <!-- Big Highlight Selling Price -->
-              <div class="pricing-highlight-box">
-                <div class="pricing-highlight-sub">ราคาขายแนะนำต่อขวด</div>
-                <div class="pricing-highlight-num" id="resSellingPrice">฿25.00</div>
-                <div class="pricing-highlight-badge" id="resProfitPerUnitTag">กำไรขวดละ +฿9.46</div>
-              </div>
-
-              <!-- Cost breakdown mini list -->
-              <div class="calc-metrics-table">
-                <div class="calc-row">
-                  <span class="text-muted">ต้นทุนตัวสินค้าต่อขวด (349 ÷ 24):</span>
-                  <span class="font-semibold" id="resRawCostPerUnit">฿14.54</span>
-                </div>
-                <div class="calc-row">
-                  <span class="text-muted">+ ค่าถุง/หลอด/แช่เย็น:</span>
-                  <span class="font-semibold" id="resExtraCostPerUnit">฿1.00</span>
-                </div>
-                <div class="calc-row highlight">
-                  <span>= ต้นทุนรวมจริงต่อขวด:</span>
-                  <span class="text-amber font-bold" id="resTotalCostPerUnit">฿15.54</span>
-                </div>
-                <div class="calc-row highlight-green">
-                  <span>กำไรสุทธิต่อขวด:</span>
-                  <span class="text-green font-bold" id="resProfitPerUnit">฿9.46</span>
-                </div>
-                <div class="calc-row">
-                  <span class="text-muted">อัตรากำไร (Margin):</span>
-                  <span class="font-semibold text-primary" id="resMarginPercent">37.8%</span>
-                </div>
-                <div class="calc-row">
-                  <span class="text-muted">กำไรสุทธิรวมเมื่อขายหมดลัง (24 ขวด):</span>
-                  <span class="font-bold text-green" id="resTotalPackProfit">฿227.04</span>
-                </div>
-              </div>
-
-              <!-- Quick Suggestion Tiers -->
-              <div class="pricing-tiers-section mt-4">
-                <div class="tiers-title">ตารางเปรียบเทียบราคาขายตัวเลือก:</div>
-                <div class="tiers-grid" id="pricingTiersGrid">
-                  <!-- Dynamically populated -->
+                  <input type="number" id="calcUnitsPerPack" class="form-input font-bold" value="24" min="1" step="1"
+                    inputmode="numeric">
+                  <span class="affix-right">ขวด</span>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
 
-        <!-- Saved Pricing Menu Table (ตารางเมนูขายและราคาสินค้าที่บันทึกไว้) -->
-        <div class="card mt-4" id="savedProductsSection">
-          <div class="card-header space-between">
-            <div class="card-header-title">
+            <div class="form-group mb-3">
+              <label class="form-label" for="calcExtraCostPerUnit">ต้นทุนเพิ่มต่อขวด (ค่าถุงหิ้ว, หลอด, แช่เย็น)
+                (บาท)</label>
+              <div class="input-with-affix">
+                <span class="affix-left">฿</span>
+                <input type="number" id="calcExtraCostPerUnit" class="form-input" value="1.0" min="0" step="0.25"
+                  inputmode="decimal">
+              </div>
+            </div>
+
+            <!-- Mode Selector Switch (Segmented Control) -->
+            <div class="form-group mb-3">
+              <label class="form-label">เลือกวิธีคำนวณราคาขาย:</label>
+              <div class="figma-segmented-control">
+                <label class="figma-segment-label">
+                  <input type="radio" name="calcMode" value="profitBaht" checked style="display:none;">
+                  <span class="figma-segment-tab active" id="tabModeProfitBaht">กำไรเป็นบาท</span>
+                </label>
+                <label class="figma-segment-label">
+                  <input type="radio" name="calcMode" value="margin" style="display:none;">
+                  <span class="figma-segment-tab" id="tabModeMargin">% กำไร (Margin)</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Mode 1: Desired Profit in Baht -->
+            <div id="calcModeProfitBahtBox" class="form-group mb-3">
+              <div class="space-between align-center mb-1">
+                <label class="form-label mb-0" id="lblDesiredProfit">กำไรที่ต้องการ (บาท):</label>
+                <div class="radio-tab-group" style="margin-bottom:0;">
+                  <label class="radio-tab" style="padding:0.25rem 0.6rem; font-size:0.78rem;">
+                    <input type="radio" name="profitBahtScope" value="unit" checked>
+                    <span>ต่อขวด</span>
+                  </label>
+                  <label class="radio-tab" style="padding:0.25rem 0.6rem; font-size:0.78rem;">
+                    <input type="radio" name="profitBahtScope" value="pack">
+                    <span>ต่อลัง</span>
+                  </label>
+                </div>
+              </div>
+              <div class="input-with-affix">
+                <span class="affix-left">฿</span>
+                <input type="number" id="calcDesiredProfitBaht" class="form-input font-bold text-primary" value="10"
+                  min="0.5" step="0.5" inputmode="decimal">
+                <span class="affix-right" id="affixProfitScope">บาท / ขวด</span>
+              </div>
+              <span class="field-hint" id="hintProfitScope">ระบุกำไรที่ต้องการต่อ 1 ขวด &rarr;
+                ระบบคำนวณราคาขายต่อขวดให้ทันที</span>
+            </div>
+
+            <!-- Mode 2: Desired Margin % -->
+            <div id="calcModeMarginBox" class="form-group mb-3" style="display:none;">
+              <label class="form-label" for="calcDesiredMargin">เปอร์เซ็นต์กำไรที่ต้องการ (%)</label>
+              <div class="slider-group">
+                <input type="range" id="calcMarginSlider" min="10" max="150" value="45" class="form-range">
+                <div class="input-with-affix short-input">
+                  <input type="number" id="calcDesiredMargin" class="form-input font-bold" value="45" min="5" max="300"
+                    inputmode="numeric">
+                  <span class="affix-right">%</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Save Action Button -->
+            <button class="figma-btn-save w-full" id="btnSaveCalcPreset"
+              style="width:100%; border-radius:var(--radius-sm);">
               <i data-lucide="bookmark-check"></i>
-              <span>ตารางเมนูขายและราคาสินค้าที่บันทึกไว้</span>
-            </div>
-            <div class="table-actions">
-              <span class="badge-counter" id="savedProductsCountBadge">0 รายการ</span>
-            </div>
+              <span>บันทึกราคานี้เข้าเมนูขาย</span>
+            </button>
           </div>
-          <div class="card-body p-0">
-            <div class="table-responsive">
-              <table class="fastwork-table">
-                <thead>
-                  <tr>
-                    <th>ชื่อสินค้า / เมนู</th>
-                    <th>แพ็คเกจ / ลัง</th>
-                    <th>ต้นทุนต่อหน่วย</th>
-                    <th>ราคาขายแนะนำ</th>
-                    <th>กำไรต่อหน่วย</th>
-                    <th>กำไรเมื่อขายหมดลัง</th>
-                    <th class="text-right">จัดการ</th>
-                  </tr>
-                </thead>
-                <tbody id="savedProductsTableBody">
-                  <!-- Dynamically populated -->
-                </tbody>
-              </table>
+
+          <!-- Saved Pricing Products Stream Header -->
+          <div class="figma-history-header mb-2">
+            <div class="figma-history-title">
+              <i data-lucide="bookmark-check"></i>
+              <span>เมนูขายและราคาสินค้าที่บันทึกไว้</span>
             </div>
+            <span class="figma-history-count" id="savedProductsCountBadge">0 รายการ</span>
           </div>
+
+          <!-- Unified Saved Products Feed (No Columns Table) -->
+          <div class="daily-tx-feed mb-4" id="savedProductsCardsFeed">
+            <!-- Rendered via JS -->
+          </div>
+
+          <!-- Fallback tbody for compatibility -->
+          <table style="display:none;">
+            <tbody id="savedProductsTableBody"></tbody>
+          </table>
+
         </div>
       </section>
 
       <!-- TAB 5: CALENDAR -->
       <section id="tab-calendar" class="tab-pane">
-        <div class="section-header">
-          <div>
-            <h2 class="page-title">ปฏิทินสรุปยอดขายรายวันตลอดเดือน</h2>
-            <p class="page-desc">คลิกที่ช่องวันที่ในปฏิทิน เพื่อดูรายละเอียดบิลยอดขายและกำไรของวันนั้นๆ</p>
-          </div>
+        <div class="section-header" style="justify-content: flex-end; margin-bottom: 0.75rem;">
           <div class="calendar-controls">
             <button class="icon-btn-border" id="calPrevMonthBtn" title="เดือนก่อนหน้า">
               <i data-lucide="chevron-left"></i>
@@ -1034,49 +930,111 @@
         </div>
       </section>
 
-      <!-- TAB 6: RECIPES (สูตรชงน้ำต่อ 1 โหล) -->
+      <!-- TAB 6: RECIPES (สูตรชงน้ำ) - Figma Mobile Design System -->
       <section id="tab-recipes" class="tab-pane">
-        <div class="section-header">
-          <div>
-            <h2 class="page-title">สูตรชงน้ำต่อ 1 โหล (Batch Recipes)</h2>
-            <p class="page-desc">จัดการสูตรชงน้ำต่อ 1 โหล (บรรจุโหลแก้ว/เหยือก) คำนวณต้นทุนต่อโหล
-              และต้นทุนต่อแก้วได้อัตโนมัติ</p>
-          </div>
-          <div class="recipe-create-dropdown-wrapper" style="position: relative; display: inline-block;">
-            <button class="btn-fastwork" id="btnOpenAddRecipeModal"
-              style="display:inline-flex; align-items:center; gap:0.4rem;">
-              <i data-lucide="plus"></i>
-              <span>สร้างสูตรชงใหม่</span>
-              <i data-lucide="chevron-down" style="width:16px; height:16px; margin-left:0.2rem;"></i>
-            </button>
-            <div class="recipe-create-menu" id="recipeCreateMenu"
-              style="display:none; position:absolute; right:0; top:calc(100% + 6px); background:#ffffff; border:1px solid var(--border-color); border-radius:var(--radius-md); box-shadow:0 10px 25px rgba(0,0,0,0.12); min-width:240px; z-index:100; overflow:hidden; padding:0.4rem 0;">
-              <button type="button" class="recipe-dropdown-item" id="btnOptionAddCupRecipe"
-                style="width:100%; text-align:left; padding:0.65rem 1rem; border:none; background:none; cursor:pointer; display:flex; align-items:flex-start; gap:0.75rem; transition:background 0.2s;">
-                <span style="font-size:1.25rem; line-height:1;">🥤</span>
-                <div>
-                  <div style="font-weight:700; color:var(--text-main); font-size:0.9rem;">สูตรต่อ 1 แก้ว (ชงสด)</div>
-                  <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">คำนวณต้นทุนต่อแก้วโดยตรง
-                  </div>
-                </div>
+        <div class="figma-mobile-container">
+
+          <!-- Top Action Bar (Add Recipe Dropdown Menu) -->
+          <div class="figma-recipe-header mb-3">
+            <div class="recipe-create-dropdown-wrapper w-full" style="position: relative; width: 100%;">
+              <button class="figma-btn-add-recipe w-full" id="btnOpenAddRecipeModal" style="width: 100%;">
+                <i data-lucide="plus"></i>
+                <span>+ สร้างสูตรชงใหม่</span>
+                <i data-lucide="chevron-down" style="width:16px; height:16px; margin-left:auto;"></i>
               </button>
-              <div style="height:1px; background:var(--border-color); margin:0.3rem 0;"></div>
-              <button type="button" class="recipe-dropdown-item" id="btnOptionAddJarRecipe"
-                style="width:100%; text-align:left; padding:0.65rem 1rem; border:none; background:none; cursor:pointer; display:flex; align-items:flex-start; gap:0.75rem; transition:background 0.2s;">
-                <span style="font-size:1.25rem; line-height:1;">🏺</span>
-                <div>
-                  <div style="font-weight:700; color:var(--text-main); font-size:0.9rem;">สูตรต่อ 1 โหล (ชงถัง/เหยือก)
+              <div class="recipe-create-menu" id="recipeCreateMenu"
+                style="display:none; position:absolute; right:0; left:0; top:calc(100% + 6px); background:#ffffff; border:1px solid var(--border-color); border-radius:var(--radius-md); box-shadow:0 12px 30px rgba(0,0,0,0.15); z-index:100; overflow:hidden; padding:0.4rem 0;">
+                <button type="button" class="recipe-dropdown-item" id="btnOptionAddCupRecipe"
+                  style="width:100%; text-align:left; padding:0.75rem 1rem; border:none; background:none; cursor:pointer; display:flex; align-items:center; gap:0.75rem; transition:background 0.2s;">
+                  <span style="font-size:1.4rem; line-height:1;">🥤</span>
+                  <div style="flex:1;">
+                    <div style="font-weight:700; color:var(--text-main); font-size:0.92rem;">สูตรต่อ 1 แก้ว (ชงสด)</div>
+                    <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">คำนวณต้นทุนต่อแก้วโดยตรง</div>
                   </div>
-                  <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">ขยายสูตรเป็นถัง 5-6 ลิตร
+                </button>
+                <div style="height:1px; background:var(--border-color); margin:0.3rem 0;"></div>
+                <button type="button" class="recipe-dropdown-item" id="btnOptionAddJarRecipe"
+                  style="width:100%; text-align:left; padding:0.75rem 1rem; border:none; background:none; cursor:pointer; display:flex; align-items:center; gap:0.75rem; transition:background 0.2s;">
+                  <span style="font-size:1.4rem; line-height:1;">🏺</span>
+                  <div style="flex:1;">
+                    <div style="font-weight:700; color:var(--text-main); font-size:0.92rem;">สูตรต่อ 1 โหล (ชงถัง/เหยือก)</div>
+                    <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">ขยายสูตรเป็นถัง 5-6 ลิตร</div>
                   </div>
-                </div>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recipe Hero Highlight Summary Card -->
+          <div class="figma-recipe-hero-card mb-3">
+            <div class="frh-top">
+              <div class="frh-label">
+                <i data-lucide="beaker"></i>
+                <span>คลังสูตรเครื่องดื่มประจำร้าน</span>
+              </div>
+              <span class="frh-count-badge" id="recipeTotalCountBadge">0 เมนู</span>
+            </div>
+            <div class="frh-amount-wrap">
+              <span class="frh-title-text">สูตรชงน้ำ & ต้นทุนแก้ว</span>
+            </div>
+            <div class="frh-breakdown-row">
+              <div class="frh-stat-pill" onclick="app.setRecipeFilter('cup')">
+                <span class="pill-dot green"></span>
+                <span class="pill-lbl">สูตรชงสด</span>
+                <span class="pill-val text-green" id="recipeCountCup">0 สูตร</span>
+              </div>
+              <div class="frh-stat-pill" onclick="app.setRecipeFilter('jar')">
+                <span class="pill-dot blue"></span>
+                <span class="pill-lbl">สูตร 1 โหล</span>
+                <span class="pill-val text-primary" id="recipeCountJar">0 สูตร</span>
+              </div>
+              <div class="frh-stat-pill" onclick="app.setRecipeFilter('all')">
+                <span class="pill-dot amber"></span>
+                <span class="pill-lbl">กำไรเฉลี่ย</span>
+                <span class="pill-val text-amber" id="recipeAvgMargin">0%</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Search & Filter Bar -->
+          <div class="figma-recipe-search-box mb-3">
+            <div class="figma-search-input-wrap">
+              <i data-lucide="search" class="figma-search-icon"></i>
+              <input type="text" id="recipeSearchInput" class="figma-search-input" placeholder="ค้นหาชื่อสูตร หรือส่วนผสม..." autocomplete="off">
+              <button type="button" class="figma-btn-clear" id="btnClearRecipeSearch" style="display:none;">
+                <i data-lucide="x"></i>
               </button>
             </div>
           </div>
-        </div>
 
-        <div class="recipes-grid" id="recipesGridContainer">
-          <!-- Dynamically populated recipe cards -->
+          <!-- Mode Filter Segmented Control / Pills -->
+          <div class="figma-pills-scroll-row mb-3" id="recipeFilterPills">
+            <button type="button" class="figma-pill-filter active" data-filter="all">
+              <i data-lucide="layers"></i>
+              <span>สูตรทั้งหมด</span>
+            </button>
+            <button type="button" class="figma-pill-filter" data-filter="cup">
+              <span>🥤 ต่อ 1 แก้ว (ชงสด)</span>
+            </button>
+            <button type="button" class="figma-pill-filter" data-filter="jar">
+              <span>🏺 ต่อ 1 โหล (ถัง/เหยือก)</span>
+            </button>
+          </div>
+
+          <!-- History Feed Header -->
+          <div class="figma-history-header mb-2">
+            <div class="figma-history-title">
+              <i data-lucide="book-open"></i>
+              <span>รายการสูตรชงน้ำ</span>
+            </div>
+            <span class="figma-history-count" id="recipeFilteredCountBadge">0 รายการ</span>
+          </div>
+
+          <!-- Recipes Feed (Modern Figma Mobile Card Stream) -->
+          <div class="daily-tx-feed mb-4" id="recipesGridContainer">
+            <!-- Dynamically populated via renderRecipes() -->
+          </div>
+
         </div>
       </section>
 

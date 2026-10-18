@@ -341,6 +341,38 @@ class WaterFlowApp {
       btnOpenAddRecipeModal.addEventListener('click', () => this.openRecipeModal(null, 'jar'));
     }
 
+    // Recipe Search & Pill Filters (Tab 6 Figma Design)
+    const recipeSearchInput = document.getElementById('recipeSearchInput');
+    const btnClearRecipeSearch = document.getElementById('btnClearRecipeSearch');
+    if (recipeSearchInput) {
+      recipeSearchInput.addEventListener('input', (e) => {
+        const val = e.target.value.trim();
+        if (btnClearRecipeSearch) {
+          btnClearRecipeSearch.style.display = val ? 'flex' : 'none';
+        }
+        this.recipeSearchQuery = val;
+        this.renderRecipes();
+      });
+    }
+
+    if (btnClearRecipeSearch) {
+      btnClearRecipeSearch.addEventListener('click', () => {
+        if (recipeSearchInput) recipeSearchInput.value = '';
+        btnClearRecipeSearch.style.display = 'none';
+        this.recipeSearchQuery = '';
+        this.renderRecipes();
+        if (recipeSearchInput) recipeSearchInput.focus();
+      });
+    }
+
+    const recipePills = document.querySelectorAll('#recipeFilterPills .figma-pill-filter');
+    recipePills.forEach(pill => {
+      pill.addEventListener('click', () => {
+        const filter = pill.getAttribute('data-filter') || 'all';
+        this.setRecipeFilter(filter);
+      });
+    });
+
     // Switch to Today tab from Dashboard
     document.querySelectorAll('[data-action="goToToday"]').forEach(btn => {
       btn.addEventListener('click', () => this.switchTab('today'));
@@ -402,6 +434,49 @@ class WaterFlowApp {
       });
     }
 
+    // Date Step Buttons (Prev Day, Next Day, Today, Yesterday, Picker trigger)
+    const shiftDate = (days) => {
+      const curDateStr = todayInput?.value || this.formatDate(new Date());
+      const d = new Date(curDateStr + 'T00:00:00');
+      d.setDate(d.getDate() + days);
+      const newStr = this.formatDate(d);
+      if (todayInput) todayInput.value = newStr;
+      if (dailyFormDate) dailyFormDate.value = newStr;
+      this.loadDailyFormForDate(newStr);
+      this.renderTodaySummary(newStr);
+    };
+
+    document.getElementById('btnPrevDay')?.addEventListener('click', () => shiftDate(-1));
+    document.getElementById('btnNextDay')?.addEventListener('click', () => shiftDate(1));
+
+    document.getElementById('btnJumpToday')?.addEventListener('click', () => {
+      const todayStr = this.formatDate(new Date());
+      if (todayInput) todayInput.value = todayStr;
+      if (dailyFormDate) dailyFormDate.value = todayStr;
+      this.loadDailyFormForDate(todayStr);
+      this.renderTodaySummary(todayStr);
+    });
+
+    document.getElementById('btnJumpYesterday')?.addEventListener('click', () => {
+      const d = new Date();
+      d.setDate(d.getDate() - 1);
+      const yStr = this.formatDate(d);
+      if (todayInput) todayInput.value = yStr;
+      if (dailyFormDate) dailyFormDate.value = yStr;
+      this.loadDailyFormForDate(yStr);
+      this.renderTodaySummary(yStr);
+    });
+
+    document.getElementById('btnJumpPicker')?.addEventListener('click', () => {
+      if (todayInput) {
+        if (typeof todayInput.showPicker === 'function') {
+          todayInput.showPicker();
+        } else {
+          todayInput.focus();
+        }
+      }
+    });
+
     // Live calculation listeners for daily revenue form
     const revInput = document.getElementById('dailyFormRevenue');
     const costInput = document.getElementById('dailyFormCost');
@@ -431,7 +506,7 @@ class WaterFlowApp {
     }
 
     // Quick Addition Chips (+50, +100, +500, +1000)
-    document.querySelectorAll('.btn-chip-add').forEach(chip => {
+    document.querySelectorAll('.btn-chip-add, .figma-chip-btn').forEach(chip => {
       chip.addEventListener('click', (e) => {
         const addVal = parseFloat(e.currentTarget.dataset.add);
         const setVal = parseFloat(e.currentTarget.dataset.set);
@@ -449,8 +524,36 @@ class WaterFlowApp {
       });
     });
 
+    // Embedded Touch Keypad (0-9, ., backspace)
+    document.querySelectorAll('.figma-keypad-key').forEach(keyBtn => {
+      keyBtn.addEventListener('click', (e) => {
+        if (!revInput) return;
+        const key = e.currentTarget.dataset.key;
+        let val = revInput.value ? String(revInput.value) : '';
+
+        if (key === 'backspace') {
+          val = val.slice(0, -1);
+        } else if (key === '.') {
+          if (!val.includes('.')) {
+            val = val === '' ? '0.' : val + '.';
+          }
+        } else if (key !== undefined) {
+          // If val is '0', replace with new digit unless key is '.'
+          if (val === '0') {
+            val = key;
+          } else {
+            val += key;
+          }
+        }
+
+        revInput.value = val;
+        toggleClearRevenueBtn();
+        this.updateDailyLivePreview();
+      });
+    });
+
     // Quick Note Tags
-    document.querySelectorAll('.btn-note-tag').forEach(tag => {
+    document.querySelectorAll('.btn-note-tag, .figma-tag-btn').forEach(tag => {
       tag.addEventListener('click', (e) => {
         const noteInput = document.getElementById('dailyFormNote');
         const text = e.currentTarget.dataset.note || '';
@@ -505,6 +608,14 @@ class WaterFlowApp {
     if (expCatFilter) {
       expCatFilter.addEventListener('change', () => this.renderExpenses());
     }
+
+    // Figma Expense Pill Filter Buttons
+    document.querySelectorAll('.figma-pill-filter').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const cat = e.currentTarget.dataset.cat;
+        this.setExpenseCategory(cat);
+      });
+    });
 
     // Pricing Calculator
     this.bindPricingCalc();
@@ -1512,12 +1623,11 @@ class WaterFlowApp {
     const costInput = document.getElementById('dailyFormCost');
     const sourceHint = document.getElementById('dailyCostSourceHint');
 
-    // คำนวณต้นทุนคงที่ต่อวัน (วัตถุดิบเฉลี่ยเปิดเทอม + ค่าเช่าร้านเฉลี่ย)
     const costInfo = this.getSystemCostForDate(dateStr, rev);
     if (recalcSystemCost || !costInput?.value) {
       if (costInput) costInput.value = costInfo.cost;
     }
-    if (sourceHint) sourceHint.textContent = costInfo.label;
+    if (sourceHint) sourceHint.textContent = '';
 
     const cost = parseFloat(costInput?.value) || 0;
     const profit = rev - cost;
@@ -1575,10 +1685,13 @@ class WaterFlowApp {
     document.getElementById('dailyFormNote').value = '';
     document.getElementById('btnResetDailyForm').style.display = 'none';
     const btnClearRevenue = document.getElementById('btnClearDailyRevenue');
-    if (btnClearRevenue) btnClearRevenue.style.display = 'none';
-    document.getElementById('dailyFormModeTag').textContent = 'บันทึกยอดใหม่';
-    document.getElementById('dailyFormModeTag').className = 'pill-tag blue-tag';
-    document.querySelector('#btnSaveDailyRevenue span').textContent = 'บันทึกยอดเงินวันนี้';
+    const modeTag = document.getElementById('dailyFormModeTag');
+    if (modeTag) {
+      modeTag.textContent = 'บันทึกยอดใหม่';
+      modeTag.className = 'pill-tag blue-tag';
+    }
+    const saveBtnSpan = document.querySelector('#btnSaveDailyRevenue span');
+    if (saveBtnSpan) saveBtnSpan.textContent = 'บันทึกยอดเงินวันนี้';
     this.updateDailyLivePreview();
   }
 
@@ -1685,6 +1798,40 @@ class WaterFlowApp {
     const isHol = this.isHoliday(selectedDate);
 
     const subtitle = document.getElementById('todayDateSubtitle');
+    const displayThaiLarge = document.getElementById('displayThaiDateLarge');
+    const hubStatusTag = document.getElementById('dateHubStatusTag');
+
+    // Update Date Hub Card Display
+    if (displayThaiLarge) {
+      displayThaiLarge.textContent = this.formatThaiDate(selectedDate);
+    }
+    if (hubStatusTag) {
+      if (isSchoolOpen) {
+        hubStatusTag.textContent = 'วันเปิดเรียน';
+        hubStatusTag.className = 'figma-capsule-tag open';
+      } else if (isHol) {
+        hubStatusTag.textContent = this.getHolidayDescription(selectedDate) || 'วันหยุดโรงเรียน';
+        hubStatusTag.className = 'figma-capsule-tag holiday';
+      } else {
+        hubStatusTag.textContent = 'วันเสาร์-อาทิตย์';
+        hubStatusTag.className = 'figma-capsule-tag weekend';
+      }
+    }
+
+    // Toggle active state on jump shortcuts
+    const todayStr = this.formatDate(new Date());
+    const yDate = new Date();
+    yDate.setDate(yDate.getDate() - 1);
+    const yStr = this.formatDate(yDate);
+
+    const btnToday = document.getElementById('btnJumpToday');
+    const btnYest = document.getElementById('btnJumpYesterday');
+    const btnOther = document.getElementById('btnJumpPicker');
+
+    if (btnToday) btnToday.classList.toggle('active', selectedDate === todayStr);
+    if (btnYest) btnYest.classList.toggle('active', selectedDate === yStr);
+    if (btnOther) btnOther.classList.toggle('active', selectedDate !== todayStr && selectedDate !== yStr);
+
     if (subtitle) {
       if (isSchoolOpen) {
         const ym = selectedDate.substring(0, 7);
@@ -1706,9 +1853,13 @@ class WaterFlowApp {
     const dailyRent = record ? (record.dailyRent !== undefined ? record.dailyRent : (isSchoolOpen ? this.getDailyRentForSchoolDay(selectedDate) : 0)) : (isSchoolOpen ? this.getDailyRentForSchoolDay(selectedDate) : 0);
     const matCost = record ? (record.materialCost !== undefined ? record.materialCost : Math.max(0, cost - dailyRent)) : 0;
 
-    // Update Stat Cards
-    document.getElementById('todaySalesAmount').textContent = this.formatCurrency(revenue);
-    document.getElementById('todayCostAmount').textContent = this.formatCurrency(cost);
+    // Update Stat Cards (if present)
+    const elSalesAmount = document.getElementById('todaySalesAmount');
+    if (elSalesAmount) elSalesAmount.textContent = this.formatCurrency(revenue);
+
+    const elCostAmount = document.getElementById('todayCostAmount');
+    if (elCostAmount) elCostAmount.textContent = this.formatCurrency(cost);
+
     const costSub = document.getElementById('todayCostSubtitle');
     if (costSub) {
       if (isSchoolOpen) {
@@ -1754,49 +1905,91 @@ class WaterFlowApp {
   }
 
   renderDailyHistoryTable() {
-    const tbody = document.getElementById('todaySalesTableBody');
+    const feedWrap = document.getElementById('todaySalesMobileCards');
     const countBadge = document.getElementById('todayBillCountBadge');
-    if (!tbody) return;
 
     const list = [...this.data.dailySales].sort((a, b) => b.date.localeCompare(a.date));
 
     if (countBadge) countBadge.textContent = `${list.length} วัน`;
 
     if (list.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">ยังไม่มีรายการบันทึกยอดขาย กรอกยอดขายด้านบนเพื่อบันทึก</td></tr>`;
+      if (feedWrap) {
+        feedWrap.innerHTML = `
+          <div class="figma-tx-empty">
+            <div class="figma-tx-empty-icon">
+              <i data-lucide="inbox"></i>
+            </div>
+            <div class="figma-tx-empty-title">ยังไม่มีรายการบันทึกยอดขาย</div>
+            <div class="figma-tx-empty-desc">กรอกยอดขายที่ได้จากแป้นพิมพ์ด้านบนเพื่อเริ่มบันทึก</div>
+          </div>
+        `;
+      }
+      this.refreshLucide();
       return;
     }
 
-    tbody.innerHTML = list.map(d => {
-      const isProfit = d.profit >= 0;
-      const margin = d.revenue > 0 ? ((Math.abs(d.profit) / d.revenue) * 100).toFixed(1) : 0;
-      return `
-        <tr>
-          <td>
-            <div class="font-bold">${this.formatThaiDate(d.date)}</div>
-          </td>
-          <td class="font-bold text-primary">${this.formatCurrency(d.revenue)}</td>
-          <td class="text-amber">${this.formatCurrency(d.cost)}</td>
-          <td class="font-bold ${isProfit ? 'text-green' : 'text-danger'}">
-            ${isProfit ? `+${this.formatCurrency(d.profit)}` : `-${this.formatCurrency(Math.abs(d.profit))}`}
-          </td>
-          <td>
-            <span class="badge-pill-item ${isProfit ? 'green-tag' : 'badge-danger-tag'}" style="${!isProfit ? 'background:#fee2e2;color:#dc2626;' : ''}">
-              ${isProfit ? `+${margin}%` : `ขาดทุน (${margin}%)`}
-            </span>
-          </td>
-          <td class="text-muted text-sm">${this.escapeHtml(d.note || '-')}</td>
-          <td class="text-center">
-            <button class="icon-btn-border mr-1" onclick="app.editDailyRecord('${d.date}')" title="แก้ไขยอดวันนี้">
-              <i data-lucide="edit-3" style="width: 15px; height: 15px; color: #0050f0;"></i>
-            </button>
-            <button class="icon-btn-border" onclick="app.deleteDailyRecord('${d.id}')" title="ลบรายการ">
-              <i data-lucide="trash-2" style="width: 15px; height: 15px; color: #ef4444;"></i>
-            </button>
-          </td>
-        </tr>
-      `;
-    }).join('');
+    // Render Unified Transaction Cards Stream (Modern Feed for both Web & Mobile, No Column Table)
+    if (feedWrap) {
+      feedWrap.innerHTML = list.map(d => {
+        const isProfit = d.profit >= 0;
+        const margin = d.revenue > 0 ? ((Math.abs(d.profit) / d.revenue) * 100).toFixed(1) : 0;
+        const isSchoolOpen = this.isSchoolOpenDay(d.date);
+
+        return `
+          <div class="figma-tx-card ${isProfit ? 'is-profit' : 'is-loss'}">
+            <!-- Main Content Row -->
+            <div class="figma-tx-main">
+              <!-- Left: Avatar Icon + Date & Subtitle -->
+              <div class="figma-tx-left">
+                <div class="figma-tx-avatar">
+                  <i data-lucide="${isProfit ? 'trending-up' : 'trending-down'}"></i>
+                </div>
+                <div class="figma-tx-meta">
+                  <div class="figma-tx-date-row">
+                    <span class="figma-tx-date">${this.formatThaiDate(d.date)}</span>
+                    <span class="figma-tx-pill ${isSchoolOpen ? 'open' : 'holiday'}">
+                      ${isSchoolOpen ? 'วันเปิดเรียน' : 'วันหยุด'}
+                    </span>
+                  </div>
+                  <div class="figma-tx-sub">
+                    <span>หักต้นทุน</span>
+                    <span class="figma-tx-cost-num">${this.formatCurrency(d.cost)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right: Revenue Amount + Profit/Loss Pill -->
+              <div class="figma-tx-right">
+                <span class="figma-tx-revenue">${this.formatCurrency(d.revenue)}</span>
+                <span class="figma-tx-profit-pill ${isProfit ? 'profit' : 'loss'}">
+                  ${isProfit ? `+${this.formatCurrency(d.profit)} (+${margin}%)` : `-${this.formatCurrency(Math.abs(d.profit))} (${margin}%)`}
+                </span>
+              </div>
+            </div>
+
+            <!-- Optional Note -->
+            ${d.note ? `
+              <div class="figma-tx-note-row">
+                <i data-lucide="message-square"></i>
+                <span>${this.escapeHtml(d.note)}</span>
+              </div>
+            ` : ''}
+
+            <!-- Touch Actions -->
+            <div class="figma-tx-actions">
+              <button type="button" class="btn-figma-tx-action edit" onclick="app.editDailyRecord('${d.date}')">
+                <i data-lucide="edit-3"></i>
+                <span>แก้ไขยอดขาย</span>
+              </button>
+              <button type="button" class="btn-figma-tx-action delete" onclick="app.deleteDailyRecord('${d.id}')">
+                <i data-lucide="trash-2"></i>
+                <span>ลบ</span>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
 
     this.refreshLucide();
   }
@@ -1852,59 +2045,133 @@ class WaterFlowApp {
     document.getElementById('expCategoryStock').textContent = this.formatCurrency(catStock);
 
     const tbody = document.getElementById('expenseTableBody');
-    if (!tbody) return;
+    const feedWrap = document.getElementById('expenseCardsFeed');
+    const countBadge = document.getElementById('expenseFilteredCountBadge');
+
+    if (countBadge) countBadge.textContent = `${list.length} รายการ`;
 
     if (list.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-4">ไม่มีรายการค่าใช้จ่ายในหมวดหมู่นี้</td></tr>`;
+      if (tbody) tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-4">ไม่มีรายการค่าใช้จ่ายในหมวดหมู่นี้</td></tr>`;
+      if (feedWrap) {
+        feedWrap.innerHTML = `
+          <div class="figma-tx-empty">
+            <div class="figma-tx-empty-icon">
+              <i data-lucide="inbox"></i>
+            </div>
+            <div class="figma-tx-empty-title">ไม่มีรายการค่าใช้จ่ายในหมวดหมู่นี้</div>
+            <div class="figma-tx-empty-desc">กดปุ่ม "+ เพิ่มค่าใช้จ่าย" ด้านบนเพื่อเริ่มบันทึกบิลซื้อของ</div>
+          </div>
+        `;
+      }
+      this.refreshLucide();
       return;
     }
 
     const sorted = [...list].sort((a, b) => b.date.localeCompare(a.date));
 
-    tbody.innerHTML = sorted.map(exp => {
-      let badge = 'blue-tag';
-      let catName = 'วัตถุดิบ';
-      if (exp.category === 'INGREDIENT') { badge = 'amber-tag'; catName = 'วัตถุดิบชงน้ำ'; }
-      if (exp.category === 'PACKAGING') { badge = 'blue-tag'; catName = 'บรรจุภัณฑ์/โหล/แก้ว'; }
-      if (exp.category === 'STOCK') { badge = 'purple-tag'; catName = 'ซื้อยกลัง/สำเร็จรูป'; }
-      if (exp.category === 'OTHER') { badge = 'green-tag'; catName = 'อื่นๆ / น้ำแข็ง'; }
+    // Render Unified Cards Feed (Matching Figma Mobile Design System)
+    if (feedWrap) {
+      feedWrap.innerHTML = sorted.map(exp => {
+        let badgeClass = 'ingredient';
+        let catName = 'วัตถุดิบชงน้ำ';
+        let avatarClass = 'cat-ingredient';
+        let iconName = 'shopping-cart';
 
-      // คำนวณราคาเฉลี่ยต่อหน่วยสุทธิ (เช่น ฿120 / 400g = ฿0.30/g)
-      const pSize = Number(exp.packSize) || 0;
-      const pUnit = exp.packUnit || '';
-      let unitPriceStr = '-';
-      if (pSize > 0 && exp.amount > 0) {
-        const uCost = exp.amount / pSize;
-        unitPriceStr = uCost < 1 ? `฿${uCost.toFixed(2)}/${pUnit}` : `฿${uCost.toFixed(1)}/${pUnit}`;
-      }
+        if (exp.category === 'INGREDIENT') {
+          badgeClass = 'ingredient';
+          catName = 'วัตถุดิบชงน้ำ';
+          avatarClass = 'cat-ingredient';
+          iconName = 'shopping-cart';
+        } else if (exp.category === 'PACKAGING') {
+          badgeClass = 'packaging';
+          catName = 'บรรจุภัณฑ์/แก้ว';
+          avatarClass = 'cat-packaging';
+          iconName = 'box';
+        } else if (exp.category === 'STOCK') {
+          badgeClass = 'stock';
+          catName = 'ซื้อยกลัง/สำเร็จรูป';
+          avatarClass = 'cat-stock';
+          iconName = 'archive';
+        } else if (exp.category === 'OTHER') {
+          badgeClass = 'other';
+          catName = 'อื่นๆ / น้ำแข็ง';
+          avatarClass = 'cat-other';
+          iconName = 'more-horizontal';
+        }
 
-      const qtyDisplay = exp.qtyDesc || (pSize > 0 ? `${pSize} ${pUnit}` : '-');
+        const pSize = Number(exp.packSize) || 0;
+        const pUnit = exp.packUnit || '';
+        let unitPriceStr = '';
+        if (pSize > 0 && exp.amount > 0) {
+          const uCost = exp.amount / pSize;
+          unitPriceStr = uCost < 1 ? `(฿${uCost.toFixed(2)}/${pUnit})` : `(฿${uCost.toFixed(1)}/${pUnit})`;
+        }
+        const qtyDisplay = exp.qtyDesc || (pSize > 0 ? `${pSize} ${pUnit}` : '');
 
-      return `
-        <tr>
-          <td>${this.formatThaiDate(exp.date)}</td>
-          <td>
-            <div class="font-bold">${this.escapeHtml(exp.title)}</div>
-            ${pSize > 0 ? `<div class="text-muted text-xs">⚖️ บรรจุ ${pSize} ${this.escapeHtml(pUnit)}</div>` : ''}
-          </td>
-          <td><span class="badge-pill-item ${badge}">${catName}</span></td>
-          <td>${this.escapeHtml(qtyDisplay)}</td>
-          <td class="font-semibold text-primary">${unitPriceStr}</td>
-          <td class="font-bold text-amber">${this.formatCurrency(exp.amount)}</td>
-          <td class="text-muted text-sm">${this.escapeHtml(exp.note || '-')}</td>
-          <td class="text-center" style="white-space:nowrap;">
-            <button class="icon-btn-border mr-1" onclick="app.openExpenseModal('${exp.id}')" title="แก้ไขรายการ">
-              <i data-lucide="edit-3" style="width: 14px; height: 14px; color: #0050f0;"></i>
-            </button>
-            <button class="icon-btn-border" onclick="app.deleteExpense('${exp.id}')" title="ลบรายจ่าย">
-              <i data-lucide="trash-2" style="color: #ef4444; width: 14px; height: 14px;"></i>
-            </button>
-          </td>
-        </tr>
-      `;
-    }).join('');
+        return `
+          <div class="figma-exp-card">
+            <!-- Top Row: Icon + Title/Meta + Amount -->
+            <div class="fec-top-row">
+              <div class="fec-left">
+                <div class="fec-avatar ${avatarClass}">
+                  <i data-lucide="${iconName}"></i>
+                </div>
+                <div class="fec-title-wrap">
+                  <div class="fec-title" title="${this.escapeHtml(exp.title)}">${this.escapeHtml(exp.title)}</div>
+                  <div class="fec-meta-row">
+                    <span class="fec-date">${this.formatThaiDate(exp.date)}</span>
+                    <span class="fec-badge ${badgeClass}">${catName}</span>
+                  </div>
+                </div>
+              </div>
+              <div class="fec-right">
+                <span class="fec-amount">-${this.formatCurrency(exp.amount)}</span>
+                ${unitPriceStr ? `<span class="fec-unit-cost">${unitPriceStr}</span>` : ''}
+              </div>
+            </div>
+
+            <!-- Sub Row: Pack Quantity & Note if present -->
+            ${qtyDisplay || exp.note ? `
+              <div class="fec-sub-row">
+                <div class="fec-pack-info">
+                  ${qtyDisplay ? `<span>📦 รับเข้า: ${this.escapeHtml(qtyDisplay)}</span>` : ''}
+                </div>
+                ${exp.note ? `<div class="fec-note" title="${this.escapeHtml(exp.note)}">📝 ${this.escapeHtml(exp.note)}</div>` : ''}
+              </div>
+            ` : ''}
+
+            <!-- Action Buttons -->
+            <div class="fec-actions">
+              <button type="button" class="btn-figma-tx-action edit" onclick="app.openExpenseModal('${exp.id}')">
+                <i data-lucide="edit-3"></i>
+                <span>แก้ไข</span>
+              </button>
+              <button type="button" class="btn-figma-tx-action delete" onclick="app.deleteExpense('${exp.id}')">
+                <i data-lucide="trash-2"></i>
+                <span>ลบ</span>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    if (tbody) {
+      tbody.innerHTML = '';
+    }
 
     this.refreshLucide();
+  }
+
+  setExpenseCategory(cat) {
+    const filterInput = document.getElementById('expenseCategoryFilter');
+    if (filterInput) filterInput.value = cat;
+
+    document.querySelectorAll('.figma-pill-filter').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.cat === cat);
+    });
+
+    this.renderExpenses();
   }
 
   deleteExpense(expId) {
@@ -1977,12 +2244,19 @@ class WaterFlowApp {
         const val = e.target.value;
         const profitBahtBox = document.getElementById('calcModeProfitBahtBox');
         const marginBox = document.getElementById('calcModeMarginBox');
+        const tabProfitBaht = document.getElementById('tabModeProfitBaht');
+        const tabMargin = document.getElementById('tabModeMargin');
+
         if (val === 'profitBaht') {
           if (profitBahtBox) profitBahtBox.style.display = 'block';
           if (marginBox) marginBox.style.display = 'none';
+          if (tabProfitBaht) tabProfitBaht.classList.add('active');
+          if (tabMargin) tabMargin.classList.remove('active');
         } else {
           if (profitBahtBox) profitBahtBox.style.display = 'none';
           if (marginBox) marginBox.style.display = 'block';
+          if (tabProfitBaht) tabProfitBaht.classList.remove('active');
+          if (tabMargin) tabMargin.classList.add('active');
         }
         updateCalc();
       });
@@ -2137,6 +2411,10 @@ class WaterFlowApp {
     const marginBox = document.getElementById('calcModeMarginBox');
     if (profitBahtBox) profitBahtBox.style.display = 'block';
     if (marginBox) marginBox.style.display = 'none';
+    const tabProfitBaht = document.getElementById('tabModeProfitBaht');
+    const tabMargin = document.getElementById('tabModeMargin');
+    if (tabProfitBaht) tabProfitBaht.classList.add('active');
+    if (tabMargin) tabMargin.classList.remove('active');
 
     // Calculate profit in Baht for this target selling price
     const packPrice = parseFloat(document.getElementById('calcPackPrice')?.value) || 349;
@@ -2159,78 +2437,165 @@ class WaterFlowApp {
 
   renderSavedProducts() {
     const tbody = document.getElementById('savedProductsTableBody');
+    const cardsFeed = document.getElementById('savedProductsCardsFeed');
     const badge = document.getElementById('savedProductsCountBadge');
-    if (!tbody) return;
 
     const list = this.data.savedProducts || [];
     if (badge) badge.textContent = `${list.length} รายการ`;
 
-    if (list.length === 0) {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="7" class="text-center py-4 text-muted">
-            ยังไม่มีสินค้าที่บันทึกไว้ ลองใช้เครื่องคิดเลขด้านบนแล้วกดปุ่ม "บันทึกราคานี้เข้าเมนูขาย"
-          </td>
-        </tr>
-      `;
-      return;
+    // 1. Render Mobile & Desktop Unified Cards Feed
+    if (cardsFeed) {
+      if (list.length === 0) {
+        cardsFeed.innerHTML = `
+          <div class="figma-tx-empty">
+            <div class="figma-empty-icon"><i data-lucide="bookmark-x"></i></div>
+            <div class="figma-empty-text">ยังไม่มีสินค้าที่บันทึกไว้</div>
+            <div class="figma-empty-sub">ลองใช้เครื่องคิดเลขด้านบนแล้วกดปุ่ม "บันทึกราคานี้เข้าเมนูขาย"</div>
+          </div>
+        `;
+      } else {
+        cardsFeed.innerHTML = list.map(item => {
+          const isProfit = (item.unitProfit || 0) >= 0;
+          const profitUnitStr = isProfit
+            ? `+฿${Number(item.unitProfit || 0).toFixed(2)}`
+            : `-฿${Math.abs(Number(item.unitProfit || 0)).toFixed(2)}`;
+          const packProfitStr = isProfit
+            ? `+฿${Number(item.packProfit || 0).toFixed(0)}`
+            : `-฿${Math.abs(Number(item.packProfit || 0)).toFixed(0)}`;
+
+          return `
+            <div class="figma-prod-card" data-id="${item.id}">
+              <div class="fpc-top">
+                <div class="fpc-left">
+                  <div class="fpc-avatar">
+                    <i data-lucide="milk"></i>
+                  </div>
+                  <div class="fpc-name-wrap">
+                    <span class="fpc-name">${this.escapeHtml(item.name || 'น้ำดื่ม/สินค้า')}</span>
+                    <span class="fpc-pack-desc">
+                      ซื้อลังละ ฿${Number(item.packPrice || 0).toLocaleString()} (${item.unitsPerPack || 0} ขวด)
+                    </span>
+                  </div>
+                </div>
+                <div class="fpc-right">
+                  <span class="fpc-price">฿${Number(item.sellingPrice || 0).toFixed(2)}</span>
+                  <span class="fpc-profit-pill ${isProfit ? 'profit' : 'loss'}">
+                    ${profitUnitStr}/ขวด
+                  </span>
+                </div>
+              </div>
+
+              <!-- Secondary Row: Breakdown -->
+              <div class="fpc-meta-strip">
+                <span class="fpc-cost">
+                  ต้นทุนรวม: <strong>฿${Number(item.unitCost || 0).toFixed(2)}</strong>/ขวด
+                  ${item.extraCost > 0 ? `<small class="text-muted">(+เสริม ฿${item.extraCost})</small>` : ''}
+                </span>
+                <span class="fpc-pack-profit ${isProfit ? 'text-green' : 'text-danger'}">
+                  กำไร <strong>${packProfitStr}</strong>/ลัง
+                </span>
+              </div>
+
+              <!-- Action Buttons -->
+              <div class="fpc-actions">
+                <button class="btn-figma-tx-action" data-action="load" data-id="${item.id}" title="ดึงกลับมาคำนวณใหม่">
+                  <i data-lucide="calculator"></i>
+                  <span>ดึงมาคำนวณ</span>
+                </button>
+                <button class="btn-figma-tx-action danger" data-action="delete" data-id="${item.id}" title="ลบรายการ">
+                  <i data-lucide="trash-2"></i>
+                  <span>ลบ</span>
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      if (!cardsFeed._eventsBound) {
+        cardsFeed._eventsBound = true;
+        cardsFeed.addEventListener('click', (e) => {
+          const btn = e.target.closest('button[data-action]');
+          if (!btn) return;
+          const action = btn.getAttribute('data-action');
+          const id = btn.getAttribute('data-id');
+          if (action === 'delete') {
+            this.deleteSavedProduct(id);
+          } else if (action === 'load') {
+            this.loadProductToCalculator(id);
+          }
+        });
+      }
     }
 
-    tbody.innerHTML = list.map(item => {
-      const isProfit = (item.unitProfit || 0) >= 0;
-      return `
-        <tr>
-          <td>
-            <div class="font-bold text-dark">${this.escapeHtml(item.name)}</div>
-            <div class="text-muted text-sm">บันทึกเมื่อ ${this.formatThaiDate(item.savedAt || '2026-10-15')}</div>
-          </td>
-          <td>
-            <span class="font-semibold">฿${Number(item.packPrice || 0).toLocaleString()}</span>
-            <span class="text-muted text-sm"> / ${item.unitsPerPack || 0} หน่วย</span>
-          </td>
-          <td>
-            <span class="text-amber font-semibold">฿${Number(item.unitCost || 0).toFixed(2)}</span>
-            ${item.extraCost > 0 ? `<span class="text-muted text-xs block">(+ค่าเสริม ฿${item.extraCost})</span>` : ''}
-          </td>
-          <td>
-            <span class="font-bold text-primary">฿${Number(item.sellingPrice || 0).toFixed(2)}</span>
-          </td>
-          <td>
-            <span class="font-semibold ${isProfit ? 'text-green' : 'text-danger'}">
-              ${isProfit ? `+฿${Number(item.unitProfit || 0).toFixed(2)}` : `-฿${Math.abs(Number(item.unitProfit || 0)).toFixed(2)}`}
-            </span>
-          </td>
-          <td>
-            <span class="font-bold ${isProfit ? 'text-green' : 'text-danger'}">
-              ${isProfit ? `+฿${Number(item.packProfit || 0).toFixed(2)}` : `-฿${Math.abs(Number(item.packProfit || 0)).toFixed(2)}`}
-            </span>
-          </td>
-          <td class="text-right">
-            <button class="icon-btn-border btn-load-calc" data-action="load" data-id="${item.id}" title="ดึงข้อมูลกลับมาคำนวณใหม่">
-              <i data-lucide="calculator" style="width:14px;height:14px;pointer-events:none;"></i>
-            </button>
-            <button class="icon-btn-border btn-del-calc" data-action="delete" data-id="${item.id}" title="ลบออกจากรายการ">
-              <i data-lucide="trash-2" style="width:14px;height:14px;color:#ef4444;pointer-events:none;"></i>
-            </button>
-          </td>
-        </tr>
-      `;
-    }).join('');
+    // 2. Fallback Table (if table exists)
+    if (tbody) {
+      if (list.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" class="text-center py-4 text-muted">
+              ยังไม่มีสินค้าที่บันทึกไว้ ลองใช้เครื่องคิดเลขด้านบนแล้วกดปุ่ม "บันทึกราคานี้เข้าเมนูขาย"
+            </td>
+          </tr>
+        `;
+      } else {
+        tbody.innerHTML = list.map(item => {
+          const isProfit = (item.unitProfit || 0) >= 0;
+          return `
+            <tr>
+              <td>
+                <div class="font-bold text-dark">${this.escapeHtml(item.name)}</div>
+                <div class="text-muted text-sm">บันทึกเมื่อ ${this.formatThaiDate(item.savedAt || '2026-10-15')}</div>
+              </td>
+              <td>
+                <span class="font-semibold">฿${Number(item.packPrice || 0).toLocaleString()}</span>
+                <span class="text-muted text-sm"> / ${item.unitsPerPack || 0} หน่วย</span>
+              </td>
+              <td>
+                <span class="text-amber font-semibold">฿${Number(item.unitCost || 0).toFixed(2)}</span>
+                ${item.extraCost > 0 ? `<span class="text-muted text-xs block">(+ค่าเสริม ฿${item.extraCost})</span>` : ''}
+              </td>
+              <td>
+                <span class="font-bold text-primary">฿${Number(item.sellingPrice || 0).toFixed(2)}</span>
+              </td>
+              <td>
+                <span class="font-semibold ${isProfit ? 'text-green' : 'text-danger'}">
+                  ${isProfit ? `+฿${Number(item.unitProfit || 0).toFixed(2)}` : `-฿${Math.abs(Number(item.unitProfit || 0)).toFixed(2)}`}
+                </span>
+              </td>
+              <td>
+                <span class="font-bold ${isProfit ? 'text-green' : 'text-danger'}">
+                  ${isProfit ? `+฿${Number(item.packProfit || 0).toFixed(2)}` : `-฿${Math.abs(Number(item.packProfit || 0)).toFixed(2)}`}
+                </span>
+              </td>
+              <td class="text-right">
+                <button class="icon-btn-border btn-load-calc" data-action="load" data-id="${item.id}" title="ดึงข้อมูลกลับมาคำนวณใหม่">
+                  <i data-lucide="calculator" style="width:14px;height:14px;pointer-events:none;"></i>
+                </button>
+                <button class="icon-btn-border btn-del-calc" data-action="delete" data-id="${item.id}" title="ลบออกจากรายการ">
+                  <i data-lucide="trash-2" style="width:14px;height:14px;color:#ef4444;pointer-events:none;"></i>
+                </button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
 
-    // Bind event delegation on tbody (runs once or safely replaced)
-    if (!tbody._eventsBound) {
-      tbody._eventsBound = true;
-      tbody.addEventListener('click', (e) => {
-        const btn = e.target.closest('button[data-action]');
-        if (!btn) return;
-        const action = btn.getAttribute('data-action');
-        const id = btn.getAttribute('data-id');
-        if (action === 'delete') {
-          this.deleteSavedProduct(id);
-        } else if (action === 'load') {
-          this.loadProductToCalculator(id);
-        }
-      });
+      // Bind event delegation on tbody (runs once or safely replaced)
+      if (!tbody._eventsBound) {
+        tbody._eventsBound = true;
+        tbody.addEventListener('click', (e) => {
+          const btn = e.target.closest('button[data-action]');
+          if (!btn) return;
+          const action = btn.getAttribute('data-action');
+          const id = btn.getAttribute('data-id');
+          if (action === 'delete') {
+            this.deleteSavedProduct(id);
+          } else if (action === 'load') {
+            this.loadProductToCalculator(id);
+          }
+        });
+      }
     }
 
     this.refreshLucide();
@@ -2781,17 +3146,89 @@ class WaterFlowApp {
     return cups > 0 ? (jarCost / cups) : 0;
   }
 
+  setRecipeFilter(filter = 'all') {
+    this.recipeActiveFilter = filter;
+    const pills = document.querySelectorAll('#recipeFilterPills .figma-pill-filter');
+    pills.forEach(pill => {
+      if (pill.getAttribute('data-filter') === filter) pill.classList.add('active');
+      else pill.classList.remove('active');
+    });
+    this.renderRecipes();
+  }
+
   renderRecipes() {
     this.syncRecipesWithExpenses();
     const container = document.getElementById('recipesGridContainer');
     if (!container) return;
 
-    if (this.data.recipes.length === 0) {
-      container.innerHTML = `<p class="text-muted text-center py-5">ยังไม่มีสูตรชงน้ำ คลิกปุ่ม "สร้างสูตรชงใหม่" เพื่อเพิ่มสูตร</p>`;
+    const allRecipes = this.data.recipes || [];
+
+    // 1. Calculate Summary Metrics for Hero Card
+    let cupCount = 0;
+    let jarCount = 0;
+    let totalMarginSum = 0;
+    let marginCount = 0;
+
+    allRecipes.forEach(recipe => {
+      const mode = recipe.mode || (recipe.yieldCups === 1 && (!recipe.jarLiters || recipe.jarLiters <= 0.5) ? 'cup' : 'jar');
+      if (mode === 'cup') cupCount++;
+      else jarCount++;
+
+      const isCup = mode === 'cup';
+      const jarCost = this.calculateRecipeJarCost(recipe);
+      const unitCost = isCup ? jarCost : this.calculateRecipeUnitCost(recipe);
+      const sellingPrice = recipe.sellingPrice !== undefined ? Number(recipe.sellingPrice) : (recipe.suggestedPrice || 25);
+      const profitPerCup = sellingPrice - unitCost;
+      const margin = sellingPrice > 0 ? ((profitPerCup / sellingPrice) * 100) : 0;
+      totalMarginSum += margin;
+      marginCount++;
+    });
+
+    const avgMargin = marginCount > 0 ? (totalMarginSum / marginCount).toFixed(0) : 0;
+
+    const totalCountBadge = document.getElementById('recipeTotalCountBadge');
+    const countCupElem = document.getElementById('recipeCountCup');
+    const countJarElem = document.getElementById('recipeCountJar');
+    const avgMarginElem = document.getElementById('recipeAvgMargin');
+
+    if (totalCountBadge) totalCountBadge.textContent = `${allRecipes.length} เมนู`;
+    if (countCupElem) countCupElem.textContent = `${cupCount} สูตร`;
+    if (countJarElem) countJarElem.textContent = `${jarCount} สูตร`;
+    if (avgMarginElem) avgMarginElem.textContent = `${avgMargin}%`;
+
+    // 2. Filter list by Active Filter & Search Query
+    const activeFilter = this.recipeActiveFilter || 'all';
+    const searchQuery = (this.recipeSearchQuery || '').toLowerCase();
+
+    let filtered = allRecipes.filter(recipe => {
+      const mode = recipe.mode || (recipe.yieldCups === 1 && (!recipe.jarLiters || recipe.jarLiters <= 0.5) ? 'cup' : 'jar');
+      if (activeFilter !== 'all' && mode !== activeFilter) return false;
+
+      if (searchQuery) {
+        const nameMatch = (recipe.name || '').toLowerCase().includes(searchQuery);
+        const ingMatch = (recipe.ingredients || []).some(ing => (ing.name || '').toLowerCase().includes(searchQuery));
+        if (!nameMatch && !ingMatch) return false;
+      }
+      return true;
+    });
+
+    const filteredBadge = document.getElementById('recipeFilteredCountBadge');
+    if (filteredBadge) filteredBadge.textContent = `${filtered.length} รายการ`;
+
+    // 3. Render Modern Card Stream
+    if (filtered.length === 0) {
+      container.innerHTML = `
+        <div class="figma-tx-empty">
+          <div class="figma-empty-icon"><i data-lucide="beaker"></i></div>
+          <div class="figma-empty-text">ไม่พบสูตรชงน้ำที่ค้นหา</div>
+          <div class="figma-empty-sub">ลองเปลี่ยนคำค้นหา หรือแตะปุ่ม "+ สร้างสูตรชงใหม่" ด้านบน</div>
+        </div>
+      `;
+      this.refreshLucide();
       return;
     }
 
-    container.innerHTML = this.data.recipes.map(recipe => {
+    container.innerHTML = filtered.map(recipe => {
       const mode = recipe.mode || (recipe.yieldCups === 1 && (!recipe.jarLiters || recipe.jarLiters <= 0.5) ? 'cup' : 'jar');
       const isCup = mode === 'cup';
       const jarCost = this.calculateRecipeJarCost(recipe);
@@ -2801,89 +3238,99 @@ class WaterFlowApp {
       const profitPerCup = sellingPrice - unitCost;
       const marginPercent = sellingPrice > 0 ? Math.round(((profitPerCup / sellingPrice) * 100)) : 0;
       const totalJarProfit = profitPerCup * yieldCups;
+      const isProfit = profitPerCup >= 0;
+
+      const capacityText = isCup
+        ? `ชงแก้ว ${recipe.cupSizeOz || 16} oz (ชงสด)`
+        : `${this.escapeHtml(recipe.jarCapacity || '1 โหล')} (~${yieldCups} แก้ว)`;
+
+      const ingredientsList = recipe.ingredients || [];
 
       return `
-        <div class="recipe-card" style="position:relative; ${isCup ? 'border-top:3px solid #10b981;' : 'border-top:3px solid var(--primary);'}">
-          <div class="recipe-card-header">
-            <div>
-              <div style="display:flex; align-items:center; gap:0.4rem; margin-bottom:0.25rem;">
-                <span class="pill-tag ${isCup ? 'green-tag' : 'blue-tag'}" style="font-size:0.7rem; font-weight:700; padding:0.15rem 0.45rem;">
-                  ${isCup ? '🥤 สูตรต่อ 1 แก้ว' : '🏺 สูตรต่อ 1 โหล'}
-                </span>
-                <span class="recipe-title" style="margin-bottom:0;">${this.escapeHtml(recipe.name)}</span>
+        <div class="figma-recipe-card ${isCup ? 'mode-cup' : 'mode-jar'}">
+          <!-- Card Top Row -->
+          <div class="frc-top">
+            <div class="frc-left">
+              <div class="frc-avatar ${isCup ? 'cup' : 'jar'}">
+                ${isCup ? '🥤' : '🏺'}
               </div>
-              <div class="recipe-jar-capacity">
-                <i data-lucide="${isCup ? 'coffee' : 'package'}" style="width:14px;height:14px;display:inline-block;vertical-align:-2px;"></i>
-                ${isCup ? `ชงสดแก้ว ${recipe.cupSizeOz || 16} oz (1 แก้ว)` : `${this.escapeHtml(recipe.jarCapacity || '1 โหล')} (~${yieldCups} แก้ว)`}
+              <div class="frc-name-wrap">
+                <div class="frc-tags-row">
+                  <span class="frc-badge ${isCup ? 'cup' : 'jar'}">
+                    ${isCup ? 'สูตร 1 แก้ว' : 'สูตร 1 โหล'}
+                  </span>
+                  <span class="frc-capacity">${capacityText}</span>
+                </div>
+                <div class="frc-title">${this.escapeHtml(recipe.name)}</div>
               </div>
             </div>
-            <div class="recipe-badge-actions">
-              <button class="icon-btn-border" onclick="app.openRecipeModal('${recipe.id}')" title="แก้ไขสูตร">
-                <i data-lucide="edit-3" style="width:15px;height:15px;"></i>
-              </button>
-              <button class="icon-btn-border" onclick="app.deleteRecipe('${recipe.id}')" title="ลบสูตร">
-                <i data-lucide="trash-2" style="width:15px;height:15px;color:#ef4444;"></i>
-              </button>
+            <div class="frc-right">
+              <span class="frc-price">฿${sellingPrice.toFixed(0)}</span>
+              <span class="frc-profit-pill">กำไร ${marginPercent}%</span>
             </div>
           </div>
 
-          <div class="recipe-card-body">
-            <div class="recipe-stats-row">
-              <div>
-                <div class="recipe-stat-lbl">${isCup ? 'ต้นทุนวัตถุดิบ/แก้ว' : 'ต้นทุนต่อ 1 โหล'}</div>
-                <div class="recipe-stat-val text-amber">${isCup ? `฿${unitCost.toFixed(2)}` : this.formatCurrency(jarCost)}</div>
-              </div>
-              <div>
-                <div class="recipe-stat-lbl">ทุนเฉลี่ยต่อแก้ว</div>
-                <div class="recipe-stat-val text-amber">฿${unitCost.toFixed(2)}</div>
-              </div>
-              <div>
-                <div class="recipe-stat-lbl">ราคาขายต่อแก้ว</div>
-                <div class="recipe-stat-val text-primary" style="font-size:1.1rem; font-weight:800;">฿${sellingPrice.toFixed(0)}</div>
-              </div>
+          <!-- Key Metrics 3-Column Strip -->
+          <div class="frc-metrics-strip">
+            <div class="frc-metric-col">
+              <span class="frc-metric-lbl">${isCup ? 'ทุนวัตถุดิบ' : 'ทุนรวม 1 โหล'}</span>
+              <span class="frc-metric-val text-amber">${isCup ? `฿${unitCost.toFixed(2)}` : this.formatCurrency(jarCost)}</span>
             </div>
-
-            <!-- Profit Summary Bar on Card -->
-            <div class="mb-3" style="background:#f8fafc; border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:0.5rem 0.75rem; display:flex; justify-content:space-between; align-items:center;">
-              <div>
-                <span style="font-size:0.75rem; color:var(--text-muted); font-weight:600;">กำไรต่อแก้ว: </span>
-                <span class="font-bold text-success" style="font-size:0.95rem;">+฿${profitPerCup.toFixed(2)}</span>
-              </div>
-              <div class="pill-tag green-tag" style="font-size:0.75rem; font-weight:700;">
-                กำไร ${marginPercent}%
-              </div>
+            <div class="frc-metric-col">
+              <span class="frc-metric-lbl">ทุนเฉลี่ย/แก้ว</span>
+              <span class="frc-metric-val text-amber">฿${unitCost.toFixed(2)}</span>
             </div>
+            <div class="frc-metric-col">
+              <span class="frc-metric-lbl">กำไรสุทธิ/แก้ว</span>
+              <span class="frc-metric-val ${isProfit ? 'text-green' : 'text-danger'}">
+                ${isProfit ? `+฿${profitPerCup.toFixed(2)}` : `-฿${Math.abs(profitPerCup).toFixed(2)}`}
+              </span>
+            </div>
+          </div>
 
-            <div class="recipe-ingredients-preview">
-              <div class="recipe-ingredients-title">${isCup ? 'ส่วนผสมต่อ 1 แก้ว:' : `ส่วนผสมใน 1 โหล (ชงได้ ${yieldCups} แก้ว):`}</div>
-              <div class="ingredients-chips">
-                ${(recipe.ingredients || []).map(ing => {
-        const calcNote = ing.calcData && ing.calcData.packPrice
-          ? ` • ซื้อ ฿${ing.calcData.packPrice}/${ing.calcData.packSize}${ing.calcData.packUnit || ''}`
-          : '';
-        return `
-                    <span class="ingredient-chip" title="ต้นทุน ฿${Number(ing.cost || 0).toFixed(2)}${calcNote}">
-                      ${this.escapeHtml(ing.name)} (${this.escapeHtml(ing.amount)} = ฿${Number(ing.cost || 0).toFixed(2)}${calcNote ? `<small style="color:var(--text-muted);">${calcNote}</small>` : ''})
+          <!-- Ingredients Chips Preview -->
+          ${ingredientsList.length > 0 ? `
+            <div class="frc-ingredients-box">
+              <div class="frc-ing-label">
+                <i data-lucide="layers" style="width:13px;height:13px;display:inline-block;vertical-align:-2px;"></i>
+                ${isCup ? 'ส่วนผสมต่อ 1 แก้ว' : `ส่วนผสมต่อ 1 โหล (${yieldCups} แก้ว)`} (${ingredientsList.length} รายการ):
+              </div>
+              <div class="frc-chips-wrap">
+                ${ingredientsList.map(ing => {
+                  return `
+                    <span class="frc-chip" title="ต้นทุน ฿${Number(ing.cost || 0).toFixed(2)}">
+                      <span>${this.escapeHtml(ing.name)}</span>
+                      <small class="text-muted">(${this.escapeHtml(ing.amount)})</small>
+                      <strong>฿${Number(ing.cost || 0).toFixed(1)}</strong>
                     </span>
                   `;
-      }).join('')}
+                }).join('')}
               </div>
             </div>
+          ` : ''}
 
-            ${recipe.instructions ? `
-              <div class="recipe-instructions-note">
-                ${this.escapeHtml(recipe.instructions)}
-              </div>
-            ` : ''}
-          </div>
+          <!-- Optional Instructions Note -->
+          ${recipe.instructions ? `
+            <div class="frc-note-box">
+              <strong>วิธีชง/เทคนิค:</strong> ${this.escapeHtml(recipe.instructions)}
+            </div>
+          ` : ''}
 
-          <div class="recipe-card-footer" style="display:flex; justify-content:space-between; align-items:center;">
-            <span class="text-sm font-semibold text-primary">
-              ${isCup ? `กำไรสุทธิต่อแก้ว +฿${profitPerCup.toFixed(2)}` : `ขายหมดโหลได้กำไร ~${this.formatCurrency(totalJarProfit)}`}
+          <!-- Card Actions Footer -->
+          <div class="frc-actions">
+            <span class="frc-total-summary">
+              ${isCup ? `กำไร +฿${profitPerCup.toFixed(2)}/แก้ว` : `ขายหมดโหลได้กำไร ~${this.formatCurrency(totalJarProfit)}`}
             </span>
-            <span style="font-size:0.75rem; color:var(--text-muted);">
-              ${isCup ? `รายรับ ฿${sellingPrice.toFixed(0)} / แก้ว` : `รายรับ ~฿${(sellingPrice * yieldCups).toFixed(0)}`}
-            </span>
+            <div class="frc-btns-group">
+              <button class="btn-figma-tx-action" onclick="app.openRecipeModal('${recipe.id}')" title="แก้ไขสูตร">
+                <i data-lucide="edit-3"></i>
+                <span>แก้ไข</span>
+              </button>
+              <button class="btn-figma-tx-action danger" onclick="app.deleteRecipe('${recipe.id}')" title="ลบสูตร">
+                <i data-lucide="trash-2"></i>
+                <span>ลบ</span>
+              </button>
+            </div>
           </div>
         </div>
       `;
