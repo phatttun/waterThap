@@ -6,6 +6,23 @@
 // Global Storage Key
 const STORAGE_KEY = 'waterflow_shop_data_v5';
 
+// Supabase Cloud Sync Configuration
+const SUPABASE_CONFIG = {
+  url: 'https://nsltcgiovpirdkuvemmu.supabase.co',
+  anonKey: 'sb_publishable_zwun7CNF6cyaNdF6VzZapQ_L6PRBdOi',
+  storeId: 'shop_water_yay_tap'
+};
+
+// Initialize Supabase Client (if library loaded)
+let supabaseClient = null;
+if (typeof supabase !== 'undefined' && supabase.createClient) {
+  try {
+    supabaseClient = supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+  } catch (err) {
+    console.warn('Supabase initialization failed:', err);
+  }
+}
+
 // วันหยุดนักขัตฤกษ์ประจำปี 2026 (หรือวันหยุดโรงเรียน) ตัวอย่าง
 const THAI_PUBLIC_HOLIDAYS_2026 = [
   '2026-01-01', '2026-01-02', // วันขึ้นปีใหม่
@@ -50,19 +67,22 @@ class WaterFlowApp {
     this.initElements();
     this.bindEvents();
     this.initViews();
+
+    // Start Supabase Cloud Sync
+    this.initCloudSync();
   }
 
   // Load from LocalStorage or seed
   loadData() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) {
-      this.saveData(DEFAULT_DATA);
+      this.saveData(DEFAULT_DATA, false);
       return JSON.parse(JSON.stringify(DEFAULT_DATA));
     }
     try {
       const parsed = JSON.parse(raw);
       if (!parsed.dailySales) {
-        this.saveData(DEFAULT_DATA);
+        this.saveData(DEFAULT_DATA, false);
         return JSON.parse(JSON.stringify(DEFAULT_DATA));
       }
       if (!Array.isArray(parsed.savedProducts)) {
@@ -77,14 +97,154 @@ class WaterFlowApp {
       return parsed;
     } catch (e) {
       console.error('Error parsing stored data, resetting:', e);
-      this.saveData(DEFAULT_DATA);
+      this.saveData(DEFAULT_DATA, false);
       return JSON.parse(JSON.stringify(DEFAULT_DATA));
     }
   }
 
-  saveData(customData = null) {
+  saveData(customData = null, syncToCloud = true) {
     const d = customData || this.data;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(d));
+
+    if (syncToCloud) {
+      this.pushDataToCloud(d);
+    }
+  }
+
+  // =========================================================================
+  // SUPABASE REALTIME CLOUD SYNC
+  // =========================================================================
+  async initCloudSync() {
+    this.updateCloudSyncUI('syncing', 'กำลังเชื่อมต่อคลาวด์...');
+
+    if (!supabaseClient) {
+      this.updateCloudSyncUI('offline', 'ออฟไลน์ (Local)');
+      return;
+    }
+
+    try {
+      // 1. Pull latest data from Supabase
+      await this.pullDataFromCloud();
+
+      // 2. Subscribe to Realtime Changes from other devices
+      supabaseClient
+        .channel('app_store_changes')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'app_store', filter: `id=eq.${SUPABASE_CONFIG.storeId}` },
+          (payload) => {
+            if (payload && payload.new && payload.new.data) {
+              const remoteData = payload.new.data;
+              const localJson = JSON.stringify(this.data);
+              const remoteJson = JSON.stringify(remoteData);
+              if (localJson !== remoteJson) {
+                this.data = remoteData;
+                this.saveData(remoteData, false); // save to localStorage without re-pushing
+                this.renderAllViews();
+                this.showToast('ข้อมูลอัปเดตตรงกับเครื่องอื่นแล้ว ☁️', 'success');
+              }
+              this.updateCloudSyncUI('online', 'ซิงค์ตรงกันแล้ว');
+            }
+          }
+        )
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            this.updateCloudSyncUI('online', 'ออนไลน์ (เรียลไทม์)');
+          }
+        });
+    } catch (err) {
+      console.warn('Cloud sync error:', err);
+      this.updateCloudSyncUI('offline', 'ออฟไลน์ (มีสำรองในเครื่อง)');
+    }
+  }
+
+  async pullDataFromCloud() {
+    if (!supabaseClient) return;
+    try {
+      const { data, error } = await supabaseClient
+        .from('app_store')
+        .select('data, updated_at')
+        .eq('id', SUPABASE_CONFIG.storeId)
+        .maybeSingle();
+
+      if (error) {
+        console.warn('Supabase pull error:', error);
+        this.updateCloudSyncUI('offline', 'ออฟไลน์');
+        return;
+      }
+
+      if (data && data.data) {
+        // If remote data exists, sync it
+        this.data = data.data;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data));
+        this.renderAllViews();
+        this.updateCloudSyncUI('online', 'เชื่อมต่อคลาวด์แล้ว');
+      } else {
+        // If first time and no record in Supabase yet, push current local data to seed Supabase
+        await this.pushDataToCloud(this.data);
+      }
+    } catch (e) {
+      console.warn('pullDataFromCloud exception:', e);
+      this.updateCloudSyncUI('offline', 'ออฟไลน์');
+    }
+  }
+
+  async pushDataToCloud(dataToPush) {
+    if (!supabaseClient) return;
+    this.updateCloudSyncUI('syncing', 'กำลังซิงค์...');
+
+    try {
+      const payload = {
+        id: SUPABASE_CONFIG.storeId,
+        data: dataToPush,
+        updated_at: new Date().toISOString()
+      };
+
+      const { error } = await supabaseClient
+        .from('app_store')
+        .upsert(payload, { onConflict: 'id' });
+
+      if (error) {
+        console.warn('Supabase push error:', error);
+        this.updateCloudSyncUI('offline', 'ซิงค์ไม่สำเร็จ (เซฟในเครื่องแล้ว)');
+      } else {
+        this.updateCloudSyncUI('online', 'ซิงค์ทุกเครื่องแล้ว');
+      }
+    } catch (e) {
+      console.warn('pushDataToCloud exception:', e);
+      this.updateCloudSyncUI('offline', 'ออฟไลน์ (เซฟในเครื่องแล้ว)');
+    }
+  }
+
+  updateCloudSyncUI(status, label) {
+    const badges = [
+      document.getElementById('cloudSyncStatusMobile'),
+      document.getElementById('cloudSyncStatusDesktop')
+    ];
+
+    badges.forEach(badge => {
+      if (!badge) return;
+      badge.classList.remove('syncing', 'offline');
+      if (status === 'syncing') badge.classList.add('syncing');
+      if (status === 'offline') badge.classList.add('offline');
+
+      const textElem = badge.querySelector('.sync-text');
+      if (textElem) {
+        textElem.textContent = badge.classList.contains('desktop') ? `คลาวด์: ${label}` : (status === 'online' ? 'ซิงค์' : (status === 'syncing' ? 'กำลังส่ง' : 'ออฟไลน์'));
+      }
+      badge.setAttribute('title', `Supabase Cloud Sync: ${label}`);
+    });
+  }
+
+  renderAllViews() {
+    this.renderDashboard();
+    this.renderTodayView();
+    this.renderExpenses();
+    this.renderSavedProducts();
+    this.renderCalendar();
+    this.renderRecipes();
+    this.renderStock();
+    this.refreshLucide();
   }
 
   formatDate(dateObj) {

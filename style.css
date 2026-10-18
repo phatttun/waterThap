@@ -4555,6 +4555,59 @@ body {
   margin-top: 0.15rem;
 }
 
+/* Cloud Sync Badge Indicator */
+.cloud-sync-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: var(--radius-full);
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #047857;
+  transition: var(--transition);
+  user-select: none;
+}
+
+.cloud-sync-badge .sync-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25);
+  transition: var(--transition);
+}
+
+.cloud-sync-badge.syncing {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.35);
+  color: #b45309;
+}
+
+.cloud-sync-badge.syncing .sync-dot {
+  background: #f59e0b;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25);
+  animation: pulseSync 1s infinite alternate;
+}
+
+.cloud-sync-badge.offline {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #dc2626;
+}
+
+.cloud-sync-badge.offline .sync-dot {
+  background: #ef4444;
+  box-shadow: none;
+}
+
+@keyframes pulseSync {
+  0% { transform: scale(0.85); opacity: 0.6; }
+  100% { transform: scale(1.15); opacity: 1; }
+}
+
 /* ==========================================================
    Figma Mobile Design System: Tab 6 (Recipes & Beverage Formulas)
    ========================================================== */
