@@ -42,7 +42,8 @@ const DEFAULT_DATA = {
   shopSettings: {
     name: 'ร้านน้ำยายแต๊ป',
     monthlyRent: 10000,
-    schoolOpenDays: 20 // วันเปิดเรียนเฉลี่ยต่อเดือน
+    schoolOpenDays: 20, // วันเปิดเรียนเฉลี่ยต่อเดือน
+    vacationMonths: [] // เดือนปิดเทอมเริ่มต้น (เม.ย. และ ต.ค.)
   },
   dailySales: [],
   expenses: [],
@@ -84,6 +85,12 @@ class WaterFlowApp {
       if (!parsed.dailySales) {
         this.saveData(DEFAULT_DATA, false);
         return JSON.parse(JSON.stringify(DEFAULT_DATA));
+      }
+      if (!parsed.shopSettings) {
+        parsed.shopSettings = JSON.parse(JSON.stringify(DEFAULT_DATA.shopSettings));
+      }
+      if (!Array.isArray(parsed.shopSettings.vacationMonths)) {
+        parsed.shopSettings.vacationMonths = [];
       }
       if (!Array.isArray(parsed.savedProducts)) {
         parsed.savedProducts = [];
@@ -322,9 +329,35 @@ class WaterFlowApp {
     return openDays > 0 ? openDays : 20;
   }
 
+  isVacationMonth(ymOrMonth) {
+    if (!this.data.shopSettings) return false;
+    const vMonths = this.data.shopSettings.vacationMonths || [];
+    let m = 0;
+    if (typeof ymOrMonth === 'number') {
+      m = ymOrMonth;
+    } else if (typeof ymOrMonth === 'string') {
+      if (ymOrMonth.includes('-')) {
+        m = parseInt(ymOrMonth.split('-')[1], 10);
+      } else {
+        m = parseInt(ymOrMonth, 10);
+      }
+    }
+    return vMonths.map(Number).includes(m);
+  }
+
+  getRentForMonth(ym) {
+    if (this.isVacationMonth(ym)) {
+      return 0; // เดือนปิดเทอม = ไม่คิดค่าเช่า (฿0)
+    }
+    return (this.data.shopSettings && Number(this.data.shopSettings.monthlyRent)) || 10000;
+  }
+
   getDailyRentForSchoolDay(dateStr = null) {
-    const rent = (this.data.shopSettings && Number(this.data.shopSettings.monthlyRent)) || 10000;
     const ym = dateStr ? dateStr.substring(0, 7) : this.formatDate(new Date()).substring(0, 7);
+    if (this.isVacationMonth(ym)) {
+      return 0; // เดือนปิดเทอม = ค่าเช่ารายวันเป็น 0
+    }
+    const rent = this.getRentForMonth(ym);
     const days = this.getSchoolOpenDaysCount(ym);
     return Math.round(rent / (days > 0 ? days : 20));
   }
@@ -405,6 +438,65 @@ class WaterFlowApp {
     if (rentInput && this.data.shopSettings) {
       rentInput.value = this.data.shopSettings.monthlyRent || 10000;
     }
+
+    // Initialize vacation months checkboxes
+    this.updateVacationMonthsUI();
+  }
+
+  updateVacationMonthsUI() {
+    const vMonths = (this.data.shopSettings && this.data.shopSettings.vacationMonths) || [];
+    document.querySelectorAll('input[name="vacationMonth"]').forEach(cb => {
+      const val = parseInt(cb.value, 10);
+      cb.checked = vMonths.includes(val);
+      const chip = cb.closest('.vacation-month-chip');
+      if (chip) {
+        if (cb.checked) {
+          chip.style.borderColor = 'var(--primary)';
+          chip.style.backgroundColor = '#eff6ff';
+          chip.style.color = 'var(--primary)';
+          chip.style.fontWeight = '700';
+        } else {
+          chip.style.borderColor = '#cbd5e1';
+          chip.style.backgroundColor = '#ffffff';
+          chip.style.color = 'inherit';
+          chip.style.fontWeight = 'normal';
+        }
+      }
+    });
+
+    this.updateVacationChipsStyle();
+
+    const countBadge = document.getElementById('vacationMonthsCountBadge');
+    if (countBadge) {
+      countBadge.textContent = vMonths.length > 0 ? `ปิดเทอม ${vMonths.length} เดือน (ค่าเช่า ฿0)` : 'ไม่มีเดือนปิดเทอม';
+      countBadge.className = vMonths.length > 0 ? 'pill-tag purple-tag' : 'pill-tag';
+    }
+  }
+
+  updateVacationChipsStyle() {
+    document.querySelectorAll('input[name="vacationMonth"]').forEach(cb => {
+      const chip = cb.closest('.vacation-month-chip');
+      if (chip) {
+        if (cb.checked) {
+          chip.style.borderColor = 'var(--primary)';
+          chip.style.backgroundColor = '#eff6ff';
+          chip.style.color = 'var(--primary)';
+          chip.style.fontWeight = '700';
+        } else {
+          chip.style.borderColor = '#cbd5e1';
+          chip.style.backgroundColor = '#ffffff';
+          chip.style.color = 'inherit';
+          chip.style.fontWeight = 'normal';
+        }
+      }
+    });
+
+    const checkedCount = document.querySelectorAll('input[name="vacationMonth"]:checked').length;
+    const countBadge = document.getElementById('vacationMonthsCountBadge');
+    if (countBadge) {
+      countBadge.textContent = checkedCount > 0 ? `ปิดเทอม ${checkedCount} เดือน (ค่าเช่า ฿0)` : 'ไม่มีเดือนปิดเทอม';
+      countBadge.className = checkedCount > 0 ? 'pill-tag purple-tag' : 'pill-tag';
+    }
   }
 
   bindEvents() {
@@ -419,6 +511,21 @@ class WaterFlowApp {
       btn.addEventListener('click', (e) => {
         this.switchTab(e.currentTarget.dataset.tab);
       });
+    });
+
+    // Support browser Back/Forward buttons and Hash changes
+    window.addEventListener('hashchange', () => {
+      const hash = window.location.hash.replace(/^#/, '');
+      if (hash && document.getElementById(`tab-${hash}`)) {
+        this.switchTab(hash, false, false);
+      }
+    });
+
+    window.addEventListener('popstate', () => {
+      const hash = window.location.hash.replace(/^#/, '');
+      if (hash && document.getElementById(`tab-${hash}`)) {
+        this.switchTab(hash, false, false);
+      }
     });
 
     // Mobile Sidebar Drawer
@@ -920,6 +1027,27 @@ class WaterFlowApp {
       });
     }
 
+    // Sort order change listeners for Sales, Expenses, Recipes, and Stock
+    const dailySalesSort = document.getElementById('dailySalesSortOrder');
+    if (dailySalesSort) {
+      dailySalesSort.addEventListener('change', () => this.renderDailyHistoryTable());
+    }
+
+    const expenseSort = document.getElementById('expenseSortOrder');
+    if (expenseSort) {
+      expenseSort.addEventListener('change', () => this.renderExpenses());
+    }
+
+    const recipeSort = document.getElementById('recipeSortOrder');
+    if (recipeSort) {
+      recipeSort.addEventListener('change', () => this.renderRecipes());
+    }
+
+    const stockSort = document.getElementById('stockSortOrder');
+    if (stockSort) {
+      stockSort.addEventListener('change', () => this.renderStock());
+    }
+
     // Modal Close
     document.querySelectorAll('[data-close]').forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -932,8 +1060,8 @@ class WaterFlowApp {
     document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
       backdrop.addEventListener('click', (e) => {
         if (e.target === backdrop) {
-          // ป้องกันไม่ให้คลิกด้านนอกแล้ว modal ปิดเองโดยไม่ได้ตั้งใจ (เหมือน recipeModal)
-          if (backdrop.id === 'recipeModal' || backdrop.id === 'expenseModal') {
+          // ป้องกันไม่ให้คลิกด้านนอกแล้ว modal ปิดเองโดยไม่ได้ตั้งใจ (ต้องกดยกเลิก หรือบันทึกข้อมูลเท่านั้น)
+          if (backdrop.id === 'recipeModal' || backdrop.id === 'expenseModal' || backdrop.id === 'stockItemModal') {
             return;
           }
           backdrop.classList.remove('active');
@@ -978,15 +1106,77 @@ class WaterFlowApp {
       btnSaveShopSettings.addEventListener('click', () => {
         const name = document.getElementById('settingShopName')?.value.trim() || 'ร้านน้ำยายแต๊ป';
         const rent = parseFloat(document.getElementById('settingMonthlyRent')?.value) || 0;
+
+        // Collect vacation months
+        const selectedVacationMonths = [];
+        document.querySelectorAll('input[name="vacationMonth"]:checked').forEach(cb => {
+          selectedVacationMonths.push(parseInt(cb.value, 10));
+        });
+
         this.data.shopSettings.name = name;
         this.data.shopSettings.monthlyRent = rent;
+        this.data.shopSettings.vacationMonths = selectedVacationMonths.sort((a, b) => a - b);
+
         this.saveData();
         this.updateShopBranding();
-        this.showToast(`บันทึกการตั้งค่าร้านค้าเรียบร้อยแล้ว (ชื่อร้าน: ${name})`, 'success');
+        this.updateVacationMonthsUI();
+        this.showToast(`บันทึกการตั้งค่าร้านค้า & เดือนปิดเทอมเรียบร้อยแล้ว`, 'success');
         this.renderDashboard();
         const todayDate = document.getElementById('dailyFormDate')?.value || this.formatDate(new Date());
         this.loadDailyFormForDate(todayDate);
         this.renderTodaySummary(todayDate);
+      });
+    }
+
+    // Vacation Months Presets & Click Handlers
+    document.querySelectorAll('input[name="vacationMonth"]').forEach(cb => {
+      cb.addEventListener('change', () => {
+        const chip = cb.closest('.vacation-month-chip');
+        if (chip) {
+          if (cb.checked) {
+            chip.style.borderColor = 'var(--primary)';
+            chip.style.backgroundColor = '#eff6ff';
+            chip.style.color = 'var(--primary)';
+            chip.style.fontWeight = '700';
+          } else {
+            chip.style.borderColor = '#cbd5e1';
+            chip.style.backgroundColor = '#ffffff';
+            chip.style.color = 'inherit';
+            chip.style.fontWeight = 'normal';
+          }
+        }
+      });
+    });
+
+    const btnPresetSummer = document.getElementById('btnPresetSummerVacation');
+    if (btnPresetSummer) {
+      btnPresetSummer.addEventListener('click', () => {
+        document.querySelectorAll('input[name="vacationMonth"]').forEach(cb => {
+          const val = parseInt(cb.value, 10);
+          if (val === 3 || val === 4) cb.checked = true; // มี.ค., เม.ย.
+        });
+        this.updateVacationChipsStyle();
+      });
+    }
+
+    const btnPresetMidterm = document.getElementById('btnPresetMidtermVacation');
+    if (btnPresetMidterm) {
+      btnPresetMidterm.addEventListener('click', () => {
+        document.querySelectorAll('input[name="vacationMonth"]').forEach(cb => {
+          const val = parseInt(cb.value, 10);
+          if (val === 10) cb.checked = true; // ต.ค.
+        });
+        this.updateVacationChipsStyle();
+      });
+    }
+
+    const btnClearVac = document.getElementById('btnClearVacationMonths');
+    if (btnClearVac) {
+      btnClearVac.addEventListener('click', () => {
+        document.querySelectorAll('input[name="vacationMonth"]').forEach(cb => {
+          cb.checked = false;
+        });
+        this.updateVacationChipsStyle();
       });
     }
 
@@ -1082,6 +1272,26 @@ class WaterFlowApp {
     this.renderCalendar();
     this.renderRecipes();
     this.renderStock();
+
+    // Restore active tab from URL hash or localStorage on page load/refresh (F5)
+    let initialTab = 'dashboard';
+    const hash = window.location.hash ? window.location.hash.replace(/^#/, '') : '';
+    let savedTab = '';
+    try {
+      savedTab = localStorage.getItem('waterflow_active_tab') || '';
+    } catch (e) {
+      console.warn('Could not read localStorage waterflow_active_tab:', e);
+    }
+
+    const candidateTab = hash || savedTab;
+    if (candidateTab) {
+      const cleanCandidate = candidateTab.replace(/^tab-/, '');
+      if (document.getElementById(`tab-${cleanCandidate}`)) {
+        initialTab = cleanCandidate;
+      }
+    }
+
+    this.switchTab(initialTab, true, false);
     this.refreshLucide();
   }
 
@@ -1113,15 +1323,20 @@ class WaterFlowApp {
     }, 3200);
   }
 
-  switchTab(tabId) {
+  switchTab(tabId, updateState = true, smoothScroll = true) {
+    if (!tabId) return;
+
+    // Normalize tabId if passed with prefix
+    const cleanTabId = tabId.replace(/^tab-/, '').replace(/^#/, '');
+
     document.querySelectorAll('.sidebar-nav .nav-item').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.tab === tabId);
+      btn.classList.toggle('active', btn.dataset.tab === cleanTabId);
     });
     document.querySelectorAll('.mobile-bottom-nav .mobile-nav-item').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.tab === tabId);
+      btn.classList.toggle('active', btn.dataset.tab === cleanTabId);
     });
     // If subhead clicked for stock, navigate to tab-stock or tab-stock-low
-    const effectiveTabId = tabId;
+    const effectiveTabId = cleanTabId;
 
     document.querySelectorAll('.tab-pane').forEach(pane => {
       pane.classList.toggle('active', pane.id === `tab-${effectiveTabId}`);
@@ -1132,27 +1347,40 @@ class WaterFlowApp {
     if (sidebar) sidebar.classList.remove('mobile-open');
     if (backdrop) backdrop.style.display = 'none';
 
-    if (tabId === 'stock-low') {
+    if (cleanTabId === 'stock-low') {
       this.renderLowStockAlertView();
-    } else if (tabId === 'stock' || tabId === 'stock-items') {
+    } else if (cleanTabId === 'stock' || cleanTabId === 'stock-items') {
       const radioAll = document.querySelector('input[name="stockSubFilter"][value="all"]');
       if (radioAll) {
         radioAll.checked = true;
         radioAll.dispatchEvent(new Event('change'));
       }
       this.renderStock();
-    } else if (tabId === 'stock-history') {
+    } else if (cleanTabId === 'stock-history') {
       this.renderStockHistory();
     }
 
-    if (tabId === 'dashboard') {
+    if (cleanTabId === 'dashboard') {
       setTimeout(() => this.renderDashboardCharts(), 50);
     }
-    if (tabId === 'calendar') {
+    if (cleanTabId === 'calendar') {
       this.renderCalendar();
     }
 
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (updateState) {
+      try {
+        localStorage.setItem('waterflow_active_tab', cleanTabId);
+        if (window.location.hash !== `#${cleanTabId}`) {
+          history.replaceState(null, '', `#${cleanTabId}`);
+        }
+      } catch (e) {
+        console.warn('Could not save tab state:', e);
+      }
+    }
+
+    if (smoothScroll) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
     this.refreshLucide();
   }
 
@@ -1261,7 +1489,35 @@ class WaterFlowApp {
   renderDashboard() {
     const period = this.getDashboardPeriodFilter();
     const monthlyRentRate = this.data.shopSettings ? this.data.shopSettings.monthlyRent : 10000;
-    const totalRentForPeriod = monthlyRentRate * period.monthsCount;
+
+    // Calculate rent dynamically per month: 0 baht if vacation month
+    let totalRentForPeriod = 0;
+    let vacationMonthsInPeriod = 0;
+    if (period.monthsList && period.monthsList.length > 0) {
+      period.monthsList.forEach(ym => {
+        const rentForThisMonth = this.getRentForMonth(ym);
+        totalRentForPeriod += rentForThisMonth;
+        if (this.isVacationMonth(ym)) {
+          vacationMonthsInPeriod++;
+        }
+      });
+    } else {
+      totalRentForPeriod = monthlyRentRate * period.monthsCount;
+    }
+
+    // Toggle Vacation Month Badge in Dashboard Filter Header
+    const vacBadge = document.getElementById('dashVacationMonthBadge');
+    if (vacBadge) {
+      if (period.mode === 'single' && this.isVacationMonth(period.monthsList[0])) {
+        vacBadge.style.display = 'inline-flex';
+        vacBadge.textContent = '🏖️ เดือนปิดเทอม (ค่าเช่า ฿0)';
+      } else if (vacationMonthsInPeriod > 0) {
+        vacBadge.style.display = 'inline-flex';
+        vacBadge.textContent = `🏖️ รวมช่วงปิดเทอม ${vacationMonthsInPeriod} เดือน (เว้นค่าเช่า)`;
+      } else {
+        vacBadge.style.display = 'none';
+      }
+    }
 
     // Update Header description
     const descElem = document.getElementById('dashHeaderDesc');
@@ -1305,7 +1561,12 @@ class WaterFlowApp {
     const totalCostElem = document.getElementById('dashTotalCost');
     if (totalCostElem) totalCostElem.textContent = this.formatCurrency(totalCombinedCost);
     const costRatioElem = document.getElementById('dashCostRatio');
-    if (costRatioElem) costRatioElem.textContent = `วัตถุดิบ ${this.formatCurrency(materialCost)} + ค่าเช่าร้าน ${this.formatCurrency(totalRentForPeriod)}`;
+    if (costRatioElem) {
+      const rentDesc = totalRentForPeriod === 0
+        ? `ค่าเช่า ฿0 (ปิดเทอม)`
+        : `ค่าเช่าร้าน ${this.formatCurrency(totalRentForPeriod)}`;
+      costRatioElem.textContent = `วัตถุดิบ ${this.formatCurrency(materialCost)} + ${rentDesc}`;
+    }
 
     // Update Stat Card 3: ค่าเช่าร้าน
     const rentCardLabel = document.querySelector('.rent-card .stat-label');
@@ -1316,7 +1577,15 @@ class WaterFlowApp {
     if (rentDisplayElem) rentDisplayElem.textContent = this.formatCurrency(totalRentForPeriod);
     const rentCardSub = document.querySelector('.rent-card .stat-subtext');
     if (rentCardSub) {
-      rentCardSub.textContent = period.monthsCount > 1 ? `เดือนละ ${this.formatCurrency(monthlyRentRate)} × ${period.monthsCount} เดือน` : 'รวมอยู่ในต้นทุนทั้งหมดแล้ว';
+      if (period.mode === 'single' && this.isVacationMonth(period.monthsList[0])) {
+        rentCardSub.textContent = '🏖️ ปิดเทอม ยกเว้นไม่คิดค่าเช่า';
+      } else if (vacationMonthsInPeriod > 0) {
+        rentCardSub.textContent = `ช่วงปิดเทอม ${vacationMonthsInPeriod} เดือน (ไม่คิดค่าเช่า)`;
+      } else if (period.monthsCount > 1) {
+        rentCardSub.textContent = `เดือนละ ${this.formatCurrency(monthlyRentRate)} × ${period.monthsCount} เดือน`;
+      } else {
+        rentCardSub.textContent = 'รวมอยู่ในต้นทุนทั้งหมดแล้ว';
+      }
     }
 
     // Update Stat Card 4: ต้นทุนวัตถุดิบ
@@ -1580,8 +1849,15 @@ class WaterFlowApp {
       totalRevenue = filteredDailySales.reduce((acc, d) => acc + (Number(d.revenue) || 0), 0);
       const filteredExpenses = this.data.expenses.filter(period.matchExpense);
       totalCost = filteredExpenses.reduce((acc, exp) => acc + (Number(exp.amount) || 0), 0);
-      const monthlyRentRate = this.data.shopSettings.monthlyRent || 10000;
-      totalRent = monthlyRentRate * period.monthsCount;
+      totalRent = 0;
+      if (period.monthsList && period.monthsList.length > 0) {
+        period.monthsList.forEach(ym => {
+          totalRent += this.getRentForMonth(ym);
+        });
+      } else {
+        const monthlyRentRate = this.data.shopSettings?.monthlyRent || 10000;
+        totalRent = monthlyRentRate * period.monthsCount;
+      }
       netProfit = totalRevenue - (totalCost + totalRent);
     }
 
@@ -1751,11 +2027,14 @@ class WaterFlowApp {
     const isWk = this.isWeekend(dateStr);
     const isHol = this.isHoliday(dateStr);
 
-    // ค่าเช่าเฉพาะวันเปิดขายที่โรงเรียน (วันหยุดเสาร์-อาทิตย์ & นักขัตฤกษ์ = 0 บาท)
+    // ค่าเช่าเฉพาะวันเปิดขายที่โรงเรียน (วันหยุดเสาร์-อาทิตย์, นักขัตฤกษ์ และช่วงปิดเทอม = 0 บาท)
     let dailyRent = 0;
     let rentLabel = '';
 
-    if (isSchoolOpen) {
+    if (this.isVacationMonth(dateStr)) {
+      dailyRent = 0;
+      rentLabel = `🏖️ ช่วงเดือนปิดเทอม (ยกเว้นไม่คิดค่าเช่าร้าน ฿0)`;
+    } else if (isSchoolOpen) {
       dailyRent = this.getDailyRentForSchoolDay(dateStr);
       const openDaysCount = this.getSchoolOpenDaysCount(dateStr.substring(0, 7));
       rentLabel = `ค่าเช่าเฉลี่ยวันเปิดเรียน ฿${dailyRent.toLocaleString()}/วัน (เดือนนี้เปิดขายจริง ${openDaysCount} วัน)`;
@@ -2143,7 +2422,17 @@ class WaterFlowApp {
     const feedWrap = document.getElementById('todaySalesMobileCards');
     const countBadge = document.getElementById('todayBillCountBadge');
 
-    const list = [...this.data.dailySales].sort((a, b) => b.date.localeCompare(a.date));
+    const sortOrder = document.getElementById('dailySalesSortOrder')?.value || 'newest';
+    const list = [...this.data.dailySales].sort((a, b) => {
+      const dateCmp = (a.date || '').localeCompare(b.date || '');
+      const idA = String(a.id || '');
+      const idB = String(b.id || '');
+      const idCmp = idA.localeCompare(idB);
+      if (sortOrder === 'oldest') {
+        return dateCmp !== 0 ? dateCmp : idCmp;
+      }
+      return dateCmp !== 0 ? -dateCmp : -idCmp;
+    });
 
     if (countBadge) countBadge.textContent = `${list.length} วัน`;
 
@@ -2302,7 +2591,19 @@ class WaterFlowApp {
       return;
     }
 
-    const sorted = [...list].sort((a, b) => b.date.localeCompare(a.date));
+    const sortOrder = document.getElementById('expenseSortOrder')?.value || 'newest';
+    const sorted = [...list].sort((a, b) => {
+      // เปรียบเทียบตามวันที่ และ id (timestamp)
+      const dateCmp = (a.date || '').localeCompare(b.date || '');
+      const idA = String(a.id || '');
+      const idB = String(b.id || '');
+      const idCmp = idA.localeCompare(idB);
+      if (sortOrder === 'oldest') {
+        return dateCmp !== 0 ? dateCmp : idCmp;
+      }
+      // default: newest
+      return dateCmp !== 0 ? -dateCmp : -idCmp;
+    });
 
     // Render Unified Cards Feed (Matching Figma Mobile Design System)
     if (feedWrap) {
@@ -2343,6 +2644,31 @@ class WaterFlowApp {
         }
         const qtyDisplay = exp.qtyDesc || (pSize > 0 ? `${pSize} ${pUnit}` : '');
 
+        // ค้นหาข้อมูลสต๊อกคงเหลือปัจจุบันที่เชื่อมโยงกับรายการนี้
+        const expTitleClean = String(exp.title || '').split('(')[0].trim().toLowerCase();
+        const matchedStock = (this.data.stockItems || []).find(s => {
+          if (!s || !s.name) return false;
+          if (exp.stockItemId && String(s.id) === String(exp.stockItemId)) return true;
+          const sClean = String(s.name).split('(')[0].trim().toLowerCase();
+          const sNameLower = String(s.name).toLowerCase();
+          const expTitleLower = String(exp.title || '').toLowerCase();
+          return sNameLower === expTitleLower || sClean === expTitleClean;
+        });
+
+        let stockBalanceBadge = '';
+        if (matchedStock) {
+          const curQty = Number(matchedStock.qty) || 0;
+          const minQ = Number(matchedStock.minQty) || 0;
+          const stockUnit = matchedStock.unit || pUnit || 'หน่วย';
+          const isLow = minQ > 0 && curQty <= minQ;
+          const badgeClass = isLow ? 'stock-badge-low' : 'stock-badge-normal';
+          const badgeIcon = isLow ? '⚠️' : '📊';
+          const badgeStyle = isLow 
+            ? 'background:#fef2f2; color:#dc2626; border:1px solid #fecaca; font-weight:700; border-radius:9999px; padding:0.15rem 0.5rem; font-size:0.75rem; display:inline-flex; align-items:center; gap:0.25rem;'
+            : 'background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; font-weight:700; border-radius:9999px; padding:0.15rem 0.5rem; font-size:0.75rem; display:inline-flex; align-items:center; gap:0.25rem;';
+          stockBalanceBadge = `<span style="${badgeStyle}" title="ปริมาณคงเหลือในสต๊อกปัจจุบัน">${badgeIcon} คงเหลือในสต๊อก: <strong>${curQty} ${this.escapeHtml(stockUnit)}</strong></span>`;
+        }
+
         return `
           <div class="figma-exp-card">
             <!-- Top Row: Icon + Title/Meta + Amount -->
@@ -2365,13 +2691,14 @@ class WaterFlowApp {
               </div>
             </div>
 
-            <!-- Sub Row: Pack Quantity & Note if present -->
-            ${qtyDisplay || exp.note ? `
-              <div class="fec-sub-row">
-                <div class="fec-pack-info">
-                  ${qtyDisplay ? `<span>📦 รับเข้า: ${this.escapeHtml(qtyDisplay)}</span>` : ''}
+            <!-- Sub Row: Pack Quantity, Stock Balance & Note if present -->
+            ${qtyDisplay || exp.note || stockBalanceBadge ? `
+              <div class="fec-sub-row" style="display:flex; flex-wrap:wrap; gap:0.4rem; align-items:center;">
+                <div class="fec-pack-info" style="display:inline-flex; align-items:center; gap:0.4rem; flex-wrap:wrap;">
+                  ${qtyDisplay ? `<span>📦 บันทึกรับ: ${this.escapeHtml(qtyDisplay)}</span>` : ''}
+                  ${stockBalanceBadge}
                 </div>
-                ${exp.note ? `<div class="fec-note" title="${this.escapeHtml(exp.note)}">📝 ${this.escapeHtml(exp.note)}</div>` : ''}
+                ${exp.note ? `<div class="fec-note" style="margin-left:auto;" title="${this.escapeHtml(exp.note)}">📝 ${this.escapeHtml(exp.note)}</div>` : ''}
               </div>
             ` : ''}
 
@@ -2411,12 +2738,18 @@ class WaterFlowApp {
 
   deleteExpense(expId) {
     if (confirm('คุณต้องการลบรายการค่าใช้จ่ายนี้ใช่หรือไม่?')) {
-      this.data.expenses = this.data.expenses.filter(e => e.id !== expId);
+      const exp = (this.data.expenses || []).find(e => e.id === expId);
+      if (exp) {
+        this.removeExpenseFromStock(exp);
+      }
+      this.data.expenses = (this.data.expenses || []).filter(e => e.id !== expId);
       this.saveData();
       this.syncRecipesWithExpenses();
       this.showToast('ลบรายการค่าใช้จ่ายเรียบร้อย', 'info');
       this.renderExpenses();
       this.renderRecipes();
+      this.renderStock();
+      this.renderLowStockAlertView();
       this.renderDashboard();
     }
   }
@@ -3459,6 +3792,17 @@ class WaterFlowApp {
       return true;
     });
 
+    const recipeSort = document.getElementById('recipeSortOrder')?.value || 'newest';
+    filtered.sort((a, b) => {
+      const idA = String(a.id || '');
+      const idB = String(b.id || '');
+      const cmp = idA.localeCompare(idB);
+      if (recipeSort === 'oldest') {
+        return cmp;
+      }
+      return -cmp;
+    });
+
     const filteredBadge = document.getElementById('recipeFilteredCountBadge');
     if (filteredBadge) filteredBadge.textContent = `${filtered.length} รายการ`;
 
@@ -3610,18 +3954,47 @@ class WaterFlowApp {
     dateInput.value = this.formatDate(new Date());
 
     if (expId) {
-      const exp = this.data.expenses.find(e => e.id === expId);
+      const exp = (this.data.expenses || []).find(e => e && String(e.id) === String(expId));
       if (exp) {
         titleElem.textContent = 'แก้ไขค่าใช้จ่าย & รายการสต๊อก';
         editIdInput.value = exp.id;
-        dateInput.value = exp.date;
-        document.getElementById('expTitle').value = exp.title;
-        document.getElementById('expCategory').value = exp.category;
-        document.getElementById('expAmount').value = exp.amount;
+
+        let dateVal = this.formatDate(new Date());
+        if (exp.date) {
+          if (/^\d{4}-\d{2}-\d{2}$/.test(exp.date)) {
+            dateVal = exp.date;
+          } else if (typeof exp.date === 'string' && exp.date.length >= 10 && /^\d{4}-\d{2}-\d{2}/.test(exp.date)) {
+            dateVal = exp.date.substring(0, 10);
+          }
+        }
+        dateInput.value = dateVal;
+
+        document.getElementById('expTitle').value = exp.title || '';
+        document.getElementById('expCategory').value = exp.category || 'INGREDIENT';
+        document.getElementById('expAmount').value = (exp.amount !== undefined && exp.amount !== '') ? exp.amount : 0;
         const qtyDescEl = document.getElementById('expQuantityDesc');
         if (qtyDescEl) qtyDescEl.value = exp.qtyDesc || '';
-        document.getElementById('expPackSize').value = exp.packSize !== undefined ? exp.packSize : '';
-        document.getElementById('expPackUnit').value = exp.packUnit || 'หน่วย';
+
+        const packSizeInput = document.getElementById('expPackSize');
+        const parsedPack = parseFloat(exp.packSize);
+        if (packSizeInput) packSizeInput.value = (!isNaN(parsedPack) && parsedPack > 0) ? parsedPack : 1;
+
+        // Pack Unit & Custom Unit setup
+        const unitSelect = document.getElementById('expPackUnit');
+        const customUnitInput = document.getElementById('expPackUnitCustom');
+        const targetUnit = exp.packUnit || 'หน่วย';
+        const optExists = unitSelect && Array.from(unitSelect.options).some(o => o.value === targetUnit);
+        if (optExists) {
+          unitSelect.value = targetUnit;
+          if (customUnitInput) customUnitInput.style.display = 'none';
+        } else if (unitSelect) {
+          unitSelect.value = 'CUSTOM';
+          if (customUnitInput) {
+            customUnitInput.style.display = 'block';
+            customUnitInput.value = targetUnit;
+          }
+        }
+
         const expSupplierEl = document.getElementById('expSupplier');
         if (expSupplierEl) expSupplierEl.value = exp.supplier || '';
         document.getElementById('expNote').value = exp.note || '';
@@ -3633,16 +4006,38 @@ class WaterFlowApp {
         }
 
         // Match existing stock item if available
-        const matched = (this.data.stockItems || []).find(s => s.name.toLowerCase() === exp.title.toLowerCase());
-        if (matched) {
-          if (expSupplierEl && !exp.supplier && matched.supplier) {
-            expSupplierEl.value = matched.supplier;
+        const expTitleClean = String(exp.title || '').split('(')[0].trim().toLowerCase();
+        const matched = (this.data.stockItems || []).find(s => {
+          if (!s || !s.name) return false;
+          if (exp.stockItemId && String(s.id) === String(exp.stockItemId)) return true;
+          const sClean = String(s.name).split('(')[0].trim().toLowerCase();
+          const sNameLower = String(s.name).toLowerCase();
+          const expTitleLower = String(exp.title || '').toLowerCase();
+          return sNameLower === expTitleLower || sClean === expTitleClean || sClean.includes(expTitleClean) || expTitleClean.includes(sClean);
+        });
+
+        if (matched && expSupplierEl && !exp.supplier && matched.supplier) {
+          expSupplierEl.value = matched.supplier;
+        }
+
+        const expMinInput = document.getElementById('expMinQty');
+        const noAlertCb = document.getElementById('expNoAlertCheckbox');
+        let initialMin = 5;
+        if (exp.minQty !== undefined) {
+          initialMin = Number(exp.minQty);
+        } else if (matched && matched.minQty !== undefined) {
+          initialMin = Number(matched.minQty);
+        }
+
+        if (expMinInput) {
+          expMinInput.value = initialMin;
+        }
+        if (noAlertCb) {
+          noAlertCb.checked = (initialMin === 0);
+          if (expMinInput) {
+            expMinInput.disabled = (initialMin === 0);
+            expMinInput.style.opacity = (initialMin === 0) ? '0.45' : '1';
           }
-          if (document.getElementById('expMinQty')) {
-            document.getElementById('expMinQty').value = matched.minQty;
-          }
-        } else if (exp.minQty && document.getElementById('expMinQty')) {
-          document.getElementById('expMinQty').value = exp.minQty;
         }
       }
     } else {
@@ -3650,11 +4045,44 @@ class WaterFlowApp {
       editIdInput.value = '';
       document.getElementById('expPackSize').value = 1;
       document.getElementById('expPackUnit').value = 'ลัง';
+      const customUnitInput = document.getElementById('expPackUnitCustom');
+      if (customUnitInput) customUnitInput.style.display = 'none';
       const crateBottlesInput = document.getElementById('expCrateBottles');
       if (crateBottlesInput) crateBottlesInput.value = 24;
-      if (document.getElementById('expMinQty')) {
-        document.getElementById('expMinQty').value = 5;
+      const expMinInput = document.getElementById('expMinQty');
+      const noAlertCb = document.getElementById('expNoAlertCheckbox');
+      if (expMinInput) {
+        expMinInput.value = 5;
+        expMinInput.disabled = false;
+        expMinInput.style.opacity = '1';
       }
+      if (noAlertCb) {
+        noAlertCb.checked = false;
+      }
+    }
+
+    // Wire noAlertCheckbox toggle
+    const noAlertCb = document.getElementById('expNoAlertCheckbox');
+    if (noAlertCb) {
+      noAlertCb.onchange = () => {
+        const minInput = document.getElementById('expMinQty');
+        if (noAlertCb.checked) {
+          if (minInput) {
+            minInput.dataset.previousVal = minInput.value || '5';
+            minInput.value = 0;
+            minInput.disabled = true;
+            minInput.style.opacity = '0.45';
+          }
+        } else {
+          if (minInput) {
+            const restored = parseFloat(minInput.dataset.previousVal) || 5;
+            minInput.value = restored > 0 ? restored : 5;
+            minInput.disabled = false;
+            minInput.style.opacity = '1';
+          }
+        }
+        this.updateExpenseModalPreview();
+      };
     }
 
     this.updateExpenseModalPreview();
@@ -3694,7 +4122,7 @@ class WaterFlowApp {
     const titleVal = document.getElementById('expTitle')?.value.trim().toLowerCase();
     if (!titleVal) return;
 
-    const matched = (this.data.stockItems || []).find(s => s.name.toLowerCase() === titleVal);
+    const matched = (this.data.stockItems || []).find(s => s && s.name && s.name.toLowerCase() === titleVal);
     if (matched) {
       if (matched.category && document.getElementById('expCategory')) {
         document.getElementById('expCategory').value = matched.category;
@@ -3766,11 +4194,18 @@ class WaterFlowApp {
       if (crateContainer) crateContainer.style.display = 'none';
     }
 
+    const noAlertCb = document.getElementById('expNoAlertCheckbox');
+    const isNoAlert = (noAlertCb && noAlertCb.checked) || (parseFloat(minQtyInput?.value) === 0);
+
     if (minQtyLabel) {
-      minQtyLabel.innerHTML = `⚠️ เกณฑ์เตือนสั่งซื้อขั้นต่ำ (Min Qty)`;
+      minQtyLabel.innerHTML = isNoAlert ? `🚫 การแจ้งเตือนสต๊อก` : `⚠️ เกณฑ์เตือนสั่งซื้อขั้นต่ำ (Min Qty)`;
+      minQtyLabel.style.color = isNoAlert ? 'var(--text-muted)' : 'var(--danger)';
     }
     if (minQtyHint) {
-      minQtyHint.textContent = '';
+      minQtyHint.textContent = isNoAlert
+        ? 'ตั้งค่า "ไม่ต้องเตือนซื้อ" แล้ว: ระบบจะไม่นำรายการนี้ไปแสดงเตือนในหน้าสินค้าใกล้หมด'
+        : 'หากคงเหลือต่ำกว่าเกณฑ์นี้ ระบบจะเตือนสั่งซื้อ (หรือติ๊ก "ไม่ต้องเตือนซื้อ" สำหรับของใช้ถาวร)';
+      minQtyHint.style.color = isNoAlert ? '#64748b' : '';
     }
 
     // Cost preview
@@ -3790,30 +4225,55 @@ class WaterFlowApp {
     }
 
     if (syncStatusEl) {
-      const matched = (this.data.stockItems || []).find(s => s.name.toLowerCase() === titleVal);
-      if (isCrate) {
+      const editId = document.getElementById('expenseEditId')?.value;
+      const titleClean = String(titleVal || '').split('(')[0].trim().toLowerCase();
+      const matched = (this.data.stockItems || []).find(s => {
+        if (!s || !s.name) return false;
+        const sClean = String(s.name).split('(')[0].trim().toLowerCase();
+        const sNameLower = String(s.name).toLowerCase();
+        const titleLower = String(titleVal || '').toLowerCase();
+        return sNameLower === titleLower || sClean === titleClean || sClean.includes(titleClean) || titleClean.includes(sClean);
+      });
+
+      if (editId) {
+        const oldExp = (this.data.expenses || []).find(e => e && String(e.id) === String(editId));
+        const oldPack = oldExp ? (Number(oldExp.packSize) || 1) : packSize;
+        const diff = packSize - oldPack;
+        const diffStr = diff > 0 ? `+${diff}` : `${diff}`;
         if (matched) {
-          const newQty = matched.qty + packSize;
-          syncStatusEl.textContent = `📦 เติมสต๊อกเดิม (ปัจจุบันมี ${matched.qty} -> รับเพิ่ม +${packSize} ${matched.unit || 'ลัง'} เป็น ${newQty} ${matched.unit || 'ลัง'})`;
+          const currentQty = Number(matched.qty) || 0;
+          const newQty = Math.max(0, currentQty + diff);
+          syncStatusEl.textContent = `🔄 อัปเดตสต๊อกเดิม "${matched.name}" (คงเหลือ ${currentQty} -> เป็น ${newQty} ${matched.unit || unit} [${diffStr}])`;
           syncStatusEl.className = 'pill-tag blue-tag';
-        } else if (titleVal) {
-          syncStatusEl.textContent = `✨ สร้างเป็นสต๊อกใหม่ (+${packSize} ลัง @ ฿${(amount / (packSize || 1)).toFixed(2)}/ลัง)`;
-          syncStatusEl.className = 'pill-tag green-tag';
         } else {
-          syncStatusEl.textContent = `พร้อมรับเข้าคลัง ${packSize} ลังอัตโนมัติ`;
+          syncStatusEl.textContent = `🔄 อัปเดตและสร้างสต๊อกใหม่ "${titleVal || 'สินค้านี้'}" (${packSize} ${unit})`;
           syncStatusEl.className = 'pill-tag green-tag';
         }
       } else {
-        if (matched) {
-          const newQty = matched.qty + packSize;
-          syncStatusEl.textContent = `📦 เติมสต๊อกเดิม (ปัจจุบันมี ${matched.qty} -> เป็น ${newQty} ${matched.unit || unit})`;
-          syncStatusEl.className = 'pill-tag blue-tag';
-        } else if (titleVal) {
-          syncStatusEl.textContent = `✨ สร้างเป็นสินค้าคงคลังใหม่ในสต๊อก (+${packSize} ${unit})`;
-          syncStatusEl.className = 'pill-tag green-tag';
+        if (isCrate) {
+          if (matched) {
+            const newQty = matched.qty + packSize;
+            syncStatusEl.textContent = `📦 เติมสต๊อกเดิม (ปัจจุบันมี ${matched.qty} -> รับเพิ่ม +${packSize} ${matched.unit || 'ลัง'} เป็น ${newQty} ${matched.unit || 'ลัง'})`;
+            syncStatusEl.className = 'pill-tag blue-tag';
+          } else if (titleVal) {
+            syncStatusEl.textContent = `✨ สร้างเป็นสต๊อกใหม่ (+${packSize} ลัง @ ฿${(amount / (packSize || 1)).toFixed(2)}/ลัง)`;
+            syncStatusEl.className = 'pill-tag green-tag';
+          } else {
+            syncStatusEl.textContent = `พร้อมรับเข้าคลัง ${packSize} ลังอัตโนมัติ`;
+            syncStatusEl.className = 'pill-tag green-tag';
+          }
         } else {
-          syncStatusEl.textContent = 'พร้อมซิงค์เข้าคลังอัตโนมัติ';
-          syncStatusEl.className = 'pill-tag green-tag';
+          if (matched) {
+            const newQty = matched.qty + packSize;
+            syncStatusEl.textContent = `📦 เติมสต๊อกเดิม (ปัจจุบันมี ${matched.qty} -> เป็น ${newQty} ${matched.unit || unit})`;
+            syncStatusEl.className = 'pill-tag blue-tag';
+          } else if (titleVal) {
+            syncStatusEl.textContent = `✨ สร้างเป็นสินค้าคงคลังใหม่ในสต๊อก (+${packSize} ${unit})`;
+            syncStatusEl.className = 'pill-tag green-tag';
+          } else {
+            syncStatusEl.textContent = 'พร้อมซิงค์เข้าคลังอัตโนมัติ';
+            syncStatusEl.className = 'pill-tag green-tag';
+          }
         }
       }
       syncStatusEl.style.fontWeight = '700';
@@ -5390,113 +5850,162 @@ class WaterFlowApp {
     `;
   }
 
+  handleExpenseSubmit() {
+    try {
+      const editId = document.getElementById('expenseEditId')?.value || '';
+      let date = document.getElementById('expDateInput')?.value || '';
+      if (!date) {
+        date = this.formatDate(new Date());
+        const dEl = document.getElementById('expDateInput');
+        if (dEl) dEl.value = date;
+      }
+
+      const title = document.getElementById('expTitle')?.value.trim() || '';
+      if (!title) {
+        this.showToast('กรุณาระบุชื่อรายการสินค้า / วัตถุดิบ', 'error');
+        document.getElementById('expTitle')?.focus();
+        return;
+      }
+
+      const category = document.getElementById('expCategory')?.value || 'INGREDIENT';
+      const amountVal = parseFloat(document.getElementById('expAmount')?.value);
+      const amount = (!isNaN(amountVal) && amountVal >= 0) ? amountVal : 0;
+
+      const expQtyDescInput = document.getElementById('expQuantityDesc');
+      let qtyDesc = expQtyDescInput ? expQtyDescInput.value.trim() : '';
+      let packSizeVal = parseFloat(document.getElementById('expPackSize')?.value);
+      let packUnitSelect = document.getElementById('expPackUnit');
+      let customUnitInput = document.getElementById('expPackUnitCustom');
+      let packUnit = packUnitSelect ? packUnitSelect.value : 'หน่วย';
+      if (packUnit === 'CUSTOM' && customUnitInput && customUnitInput.value.trim()) {
+        packUnit = customUnitInput.value.trim();
+      } else if (!packUnit || packUnit === 'CUSTOM') {
+        packUnit = 'หน่วย';
+      }
+
+      // Auto-extract packSize and packUnit from qtyDesc or title if not explicitly provided
+      let packSize = (!isNaN(packSizeVal) && packSizeVal > 0) ? packSizeVal : 1;
+      if (isNaN(packSizeVal) || packSizeVal <= 0) {
+        const textToSearch = `${qtyDesc} ${title}`;
+        const gMatch = textToSearch.match(/(\d+(\.\d+)?)\s*(g|กรัม)/i);
+        const kgMatch = textToSearch.match(/(\d+(\.\d+)?)\s*(kg|กก|กิโลกรัม)/i);
+        const canMatch = textToSearch.match(/(\d+(\.\d+)?)\s*(กป|กระป๋อง|can)/i);
+        const cupMatch = textToSearch.match(/(\d+(\.\d+)?)\s*(ชุด|ใบ|แก้ว)/i);
+        const botMatch = textToSearch.match(/(\d+(\.\d+)?)\s*(ขวด)/i);
+
+        if (gMatch) {
+          packSize = parseFloat(gMatch[1]);
+          packUnit = 'g';
+        } else if (kgMatch) {
+          packSize = parseFloat(kgMatch[1]) * 1000;
+          packUnit = 'g';
+        } else if (canMatch) {
+          packSize = parseFloat(canMatch[1]);
+          packUnit = 'กระป๋อง';
+        } else if (cupMatch) {
+          packSize = parseFloat(cupMatch[1]);
+          packUnit = 'ชุด';
+        } else if (botMatch) {
+          packSize = parseFloat(botMatch[1]);
+          packUnit = 'ขวด';
+        } else {
+          const anyNum = textToSearch.match(/(\d+(\.\d+)?)/);
+          packSize = anyNum ? parseFloat(anyNum[1]) : 1;
+        }
+      }
+
+      if (!qtyDesc && packSize > 0) {
+        qtyDesc = `${packSize} ${packUnit}`;
+      }
+
+      const expMinQtyVal = parseFloat(document.getElementById('expMinQty')?.value);
+      const crateBottlesVal = parseFloat(document.getElementById('expCrateBottles')?.value);
+      const isCrate = packUnit.includes('ลัง') || packUnit.toLowerCase() === 'crate';
+      const crateBottles = isCrate ? (!isNaN(crateBottlesVal) && crateBottlesVal > 0 ? crateBottlesVal : 24) : null;
+      const supplier = document.getElementById('expSupplier')?.value.trim() || '';
+      const note = document.getElementById('expNote')?.value.trim() || '';
+
+      const noAlertChecked = document.getElementById('expNoAlertCheckbox')?.checked || false;
+      let effectiveMinQty = 0;
+      if (noAlertChecked) {
+        effectiveMinQty = 0;
+      } else if (!isNaN(expMinQtyVal) && expMinQtyVal >= 0) {
+        effectiveMinQty = expMinQtyVal;
+      } else {
+        effectiveMinQty = Math.max(1, Math.round(packSize * 0.25));
+      }
+
+      const expRecord = {
+        date,
+        title,
+        category,
+        amount,
+        qtyDesc,
+        packSize,
+        packUnit,
+        crateBottles,
+        minQty: effectiveMinQty,
+        supplier,
+        note
+      };
+
+      if (!Array.isArray(this.data.expenses)) {
+        this.data.expenses = [];
+      }
+
+      if (editId) {
+        const idx = this.data.expenses.findIndex(x => x && String(x.id) === String(editId));
+        if (idx !== -1) {
+          const oldExp = { ...this.data.expenses[idx] };
+          const updatedExp = { ...expRecord, id: this.data.expenses[idx].id, stockItemId: oldExp.stockItemId };
+          this.updateExpenseInStock(oldExp, updatedExp);
+          this.data.expenses[idx] = updatedExp;
+        } else {
+          const newExp = { ...expRecord, id: editId };
+          this.addExpenseToStock(newExp);
+          this.data.expenses.unshift(newExp);
+        }
+        this.showToast(`แก้ไขค่าใช้จ่าย & อัปเดตสต๊อก "${title}" สำเร็จ`, 'success');
+      } else {
+        const newExp = { ...expRecord, id: 'e_' + Date.now() };
+        this.addExpenseToStock(newExp);
+        this.data.expenses.unshift(newExp);
+        const syncDesc = `+${newExp.packSize} ${newExp.packUnit}`;
+        this.showToast(`บันทึกรายจ่าย & เติมเข้าสต๊อก "${title}" (${syncDesc}) เรียบร้อย!`, 'success');
+      }
+
+      this.saveData();
+      this.syncRecipesWithExpenses();
+      const expModal = document.getElementById('expenseModal');
+      if (expModal) expModal.classList.remove('active');
+
+      this.renderExpenses();
+      this.renderRecipes();
+      this.renderStock();
+      this.renderLowStockAlertView();
+      this.renderDashboard();
+    } catch (err) {
+      console.error('Error saving expense:', err);
+      this.showToast('เกิดข้อผิดพลาดในการบันทึก: ' + err.message, 'danger');
+    }
+  }
+
   bindOtherForms() {
-    // Expense Form Submit
+    // Expense Form Submit & Button Click
     const expenseForm = document.getElementById('expenseForm');
+    const btnSaveExpense = document.getElementById('btnSaveExpense');
+
     if (expenseForm) {
       expenseForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        try {
-          const editId = document.getElementById('expenseEditId')?.value || '';
-          const date = document.getElementById('expDateInput')?.value || this.formatDate(new Date());
-          const title = document.getElementById('expTitle')?.value.trim() || '';
-          const category = document.getElementById('expCategory')?.value || 'INGREDIENT';
-          const amount = parseFloat(document.getElementById('expAmount')?.value) || 0;
-          const expQtyDescInput = document.getElementById('expQuantityDesc');
-          let qtyDesc = expQtyDescInput ? expQtyDescInput.value.trim() : '';
-          let packSize = parseFloat(document.getElementById('expPackSize')?.value);
-          let packUnitSelect = document.getElementById('expPackUnit');
-          let customUnitInput = document.getElementById('expPackUnitCustom');
-          let packUnit = packUnitSelect ? packUnitSelect.value : 'หน่วย';
-          if (packUnit === 'CUSTOM' && customUnitInput && customUnitInput.value.trim()) {
-            packUnit = customUnitInput.value.trim();
-          } else if (!packUnit) {
-            packUnit = 'หน่วย';
-          }
-          const supplier = document.getElementById('expSupplier')?.value.trim() || '';
-          const note = document.getElementById('expNote')?.value.trim() || '';
+        this.handleExpenseSubmit();
+      });
+    }
 
-          // Auto-extract packSize and packUnit from qtyDesc or title if not explicitly provided
-          if (isNaN(packSize) || packSize <= 0) {
-            const textToSearch = `${qtyDesc} ${title}`;
-            const gMatch = textToSearch.match(/(\d+(\.\d+)?)\s*(g|กรัม)/i);
-            const kgMatch = textToSearch.match(/(\d+(\.\d+)?)\s*(kg|กก|กิโลกรัม)/i);
-            const canMatch = textToSearch.match(/(\d+(\.\d+)?)\s*(กป|กระป๋อง|can)/i);
-            const cupMatch = textToSearch.match(/(\d+(\.\d+)?)\s*(ชุด|ใบ|แก้ว)/i);
-            const botMatch = textToSearch.match(/(\d+(\.\d+)?)\s*(ขวด)/i);
-
-            if (gMatch) {
-              packSize = parseFloat(gMatch[1]);
-              packUnit = 'g';
-            } else if (kgMatch) {
-              packSize = parseFloat(kgMatch[1]) * 1000;
-              packUnit = 'g';
-            } else if (canMatch) {
-              packSize = parseFloat(canMatch[1]);
-              packUnit = 'กระป๋อง';
-            } else if (cupMatch) {
-              packSize = parseFloat(cupMatch[1]);
-              packUnit = 'ชุด';
-            } else if (botMatch) {
-              packSize = parseFloat(botMatch[1]);
-              packUnit = 'ขวด';
-            } else {
-              const anyNum = textToSearch.match(/(\d+(\.\d+)?)/);
-              packSize = anyNum ? parseFloat(anyNum[1]) : 1;
-            }
-          }
-
-          if (!qtyDesc && packSize > 0) {
-            qtyDesc = `${packSize} ${packUnit}`;
-          }
-
-          const expMinQty = parseFloat(document.getElementById('expMinQty')?.value);
-          const crateBottlesVal = parseFloat(document.getElementById('expCrateBottles')?.value);
-          const isCrate = packUnit.includes('ลัง') || packUnit.toLowerCase() === 'crate';
-          const crateBottles = isCrate ? (!isNaN(crateBottlesVal) && crateBottlesVal > 0 ? crateBottlesVal : 24) : null;
-
-          const expRecord = {
-            date,
-            title,
-            category,
-            amount,
-            qtyDesc,
-            packSize: packSize || 1,
-            packUnit: packUnit || 'หน่วย',
-            crateBottles,
-            minQty: !isNaN(expMinQty) && expMinQty > 0 ? expMinQty : Math.max(1, Math.round((packSize || 1) * 0.25)),
-            supplier,
-            note
-          };
-
-          if (editId) {
-            const idx = this.data.expenses.findIndex(x => x.id === editId);
-            if (idx !== -1) {
-              this.data.expenses[idx] = { ...expRecord, id: editId };
-            }
-            this.showToast('แก้ไขค่าใช้จ่ายสำเร็จ', 'success');
-          } else {
-            const newExp = { ...expRecord, id: 'e_' + Date.now() };
-            this.data.expenses.unshift(newExp);
-
-            // Auto-sync into Stock inventory immediately
-            this.addExpenseToStock(newExp);
-            const syncDesc = `+${newExp.packSize} ${newExp.packUnit}`;
-            this.showToast(`บันทึกรายจ่าย & เติมเข้าสต๊อก "${title}" (${syncDesc}) เรียบร้อย!`, 'success');
-          }
-
-          this.saveData();
-          this.syncRecipesWithExpenses();
-          document.getElementById('expenseModal').classList.remove('active');
-          this.renderExpenses();
-          this.renderRecipes();
-          this.renderStock();
-          this.renderLowStockAlertView();
-          this.renderDashboard();
-        } catch (err) {
-          console.error('Error saving expense:', err);
-          this.showToast('เกิดข้อผิดพลาดในการบันทึก: ' + err.message, 'danger');
-        }
+    if (btnSaveExpense) {
+      btnSaveExpense.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.handleExpenseSubmit();
       });
     }
 
@@ -5629,11 +6138,14 @@ class WaterFlowApp {
 
     let lowCount = 0;
     let normalCount = 0;
+    let noAlertCount = 0;
     let totalValue = 0;
 
     list.forEach(item => {
-      const isLow = Number(item.qty) <= Number(item.minQty);
-      if (isLow) lowCount++;
+      const minQty = Number(item.minQty) || 0;
+      const isLow = minQty > 0 && Number(item.qty) <= minQty;
+      if (minQty === 0) noAlertCount++;
+      else if (isLow) lowCount++;
       else normalCount++;
       totalValue += (Number(item.qty) || 0) * (Number(item.unitCost) || 0);
     });
@@ -5679,17 +6191,34 @@ class WaterFlowApp {
       return;
     }
 
-    // Sort: Low stock first, then alphabetically
+    // Sort according to stockSortOrder (default: newest)
+    const stockSort = document.getElementById('stockSortOrder')?.value || 'newest';
     const sorted = [...list].sort((a, b) => {
-      const aLow = Number(a.qty) <= Number(a.minQty) ? 0 : 1;
-      const bLow = Number(b.qty) <= Number(b.minQty) ? 0 : 1;
-      return aLow - bLow || a.name.localeCompare(b.name, 'th');
+      const idA = String(a.id || '');
+      const idB = String(b.id || '');
+      const aMin = Number(a.minQty) || 0;
+      const bMin = Number(b.minQty) || 0;
+      const aPriority = (aMin > 0 && Number(a.qty) <= aMin) ? 0 : (aMin > 0 ? 1 : 2);
+      const bPriority = (bMin > 0 && Number(b.qty) <= bMin) ? 0 : (bMin > 0 ? 1 : 2);
+
+      if (stockSort === 'oldest') {
+        return idA.localeCompare(idB);
+      }
+      if (stockSort === 'low_stock') {
+        return aPriority - bPriority || a.name.localeCompare(b.name, 'th');
+      }
+      if (stockSort === 'name_asc') {
+        return a.name.localeCompare(b.name, 'th');
+      }
+      // default: newest
+      return idB.localeCompare(idA);
     });
 
     tbody.innerHTML = sorted.map(item => {
       const currentQty = Number(item.qty);
-      const minQty = Number(item.minQty);
-      const isLow = currentQty <= minQty;
+      const minQty = Number(item.minQty) || 0;
+      const isNoAlert = (minQty === 0);
+      const isLow = !isNoAlert && currentQty <= minQty;
       const unit = item.unit || 'หน่วย';
       const unitCost = Number(item.unitCost) || 0;
       const itemTotalVal = currentQty * unitCost;
@@ -5702,15 +6231,19 @@ class WaterFlowApp {
       const catIcon = item.category === 'INGREDIENT' ? 'coffee'
         : item.category === 'PACKAGING' ? 'cup-soda' : 'package';
 
-      const ratioPct = Math.min(100, Math.round((currentQty / Math.max(1, minQty * 2)) * 100));
+      const ratioPct = isNoAlert ? 100 : Math.min(100, Math.round((currentQty / Math.max(1, minQty * 2)) * 100));
 
-      const statusTag = isLow
-        ? `<span class="pill-tag red-tag" style="font-weight:700; font-size:0.75rem; display:inline-flex; align-items:center; gap:0.25rem;">
-            <i data-lucide="alert-triangle" style="width:12px;height:12px;"></i> ใกล้หมด
+      const statusTag = isNoAlert
+        ? `<span class="pill-tag" style="font-size:0.75rem; font-weight:600; background:#f1f5f9; color:#64748b; border:1px solid #cbd5e1;">
+            <i data-lucide="package-check" style="width:12px;height:12px;"></i> ของใช้ร้าน
            </span>`
-        : `<span class="pill-tag green-tag" style="font-size:0.75rem; font-weight:600;">
-            <i data-lucide="check" style="width:12px;height:12px;"></i> ปกติ
-           </span>`;
+        : isLow
+          ? `<span class="pill-tag red-tag" style="font-weight:700; font-size:0.75rem; display:inline-flex; align-items:center; gap:0.25rem;">
+              <i data-lucide="alert-triangle" style="width:12px;height:12px;"></i> ใกล้หมด
+             </span>`
+          : `<span class="pill-tag green-tag" style="font-size:0.75rem; font-weight:600;">
+              <i data-lucide="check" style="width:12px;height:12px;"></i> ปกติ
+             </span>`;
 
       return `
         <tr data-category="${this.escapeHtml(item.category)}" data-is-low="${isLow}" style="${isLow ? 'background:#fffbfb;' : ''}">
@@ -5765,7 +6298,10 @@ class WaterFlowApp {
           </td>
           <td>
             <div style="font-size:0.875rem;">
-              <b style="color:${isLow ? 'var(--danger)' : 'var(--text-main)'};">${minQty}</b> <span class="text-xs text-muted">${this.escapeHtml(unit)}</span>
+              ${isNoAlert
+          ? `<span class="text-muted" title="ของใช้/ตกแต่งร้าน (ไม่ต้องเตือนสั่งซื้อ)">- (ไม่เตือน)</span>`
+          : `<b style="color:${isLow ? 'var(--danger)' : 'var(--text-main)'};">${minQty}</b> <span class="text-xs text-muted">${this.escapeHtml(unit)}</span>`
+        }
             </div>
           </td>
           <td>
@@ -5853,6 +6389,8 @@ class WaterFlowApp {
 
     this.saveData();
     this.renderStock();
+    this.renderLowStockAlertView();
+    this.renderDashboard();
     this.showToast(`ปรับยอดคงเหลือ "${item.name}" เป็น ${parsed} ${item.unit || ''} (บันทึกประวัติแล้ว)`, 'success');
   }
 
@@ -5873,6 +6411,8 @@ class WaterFlowApp {
 
     this.saveData();
     this.renderStock();
+    this.renderLowStockAlertView();
+    this.renderDashboard();
 
     if (delta > 0) {
       this.showToast(`เติมสต๊อก ${item.name} +${delta} ${item.unit} (คงเหลือ ${newQty})`, 'success');
@@ -5988,6 +6528,9 @@ class WaterFlowApp {
     form.reset();
     document.getElementById('stockItemId').value = '';
 
+    const noAlertCb = document.getElementById('stockItemNoAlertCheckbox');
+    const minInput = document.getElementById('stockItemMin');
+
     if (itemId) {
       const item = (this.data.stockItems || []).find(x => x.id === itemId);
       if (item) {
@@ -5997,7 +6540,15 @@ class WaterFlowApp {
         document.getElementById('stockItemCategory').value = item.category || 'INGREDIENT';
         document.getElementById('stockItemUnit').value = item.unit || 'กระป๋อง';
         document.getElementById('stockItemQty').value = item.qty;
-        document.getElementById('stockItemMin').value = item.minQty;
+        const currentMin = item.minQty !== undefined ? Number(item.minQty) : 5;
+        if (minInput) {
+          minInput.value = currentMin;
+          minInput.disabled = (currentMin === 0);
+          minInput.style.opacity = (currentMin === 0) ? '0.45' : '1';
+        }
+        if (noAlertCb) {
+          noAlertCb.checked = (currentMin === 0);
+        }
         document.getElementById('stockItemCost').value = item.unitCost;
         const supEl = document.getElementById('stockItemSupplier');
         if (supEl) supEl.value = item.supplier || '';
@@ -6006,10 +6557,38 @@ class WaterFlowApp {
     } else {
       if (title) title.textContent = 'เพิ่มสินค้าเข้าสต๊อกร้าน';
       document.getElementById('stockItemQty').value = 10;
-      document.getElementById('stockItemMin').value = 5;
+      if (minInput) {
+        minInput.value = 5;
+        minInput.disabled = false;
+        minInput.style.opacity = '1';
+      }
+      if (noAlertCb) {
+        noAlertCb.checked = false;
+      }
       document.getElementById('stockItemCost').value = 25;
       const supEl = document.getElementById('stockItemSupplier');
       if (supEl) supEl.value = '';
+    }
+
+    if (noAlertCb) {
+      noAlertCb.onchange = () => {
+        if (noAlertCb.checked) {
+          if (minInput) {
+            minInput.dataset.prevVal = minInput.value || '5';
+            minInput.value = 0;
+            minInput.disabled = true;
+            minInput.style.opacity = '0.45';
+          }
+        } else {
+          if (minInput) {
+            const restored = parseFloat(minInput.dataset.prevVal) || 5;
+            minInput.value = restored > 0 ? restored : 5;
+            minInput.disabled = false;
+            minInput.style.opacity = '1';
+          }
+        }
+        this.updateStockModalPreview();
+      };
     }
 
     this.updateStockModalPreview();
@@ -6026,7 +6605,10 @@ class WaterFlowApp {
 
   updateStockModalPreview() {
     const qty = parseFloat(document.getElementById('stockItemQty')?.value) || 0;
-    const min = parseFloat(document.getElementById('stockItemMin')?.value) || 0;
+    const noAlertCb = document.getElementById('stockItemNoAlertCheckbox');
+    const minInput = document.getElementById('stockItemMin');
+    const isNoAlert = (noAlertCb && noAlertCb.checked) || (parseFloat(minInput?.value) === 0);
+    const min = isNoAlert ? 0 : (parseFloat(minInput?.value) || 0);
     const cost = parseFloat(document.getElementById('stockItemCost')?.value) || 0;
     const totalVal = qty * cost;
 
@@ -6035,7 +6617,12 @@ class WaterFlowApp {
 
     if (valEl) valEl.textContent = this.formatCurrency(totalVal);
     if (statusEl) {
-      if (qty <= min) {
+      if (isNoAlert) {
+        statusEl.textContent = '📦 ของใช้/ตกแต่ง (ไม่เตือนซื้อ)';
+        statusEl.className = 'pill-tag blue-tag';
+        statusEl.style.fontSize = '0.75rem';
+        statusEl.style.fontWeight = '700';
+      } else if (qty <= min) {
         statusEl.textContent = '⚠️ ใกล้หมด (ต่ำกว่าเกณฑ์)';
         statusEl.className = 'pill-tag red-tag';
         statusEl.style.fontSize = '0.75rem';
@@ -6055,7 +6642,8 @@ class WaterFlowApp {
     const category = document.getElementById('stockItemCategory').value;
     const unit = document.getElementById('stockItemUnit').value.trim() || 'หน่วย';
     const qty = parseFloat(document.getElementById('stockItemQty').value) || 0;
-    const minQty = parseFloat(document.getElementById('stockItemMin').value) || 0;
+    const noAlertCb = document.getElementById('stockItemNoAlertCheckbox');
+    const minQty = (noAlertCb && noAlertCb.checked) ? 0 : (parseFloat(document.getElementById('stockItemMin').value) || 0);
     const unitCost = parseFloat(document.getElementById('stockItemCost').value) || 0;
     const supplier = document.getElementById('stockItemSupplier')?.value.trim() || '';
     const note = document.getElementById('stockItemNote').value.trim();
@@ -6069,14 +6657,21 @@ class WaterFlowApp {
       this.data.stockItems = [];
     }
 
+    let savedItem = null;
+    let isNew = false;
+
     if (id) {
       const idx = this.data.stockItems.findIndex(x => x.id === id);
       if (idx !== -1) {
-        this.data.stockItems[idx] = { id, name, category, unit, qty, minQty, unitCost, supplier, note };
-        this.showToast(`แก้ไขสต๊อก "${name}" เรียบร้อย`, 'success');
+        const oldItem = { ...this.data.stockItems[idx] };
+        savedItem = { id, name, category, unit, qty, minQty, unitCost, supplier, note };
+        this.data.stockItems[idx] = savedItem;
+        this.syncStockToExpenses(savedItem, oldItem);
+        this.showToast(`แก้ไขสต๊อก "${name}" และอัปเดตบันทึกต้นทุนเรียบร้อย`, 'success');
       }
     } else {
-      const newItem = {
+      isNew = true;
+      savedItem = {
         id: 'stk_' + Date.now(),
         name,
         category,
@@ -6087,13 +6682,94 @@ class WaterFlowApp {
         supplier,
         note
       };
-      this.data.stockItems.unshift(newItem);
-      this.showToast(`เพิ่ม "${name}" เข้าสู่สต๊อกร้านแล้ว`, 'success');
+      this.data.stockItems.unshift(savedItem);
+      this.syncStockToExpenses(savedItem, null, true);
+      this.showToast(`เพิ่ม "${name}" เข้าสู่สต๊อกและบันทึกต้นทุนแล้ว`, 'success');
     }
 
     this.saveData();
+    this.syncRecipesWithExpenses();
     document.getElementById('stockItemModal').classList.remove('active');
     this.renderStock();
+    this.renderLowStockAlertView();
+    this.renderExpenses();
+    this.renderRecipes();
+    this.calculatePricing();
+    this.renderDashboard();
+  }
+
+  // ซิงค์การแก้ไขข้อมูลสต๊อกสินค้า -> รายการค่าใช้จ่าย & ต้นทุนวัตถุดิบ (Expenses)
+  syncStockToExpenses(stockItem, oldItem = null, isNew = false) {
+    if (!stockItem) return;
+    if (!Array.isArray(this.data.expenses)) {
+      this.data.expenses = [];
+    }
+
+    const stockNameClean = String(stockItem.name || '').split('(')[0].trim().toLowerCase();
+    const oldNameClean = oldItem ? String(oldItem.name || '').split('(')[0].trim().toLowerCase() : '';
+
+    // ค้นหารายการค่าใช้จ่ายที่เชื่อมโยงกับสินค้านี้
+    const matchedExpenses = this.data.expenses.filter(exp => {
+      if (!exp) return false;
+      if (exp.stockItemId && String(exp.stockItemId) === String(stockItem.id)) return true;
+      if (exp.title) {
+        const expClean = String(exp.title).split('(')[0].trim().toLowerCase();
+        const expLower = String(exp.title).toLowerCase();
+        if (stockItem.name && (expLower === String(stockItem.name).toLowerCase() || expClean === stockNameClean)) return true;
+        if (oldItem && oldItem.name && (expLower === String(oldItem.name).toLowerCase() || expClean === oldNameClean)) return true;
+      }
+      return false;
+    });
+
+    if (matchedExpenses.length > 0) {
+      // ตรวจสอบว่าจำนวนสินค้าในสต๊อกมีการแก้ไขหรือไม่
+      const isQtyChanged = oldItem && oldItem.qty !== stockItem.qty;
+
+      matchedExpenses.forEach(exp => {
+        // ผูก stockItemId ให้ตรงกัน
+        exp.stockItemId = stockItem.id;
+        exp.title = stockItem.name;
+        exp.category = stockItem.category || exp.category;
+        exp.packUnit = stockItem.unit || exp.packUnit;
+        if (stockItem.supplier !== undefined) exp.supplier = stockItem.supplier;
+        if (stockItem.minQty !== undefined) exp.minQty = stockItem.minQty;
+
+        // หากเป็นการแก้ไขจำนวนคงเหลือในสต๊อก (และเป็นบิลที่ผูกกัน)
+        if (isQtyChanged && stockItem.qty >= 0) {
+          // หากมีบิลเดียว หรือจำนวนเดิมตรงกัน ให้ปรับจำนวนรับเข้า/ขนาดแพ็คตามสต๊อก
+          if (matchedExpenses.length === 1 || Number(exp.packSize) === Number(oldItem.qty)) {
+            exp.packSize = stockItem.qty;
+            exp.qtyDesc = `${stockItem.qty} ${stockItem.unit}`;
+          }
+        }
+
+        // ปรับยอดเงินรวม amount ตามราคาต่อหน่วยใหม่ (amount = unitCost * packSize)
+        const packSize = Number(exp.packSize) || 1;
+        if (stockItem.unitCost > 0) {
+          exp.amount = parseFloat((stockItem.unitCost * packSize).toFixed(2));
+        }
+      });
+    } else if (isNew && stockItem.qty > 0 && stockItem.unitCost > 0) {
+      // ถ้าเป็นการสร้างสต๊อกใหม่ที่ยังไม่มีบิลค่าใช้จ่าย ให้สร้างบันทึกต้นทุนอัตโนมัติ
+      const totalAmount = parseFloat((stockItem.unitCost * stockItem.qty).toFixed(2));
+      const todayStr = this.formatDate(new Date());
+      const newExp = {
+        id: 'e_' + Date.now(),
+        date: todayStr,
+        title: stockItem.name,
+        category: stockItem.category || 'INGREDIENT',
+        amount: totalAmount,
+        qtyDesc: `${stockItem.qty} ${stockItem.unit}`,
+        packSize: stockItem.qty,
+        packUnit: stockItem.unit,
+        crateBottles: stockItem.unit.includes('ลัง') ? 24 : null,
+        minQty: stockItem.minQty,
+        supplier: stockItem.supplier || '',
+        note: stockItem.note || 'บันทึกอัตโนมัติจากการเพิ่มสินค้าสต๊อก',
+        stockItemId: stockItem.id
+      };
+      this.data.expenses.unshift(newExp);
+    }
   }
 
   deleteStockItem(itemId) {
@@ -6101,9 +6777,25 @@ class WaterFlowApp {
     if (!item) return;
     if (confirm(`คุณต้องการลบ "${item.name}" ออกจากสต๊อกใช่หรือไม่?`)) {
       this.data.stockItems = this.data.stockItems.filter(x => x.id !== itemId);
+
+      // ปลดการเชื่อมโยง stockItemId ใน expenses (คงประวัติค่าใช้จ่ายไว้ แต่ไม่ผูกกับสต๊อกนี้อีก)
+      if (Array.isArray(this.data.expenses)) {
+        this.data.expenses.forEach(exp => {
+          if (exp && String(exp.stockItemId) === String(itemId)) {
+            delete exp.stockItemId;
+          }
+        });
+      }
+
       this.saveData();
+      this.syncRecipesWithExpenses();
       this.showToast(`ลบรายการ "${item.name}" แล้ว`, 'info');
       this.renderStock();
+      this.renderLowStockAlertView();
+      this.renderExpenses();
+      this.renderRecipes();
+      this.calculatePricing();
+      this.renderDashboard();
     }
   }
 
@@ -6113,10 +6805,14 @@ class WaterFlowApp {
       this.data.stockItems = [];
     }
 
-    const expTitleClean = exp.title.split('(')[0].trim().toLowerCase();
+    const expTitleClean = String(exp.title || '').split('(')[0].trim().toLowerCase();
     let match = this.data.stockItems.find(s => {
-      const sNameClean = s.name.split('(')[0].trim().toLowerCase();
-      return sNameClean.includes(expTitleClean) || expTitleClean.includes(sNameClean);
+      if (!s || !s.name) return false;
+      if (exp.stockItemId && String(s.id) === String(exp.stockItemId)) return true;
+      const sNameClean = String(s.name).split('(')[0].trim().toLowerCase();
+      const sNameLower = String(s.name).toLowerCase();
+      const expTitleLower = String(exp.title || '').toLowerCase();
+      return sNameLower === expTitleLower || sNameClean === expTitleClean || sNameClean.includes(expTitleClean) || expTitleClean.includes(sNameClean);
     });
 
     const rawPackSize = Number(exp.packSize) || 1;
@@ -6127,8 +6823,8 @@ class WaterFlowApp {
     const stockQty = rawPackSize;
     const stockUnit = exp.packUnit || 'หน่วย';
     const unitCost = stockQty > 0 ? (Number(exp.amount) / stockQty) : Number(exp.amount);
-    const minThreshold = exp.minQty && exp.minQty > 0
-      ? exp.minQty
+    const minThreshold = (exp.minQty !== undefined && exp.minQty !== null && exp.minQty !== '')
+      ? Number(exp.minQty)
       : Math.max(1, Math.round(stockQty * 0.25));
 
     if (match) {
@@ -6148,11 +6844,12 @@ class WaterFlowApp {
         ? `รับเข้าของ ${rawPackSize} ลัง (บรรจุ ${crateBottles} ขวด/ลัง) จากบิลซื้อ (${this.formatThaiDate(exp.date)})${supText}`
         : `รับเข้าของจากบิลซื้อ (${this.formatThaiDate(exp.date)})${supText}`;
       this.logStockAction(match.name, 'RESTOCK', stockQty, newQty, match.unit || '', logNote);
+      exp.stockItemId = match.id;
     } else {
       // ยังไม่มีในสต๊อก -> เพิ่มเป็นสินค้าคงคลังรายการใหม่ทันที
       const newItem = {
         id: 'stk_' + Date.now() + Math.random().toString(36).substring(2, 5),
-        name: exp.title,
+        name: exp.title || 'สินค้าใหม่',
         category: exp.category || (isCrate ? 'STOCK' : 'INGREDIENT'),
         unit: stockUnit,
         qty: stockQty,
@@ -6164,6 +6861,131 @@ class WaterFlowApp {
       this.data.stockItems.unshift(newItem);
       const supText = exp.supplier ? ` [ซื้อจาก: ${exp.supplier}]` : '';
       this.logStockAction(newItem.name, 'RESTOCK', stockQty, stockQty, newItem.unit, `เพิ่มรายการใหม่จากบิลซื้อ (${this.formatThaiDate(exp.date)})${supText}`);
+      exp.stockItemId = newItem.id;
+    }
+  }
+
+  // ซิงค์การแก้ไขรายจ่ายเข้าสู่สต๊อกสินค้า (อัปเดตจำนวน, ต้นทุน, เกณฑ์เตือนซื้อ, ร้านค้า, ชื่อสินค้า)
+  updateExpenseInStock(oldExp, updatedExp) {
+    if (!Array.isArray(this.data.stockItems)) {
+      this.data.stockItems = [];
+    }
+
+    // หา stock item เดิมที่ตรงกับ oldExp
+    let match = null;
+    if (oldExp && oldExp.stockItemId) {
+      match = this.data.stockItems.find(s => s && String(s.id) === String(oldExp.stockItemId));
+    }
+    if (!match && oldExp && oldExp.title) {
+      const oldTitleClean = String(oldExp.title).split('(')[0].trim().toLowerCase();
+      match = this.data.stockItems.find(s => {
+        if (!s || !s.name) return false;
+        const sClean = String(s.name).split('(')[0].trim().toLowerCase();
+        const sNameLower = String(s.name).toLowerCase();
+        const oldTitleLower = String(oldExp.title).toLowerCase();
+        return sNameLower === oldTitleLower || sClean === oldTitleClean || sClean.includes(oldTitleClean) || oldTitleClean.includes(sClean);
+      });
+    }
+    if (!match && updatedExp && updatedExp.title) {
+      const newTitleClean = String(updatedExp.title).split('(')[0].trim().toLowerCase();
+      match = this.data.stockItems.find(s => {
+        if (!s || !s.name) return false;
+        const sClean = String(s.name).split('(')[0].trim().toLowerCase();
+        const sNameLower = String(s.name).toLowerCase();
+        const newTitleLower = String(updatedExp.title).toLowerCase();
+        return sNameLower === newTitleLower || sClean === newTitleClean || sClean.includes(newTitleClean) || newTitleClean.includes(sClean);
+      });
+    }
+
+    if (!match) {
+      // หากยังไม่มีสต๊อกรายการนี้ ให้เพิ่มเข้าสต๊อกใหม่ทันที
+      this.addExpenseToStock(updatedExp);
+      return;
+    }
+
+    const oldPackSize = Number(oldExp ? oldExp.packSize : 1) || 1;
+    const newPackSize = Number(updatedExp ? updatedExp.packSize : 1) || 1;
+    const diffQty = newPackSize - oldPackSize;
+    const isCrate = (updatedExp.packUnit || '').includes('ลัง') || (updatedExp.packUnit || '').toLowerCase() === 'crate';
+
+    const unitCost = newPackSize > 0 ? (Number(updatedExp.amount) / newPackSize) : Number(updatedExp.amount);
+    const minThreshold = (updatedExp.minQty !== undefined && updatedExp.minQty !== null && updatedExp.minQty !== '')
+      ? Number(updatedExp.minQty)
+      : Math.max(1, Math.round(newPackSize * 0.25));
+
+    // ตรวจสอบว่ามีการเปลี่ยนชื่อไปตรงกับสต๊อกรายการอื่นหรือไม่
+    const newTitleClean = String(updatedExp.title || '').split('(')[0].trim().toLowerCase();
+    const anotherMatch = this.data.stockItems.find(s => {
+      if (!s || !s.name || (match && String(s.id) === String(match.id))) return false;
+      const sClean = String(s.name).split('(')[0].trim().toLowerCase();
+      const sNameLower = String(s.name).toLowerCase();
+      const newTitleLower = String(updatedExp.title || '').toLowerCase();
+      return sNameLower === newTitleLower || sClean === newTitleClean;
+    });
+
+    if (anotherMatch) {
+      // ผู้ใช้เปลี่ยนชื่อบิลไปตรงกับสินค้าตัวอื่นที่มีอยู่แล้ว -> ตัดยอดออกจากตัวเดิม แล้วย้ายไปบวกที่ตัวใหม่
+      const prevQty = Number(match.qty) || 0;
+      match.qty = Math.max(0, prevQty - oldPackSize);
+      this.logStockAction(match.name, 'ADJUST', -oldPackSize, match.qty, match.unit || '', `ปรับแก้บิลซื้อ ย้ายรายการไปที่ "${anotherMatch.name}"`);
+
+      const anotherPrevQty = Number(anotherMatch.qty) || 0;
+      const anotherNewQty = anotherPrevQty + newPackSize;
+      anotherMatch.qty = anotherNewQty;
+      anotherMatch.unitCost = parseFloat(unitCost.toFixed(2));
+      anotherMatch.minQty = minThreshold;
+      if (updatedExp.supplier) anotherMatch.supplier = updatedExp.supplier;
+      if (updatedExp.packUnit) anotherMatch.unit = updatedExp.packUnit;
+      if (updatedExp.category) anotherMatch.category = updatedExp.category;
+
+      this.logStockAction(anotherMatch.name, 'RESTOCK', newPackSize, anotherNewQty, anotherMatch.unit || '', `รับเข้าจากการแก้ไขบิลซื้อ (${this.formatThaiDate(updatedExp.date)})`);
+      updatedExp.stockItemId = anotherMatch.id;
+    } else {
+      // รายการเดิม -> อัปเดตข้อมูลทั้งหมดตามที่แก้ไข
+      const currentQty = Number(match.qty) || 0;
+      const newQty = Math.max(0, currentQty + diffQty);
+      match.name = updatedExp.title || match.name;
+      match.qty = newQty;
+      match.unitCost = parseFloat(unitCost.toFixed(2));
+      match.unit = updatedExp.packUnit || match.unit || 'หน่วย';
+      match.category = updatedExp.category || match.category || (isCrate ? 'STOCK' : 'INGREDIENT');
+      match.minQty = minThreshold;
+      if (updatedExp.supplier !== undefined) {
+        match.supplier = updatedExp.supplier;
+      }
+
+      const supText = updatedExp.supplier ? ` [ร้าน: ${updatedExp.supplier}]` : '';
+      const diffText = diffQty !== 0 ? ` (ปรับจำนวน ${diffQty >= 0 ? '+' : ''}${diffQty} ${match.unit} คงเหลือ ${newQty})` : '';
+      const logNote = `แก้ไขบิลซื้อ & สต๊อก${diffText} ทุน ฿${match.unitCost}/${match.unit} เกณฑ์เตือน ${match.minQty}${supText}`;
+      this.logStockAction(match.name, 'ADJUST', diffQty, newQty, match.unit || '', logNote);
+      updatedExp.stockItemId = match.id;
+    }
+  }
+
+  // หักสต๊อกเมื่อมีการลบรายการค่าใช้จ่าย
+  removeExpenseFromStock(exp) {
+    if (!Array.isArray(this.data.stockItems) || !exp) return;
+    const packSize = Number(exp.packSize) || 1;
+    let match = null;
+    if (exp.stockItemId) {
+      match = this.data.stockItems.find(s => s && String(s.id) === String(exp.stockItemId));
+    }
+    if (!match && exp.title) {
+      const expTitleClean = String(exp.title).split('(')[0].trim().toLowerCase();
+      match = this.data.stockItems.find(s => {
+        if (!s || !s.name) return false;
+        const sClean = String(s.name).split('(')[0].trim().toLowerCase();
+        const sNameLower = String(s.name).toLowerCase();
+        const expTitleLower = String(exp.title).toLowerCase();
+        return sNameLower === expTitleLower || sClean === expTitleClean || sClean.includes(expTitleClean) || expTitleClean.includes(sClean);
+      });
+    }
+
+    if (match) {
+      const oldQty = Number(match.qty) || 0;
+      const newQty = Math.max(0, oldQty - packSize);
+      match.qty = newQty;
+      this.logStockAction(match.name, 'ADJUST', -packSize, newQty, match.unit || '', `หักสต๊อกจากลบบิลซื้อ (${this.formatThaiDate(exp.date)})`);
     }
   }
 
@@ -6177,29 +6999,45 @@ class WaterFlowApp {
     let syncedCount = 0;
 
     expenses.forEach(exp => {
-      const expTitleClean = exp.title.split('(')[0].trim().toLowerCase();
+      if (!exp || !exp.title) return;
+      const expTitleClean = String(exp.title).split('(')[0].trim().toLowerCase();
       let match = this.data.stockItems.find(s => {
-        const sNameClean = s.name.split('(')[0].trim().toLowerCase();
-        return sNameClean.includes(expTitleClean) || expTitleClean.includes(sNameClean);
+        if (!s || !s.name) return false;
+        if (exp.stockItemId && String(s.id) === String(exp.stockItemId)) return true;
+        const sNameClean = String(s.name).split('(')[0].trim().toLowerCase();
+        const sNameLower = String(s.name).toLowerCase();
+        const expTitleLower = String(exp.title).toLowerCase();
+        return sNameLower === expTitleLower || sNameClean === expTitleClean || sNameClean.includes(expTitleClean) || expTitleClean.includes(sNameClean);
       });
 
       const packSize = Number(exp.packSize) || 1;
       const unitCost = packSize > 0 ? (Number(exp.amount) / packSize) : Number(exp.amount);
 
+      const effectiveMin = (exp.minQty !== undefined && exp.minQty !== null && exp.minQty !== '')
+        ? Number(exp.minQty)
+        : Math.max(1, Math.round(packSize * 0.25));
+
       if (match) {
         match.unitCost = parseFloat(unitCost.toFixed(2));
+        if (exp.supplier && !match.supplier) match.supplier = exp.supplier;
+        if (exp.minQty !== undefined && exp.minQty !== null && exp.minQty !== '') match.minQty = Number(exp.minQty);
+        if (exp.packUnit && (!match.unit || match.unit === 'หน่วย')) match.unit = exp.packUnit;
+        if (!exp.stockItemId) exp.stockItemId = match.id;
         syncedCount++;
       } else {
-        this.data.stockItems.push({
+        const newItem = {
           id: 'stk_' + Date.now() + Math.random().toString(36).substring(2, 5),
           name: exp.title,
           category: exp.category || 'INGREDIENT',
           unit: exp.packUnit || 'หน่วย',
           qty: packSize,
-          minQty: Math.max(1, Math.round(packSize * 0.25)),
+          minQty: effectiveMin,
           unitCost: parseFloat(unitCost.toFixed(2)),
+          supplier: exp.supplier || '',
           note: `ซิงค์อัตโนมัติจากบิลซื้อ (${this.formatThaiDate(exp.date)})`
-        });
+        };
+        this.data.stockItems.push(newItem);
+        exp.stockItemId = newItem.id;
         syncedCount++;
       }
     });
@@ -6207,6 +7045,7 @@ class WaterFlowApp {
     this.saveData();
     this.renderStock();
     this.renderLowStockAlertView();
+    this.renderDashboard();
     this.showToast(`ซิงค์ข้อมูลกับรายการซื้อของสำเร็จ (${syncedCount} รายการได้รับการเชื่อมโยง)`, 'success');
   }
 
@@ -6284,8 +7123,11 @@ class WaterFlowApp {
       this.currentLowStockSupplierFilter = 'ALL';
     }
 
-    // Filter only critical low-stock items
-    const lowItems = list.filter(item => Number(item.qty) <= Number(item.minQty));
+    // Filter only critical low-stock items (exclude items with minQty <= 0 which means no alert)
+    const lowItems = list.filter(item => {
+      const min = Number(item.minQty) || 0;
+      return min > 0 && Number(item.qty) <= min;
+    });
 
     let totalSuggestedQty = 0;
     let totalEstBudget = 0;
@@ -6546,6 +7388,7 @@ class WaterFlowApp {
     this.saveData();
     this.renderStock();
     this.renderLowStockAlertView();
+    this.renderDashboard();
     this.showToast(`เติมสต๊อก ${item.name} +${addQty} ${item.unit} เรียบร้อยแล้ว!`, 'success');
   }
 

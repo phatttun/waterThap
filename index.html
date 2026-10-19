@@ -213,9 +213,13 @@
                 <i data-lucide="calendar"></i>
                 <span>ช่วงเวลาที่ต้องการดูข้อมูล</span>
               </div>
-              <!-- Single Month Selector -->
-              <div id="dashSingleMonthBox" style="display:inline-flex; align-items:center;">
+              <!-- Single Month Selector & Vacation Tag -->
+              <div id="dashSingleMonthBox" style="display:inline-flex; align-items:center; gap:0.4rem; flex-wrap:wrap;">
                 <input type="month" id="dashboardMonthSelect" class="form-input-sm figma-month-input">
+                <span id="dashVacationMonthBadge" class="pill-tag purple-tag"
+                  style="display:none; font-size:0.75rem; font-weight:700;">
+                  🏖️ เดือนปิดเทอม (ค่าเช่า ฿0)
+                </span>
               </div>
             </div>
 
@@ -244,7 +248,8 @@
             </div>
 
             <!-- Custom Range Month Selector (From - To) -->
-            <div id="dashCustomRangeBox" class="mt-2" style="display:none; align-items:center; gap:0.4rem; justify-content:center;">
+            <div id="dashCustomRangeBox" class="mt-2"
+              style="display:none; align-items:center; gap:0.4rem; justify-content:center;">
               <input type="month" id="dashRangeStartMonth" class="form-input-sm figma-month-input">
               <span class="text-muted text-sm">ถึง</span>
               <input type="month" id="dashRangeEndMonth" class="form-input-sm figma-month-input">
@@ -286,14 +291,18 @@
           <!-- Rent Coverage Progress Bar Card -->
           <div class="figma-pos-card mb-3" id="dashRentCoverageCard">
             <div class="space-between align-center mb-1">
-              <div style="font-size:0.8rem; font-weight:700; color:var(--text-main); display:flex; align-items:center; gap:0.35rem;">
+              <div
+                style="font-size:0.8rem; font-weight:700; color:var(--text-main); display:flex; align-items:center; gap:0.35rem;">
                 <i data-lucide="shield-check" style="width:15px;height:15px;color:var(--primary);"></i>
                 <span>ความคุ้มค่าเช่าร้านคงที่</span>
               </div>
               <span id="rentProgressText" style="font-size:0.75rem; font-weight:700; color:#7e22ce;">0%</span>
             </div>
-            <div class="rent-progress-track" style="height:8px; background:var(--bg-subtle); border-radius:var(--radius-full); overflow:hidden;">
-              <div id="rentProgressBar" style="height:100%; width:0%; background:linear-gradient(90deg, #8b5cf6 0%, #10b981 100%); transition:width 0.4s ease;"></div>
+            <div class="rent-progress-track"
+              style="height:8px; background:var(--bg-subtle); border-radius:var(--radius-full); overflow:hidden;">
+              <div id="rentProgressBar"
+                style="height:100%; width:0%; background:linear-gradient(90deg, #8b5cf6 0%, #10b981 100%); transition:width 0.4s ease;">
+              </div>
             </div>
           </div>
 
@@ -366,7 +375,9 @@
           </div>
 
           <!-- Fallback Desktop Table for compatibility (hidden) -->
-          <table style="display:none;"><tbody id="dashRecentSalesTableBody"></tbody></table>
+          <table style="display:none;">
+            <tbody id="dashRecentSalesTableBody"></tbody>
+          </table>
 
         </div>
       </section>
@@ -510,12 +521,21 @@
           </div>
 
           <!-- History Section Header -->
-          <div class="figma-history-header mb-2">
+          <div class="figma-history-header mb-2" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
             <div class="figma-history-title">
               <i data-lucide="history"></i>
               <span>ประวัติการบันทึกยอดขาย</span>
+              <span class="figma-history-count" id="todayBillCountBadge">0 วัน</span>
             </div>
-            <span class="figma-history-count" id="todayBillCountBadge">0 วัน</span>
+            <div style="display:inline-flex; align-items:center; gap:0.4rem;">
+              <label for="dailySalesSortOrder" style="font-size:0.8rem; font-weight:600; color:var(--text-muted); cursor:pointer;">
+                <i data-lucide="arrow-down-up" style="width:13px; height:13px; vertical-align:middle;"></i> เรียงลำดับ:
+              </label>
+              <select id="dailySalesSortOrder" class="form-input" style="padding:0.25rem 0.65rem; font-size:0.8rem; height:32px; border-radius:var(--radius-sm); cursor:pointer; background-color:#ffffff; font-weight:600; color:var(--text-main); border:1.5px solid var(--border-color);">
+                <option value="newest" selected>⏱️ ล่าสุดก่อน</option>
+                <option value="oldest">⌛ เก่าสุดก่อน</option>
+              </select>
+            </div>
           </div>
 
           <!-- Transaction History Stream (Unified Cards Feed, No Old Columns Table) -->
@@ -601,12 +621,21 @@
           </div>
 
           <!-- History Feed Header -->
-          <div class="figma-history-header mb-2">
+          <div class="figma-history-header mb-2" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
             <div class="figma-history-title">
               <i data-lucide="receipt"></i>
               <span>รายการซื้อของ & ต้นทุน</span>
+              <span class="figma-history-count" id="expenseFilteredCountBadge">0 รายการ</span>
             </div>
-            <span class="figma-history-count" id="expenseFilteredCountBadge">0 รายการ</span>
+            <div style="display:inline-flex; align-items:center; gap:0.4rem;">
+              <label for="expenseSortOrder" style="font-size:0.8rem; font-weight:600; color:var(--text-muted); cursor:pointer;">
+                <i data-lucide="arrow-down-up" style="width:13px; height:13px; vertical-align:middle;"></i> เรียงลำดับ:
+              </label>
+              <select id="expenseSortOrder" class="form-input" style="padding:0.25rem 0.65rem; font-size:0.8rem; height:32px; border-radius:var(--radius-sm); cursor:pointer; background-color:#ffffff; font-weight:600; color:var(--text-main); border:1.5px solid var(--border-color);">
+                <option value="newest" selected>⏱️ ล่าสุดก่อน</option>
+                <option value="oldest">⌛ เก่าสุดก่อน</option>
+              </select>
+            </div>
           </div>
 
           <!-- Unified Expenses Feed (Cards for Mobile & Desktop, No Columns Table) -->
@@ -667,8 +696,11 @@
             </div>
 
             <!-- Clear Formula Equation Banner -->
-            <div id="pricingFormulaBanner" class="fph-formula-strip" style="margin-top: 0.6rem; background: rgba(59, 130, 246, 0.15); border: 1px dashed rgba(96, 165, 250, 0.4); border-radius: var(--radius-sm); padding: 0.5rem 0.75rem; font-size: 0.8rem; color: #e2e8f0; text-align: center;">
-              ทุนขวดละ <span id="resFormulaCost" style="font-weight:700; color:#fbbf24;">฿0.00</span> + กำไร <span id="resFormulaProfit" style="font-weight:700; color:#34d399;">฿0.00</span> = ราคาขาย <span id="resFormulaSell" style="font-weight:800; color:#ffffff;">฿0.00</span>
+            <div id="pricingFormulaBanner" class="fph-formula-strip"
+              style="margin-top: 0.6rem; background: rgba(59, 130, 246, 0.15); border: 1px dashed rgba(96, 165, 250, 0.4); border-radius: var(--radius-sm); padding: 0.5rem 0.75rem; font-size: 0.8rem; color: #e2e8f0; text-align: center;">
+              ทุนขวดละ <span id="resFormulaCost" style="font-weight:700; color:#fbbf24;">฿0.00</span> + กำไร <span
+                id="resFormulaProfit" style="font-weight:700; color:#34d399;">฿0.00</span> = ราคาขาย <span
+                id="resFormulaSell" style="font-weight:800; color:#ffffff;">฿0.00</span>
             </div>
           </div>
 
@@ -703,15 +735,15 @@
                 <label class="form-label" for="calcPackPrice">ราคาซื้อมาต่อลัง (บาท)</label>
                 <div class="input-with-affix">
                   <span class="affix-left">฿</span>
-                  <input type="number" id="calcPackPrice" class="form-input font-bold" value="" placeholder="0.00" min="0" step="0.5"
-                    inputmode="decimal">
+                  <input type="number" id="calcPackPrice" class="form-input font-bold" value="" placeholder="0.00"
+                    min="0" step="0.5" inputmode="decimal">
                 </div>
               </div>
               <div class="form-group">
                 <label class="form-label" for="calcUnitsPerPack">จำนวนขวดใน 1 ลัง (ขวด)</label>
                 <div class="input-with-affix">
-                  <input type="number" id="calcUnitsPerPack" class="form-input font-bold" value="" placeholder="24" min="1" step="1"
-                    inputmode="numeric">
+                  <input type="number" id="calcUnitsPerPack" class="form-input font-bold" value="" placeholder="24"
+                    min="1" step="1" inputmode="numeric">
                   <span class="affix-right">ขวด</span>
                 </div>
               </div>
@@ -722,8 +754,8 @@
                 (บาท)</label>
               <div class="input-with-affix">
                 <span class="affix-left">฿</span>
-                <input type="number" id="calcExtraCostPerUnit" class="form-input" value="" placeholder="0.00" min="0" step="0.25"
-                  inputmode="decimal">
+                <input type="number" id="calcExtraCostPerUnit" class="form-input" value="" placeholder="0.00" min="0"
+                  step="0.25" inputmode="decimal">
               </div>
             </div>
 
@@ -773,8 +805,8 @@
               <div class="slider-group">
                 <input type="range" id="calcMarginSlider" min="0" max="150" value="0" class="form-range">
                 <div class="input-with-affix short-input">
-                  <input type="number" id="calcDesiredMargin" class="form-input font-bold" value="" placeholder="0" min="0" max="300"
-                    inputmode="numeric">
+                  <input type="number" id="calcDesiredMargin" class="form-input font-bold" value="" placeholder="0"
+                    min="0" max="300" inputmode="numeric">
                   <span class="affix-right">%</span>
                 </div>
               </div>
@@ -814,7 +846,8 @@
       <section id="tab-calendar" class="tab-pane">
         <!-- Top Floating Month Capsule (Matching Tab 2 Date Capsule) -->
         <div class="figma-date-capsule mb-3" style="max-width: 680px; margin-left: auto; margin-right: auto;">
-          <button type="button" class="figma-capsule-nav" id="calPrevMonthBtn" aria-label="เดือนก่อนหน้า" title="เดือนก่อนหน้า">
+          <button type="button" class="figma-capsule-nav" id="calPrevMonthBtn" aria-label="เดือนก่อนหน้า"
+            title="เดือนก่อนหน้า">
             <i data-lucide="chevron-left"></i>
           </button>
           <div class="figma-capsule-center" id="calTodayBtn" title="แตะเพื่อกลับมาเดือนนี้">
@@ -822,7 +855,8 @@
             <span class="figma-capsule-text" id="calCurrentMonthLabel">ตุลาคม 2026</span>
             <span class="figma-capsule-tag blue">ปฏิทินรายวัน</span>
           </div>
-          <button type="button" class="figma-capsule-nav" id="calNextMonthBtn" aria-label="เดือนถัดไป" title="เดือนถัดไป">
+          <button type="button" class="figma-capsule-nav" id="calNextMonthBtn" aria-label="เดือนถัดไป"
+            title="เดือนถัดไป">
             <i data-lucide="chevron-right"></i>
           </button>
         </div>
@@ -924,7 +958,8 @@
                   <span style="font-size:1.4rem; line-height:1;">🥤</span>
                   <div style="flex:1;">
                     <div style="font-weight:700; color:var(--text-main); font-size:0.92rem;">สูตรต่อ 1 แก้ว (ชงสด)</div>
-                    <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">คำนวณต้นทุนต่อแก้วโดยตรง</div>
+                    <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">คำนวณต้นทุนต่อแก้วโดยตรง
+                    </div>
                   </div>
                 </button>
                 <div style="height:1px; background:var(--border-color); margin:0.3rem 0;"></div>
@@ -932,8 +967,10 @@
                   style="width:100%; text-align:left; padding:0.75rem 1rem; border:none; background:none; cursor:pointer; display:flex; align-items:center; gap:0.75rem; transition:background 0.2s;">
                   <span style="font-size:1.4rem; line-height:1;">🏺</span>
                   <div style="flex:1;">
-                    <div style="font-weight:700; color:var(--text-main); font-size:0.92rem;">สูตรต่อ 1 โหล (ชงถัง/เหยือก)</div>
-                    <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">ขยายสูตรเป็นถัง 5-6 ลิตร</div>
+                    <div style="font-weight:700; color:var(--text-main); font-size:0.92rem;">สูตรต่อ 1 โหล
+                      (ชงถัง/เหยือก)</div>
+                    <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">ขยายสูตรเป็นถัง 5-6 ลิตร
+                    </div>
                   </div>
                 </button>
               </div>
@@ -975,7 +1012,8 @@
           <div class="figma-recipe-search-box mb-3">
             <div class="figma-search-input-wrap">
               <i data-lucide="search" class="figma-search-icon"></i>
-              <input type="text" id="recipeSearchInput" class="figma-search-input" placeholder="ค้นหาชื่อสูตร หรือส่วนผสม..." autocomplete="off">
+              <input type="text" id="recipeSearchInput" class="figma-search-input"
+                placeholder="ค้นหาชื่อสูตร หรือส่วนผสม..." autocomplete="off">
               <button type="button" class="figma-btn-clear" id="btnClearRecipeSearch" style="display:none;">
                 <i data-lucide="x"></i>
               </button>
@@ -997,12 +1035,21 @@
           </div>
 
           <!-- History Feed Header -->
-          <div class="figma-history-header mb-2">
+          <div class="figma-history-header mb-2" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
             <div class="figma-history-title">
               <i data-lucide="book-open"></i>
               <span>รายการสูตรชงน้ำ</span>
+              <span class="figma-history-count" id="recipeFilteredCountBadge">0 รายการ</span>
             </div>
-            <span class="figma-history-count" id="recipeFilteredCountBadge">0 รายการ</span>
+            <div style="display:inline-flex; align-items:center; gap:0.4rem;">
+              <label for="recipeSortOrder" style="font-size:0.8rem; font-weight:600; color:var(--text-muted); cursor:pointer;">
+                <i data-lucide="arrow-down-up" style="width:13px; height:13px; vertical-align:middle;"></i> เรียงลำดับ:
+              </label>
+              <select id="recipeSortOrder" class="form-input" style="padding:0.25rem 0.65rem; font-size:0.8rem; height:32px; border-radius:var(--radius-sm); cursor:pointer; background-color:#ffffff; font-weight:600; color:var(--text-main); border:1.5px solid var(--border-color);">
+                <option value="newest" selected>⏱️ ล่าสุดก่อน</option>
+                <option value="oldest">⌛ เก่าสุดก่อน</option>
+              </select>
+            </div>
           </div>
 
           <!-- Recipes Feed (Modern Figma Mobile Card Stream) -->
@@ -1129,12 +1176,23 @@
             </div>
 
             <!-- Search & Quick Filter Tools -->
-            <div style="display:flex; gap:0.5rem; align-items:center;">
-              <div class="input-with-affix" style="width:240px;">
+            <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+              <div class="input-with-affix" style="width:230px;">
                 <span class="affix-left" style="color:var(--text-muted);"><i data-lucide="search"
                     style="width:15px;height:15px;"></i></span>
                 <input type="text" id="stockSearchInput" class="form-input" placeholder="ค้นหาชื่อ, หมวด, แหล่งซื้อ..."
                   style="height:36px; padding-left:2.2rem; font-size:0.875rem;">
+              </div>
+              <div style="display:inline-flex; align-items:center; gap:0.35rem;">
+                <label for="stockSortOrder" style="font-size:0.8rem; font-weight:600; color:var(--text-muted); cursor:pointer;">
+                  <i data-lucide="arrow-down-up" style="width:13px; height:13px; vertical-align:middle;"></i> เรียง:
+                </label>
+                <select id="stockSortOrder" class="form-input" style="padding:0.25rem 0.65rem; font-size:0.8rem; height:36px; border-radius:var(--radius-sm); cursor:pointer; background-color:#ffffff; font-weight:600; color:var(--text-main); border:1.5px solid var(--border-color);">
+                  <option value="newest" selected>⏱️ ล่าสุดก่อน</option>
+                  <option value="oldest">⌛ เก่าสุดก่อน</option>
+                  <option value="low_stock">⚠️ สินค้าใกล้หมดก่อน</option>
+                  <option value="name_asc">🔤 ชื่อ ก-ฮ / A-Z</option>
+                </select>
               </div>
             </div>
           </div>
@@ -1353,13 +1411,120 @@
                 <input type="text" id="settingShopName" class="form-input" value="ร้านชา-กาแฟชงสด">
               </div>
               <div class="form-group mb-3">
-                <label class="form-label" for="settingMonthlyRent">ค่าเช่าร้านต่อเดือน (บาท)</label>
+                <label class="form-label" for="settingMonthlyRent">ค่าเช่าร้านต่อเดือนปกติ (บาท)</label>
                 <div class="input-with-affix">
                   <span class="affix-left">฿</span>
                   <input type="number" id="settingMonthlyRent" class="form-input" value="10000" min="0" step="500">
                 </div>
-                <span class="field-hint">ระบบจะนำไปหักอัตโนมัติในแดชบอร์ดสรุปยอดประจำเดือน</span>
+                <span class="field-hint">นำไปหักเป็นต้นทุนค่าเช่าในแดชบอร์ดสรุปยอดประจำเดือนปกติ</span>
               </div>
+
+              <!-- Vacation Months (เดือนปิดเทอม: ไม่คิดค่าเช่า) -->
+              <div class="form-group mb-3"
+                style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:var(--radius-md); padding:0.85rem;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.4rem;">
+                  <label class="form-label font-bold mb-0"
+                    style="color:var(--text-main); display:inline-flex; align-items:center; gap:0.35rem;">
+                    <span>🏖️ เลือกเดือนปิดเทอม</span>
+                  </label>
+                  <span class="pill-tag purple-tag" id="vacationMonthsCountBadge"
+                    style="font-size:0.75rem; font-weight:700;">
+                    ปิดเทอม 0 เดือน
+                  </span>
+                </div>
+                <div id="vacationMonthsCheckboxGrid"
+                  style="display:grid; grid-template-columns:repeat(auto-fill, minmax(88px, 1fr)); gap:0.4rem;">
+                  <label class="vacation-month-chip"
+                    style="display:flex; align-items:center; gap:0.35rem; font-size:0.8rem; background:#ffffff; border:1px solid #cbd5e1; border-radius:6px; padding:0.35rem 0.5rem; cursor:pointer;">
+                    <input type="checkbox" name="vacationMonth" value="1"
+                      style="accent-color:var(--primary); cursor:pointer;">
+                    <span>ม.ค.</span>
+                  </label>
+                  <label class="vacation-month-chip"
+                    style="display:flex; align-items:center; gap:0.35rem; font-size:0.8rem; background:#ffffff; border:1px solid #cbd5e1; border-radius:6px; padding:0.35rem 0.5rem; cursor:pointer;">
+                    <input type="checkbox" name="vacationMonth" value="2"
+                      style="accent-color:var(--primary); cursor:pointer;">
+                    <span>ก.พ.</span>
+                  </label>
+                  <label class="vacation-month-chip"
+                    style="display:flex; align-items:center; gap:0.35rem; font-size:0.8rem; background:#ffffff; border:1px solid #cbd5e1; border-radius:6px; padding:0.35rem 0.5rem; cursor:pointer;">
+                    <input type="checkbox" name="vacationMonth" value="3"
+                      style="accent-color:var(--primary); cursor:pointer;">
+                    <span>มี.ค.</span>
+                  </label>
+                  <label class="vacation-month-chip"
+                    style="display:flex; align-items:center; gap:0.35rem; font-size:0.8rem; background:#ffffff; border:1px solid #cbd5e1; border-radius:6px; padding:0.35rem 0.5rem; cursor:pointer;">
+                    <input type="checkbox" name="vacationMonth" value="4"
+                      style="accent-color:var(--primary); cursor:pointer;">
+                    <span>เม.ย.</span>
+                  </label>
+                  <label class="vacation-month-chip"
+                    style="display:flex; align-items:center; gap:0.35rem; font-size:0.8rem; background:#ffffff; border:1px solid #cbd5e1; border-radius:6px; padding:0.35rem 0.5rem; cursor:pointer;">
+                    <input type="checkbox" name="vacationMonth" value="5"
+                      style="accent-color:var(--primary); cursor:pointer;">
+                    <span>พ.ค.</span>
+                  </label>
+                  <label class="vacation-month-chip"
+                    style="display:flex; align-items:center; gap:0.35rem; font-size:0.8rem; background:#ffffff; border:1px solid #cbd5e1; border-radius:6px; padding:0.35rem 0.5rem; cursor:pointer;">
+                    <input type="checkbox" name="vacationMonth" value="6"
+                      style="accent-color:var(--primary); cursor:pointer;">
+                    <span>มิ.ย.</span>
+                  </label>
+                  <label class="vacation-month-chip"
+                    style="display:flex; align-items:center; gap:0.35rem; font-size:0.8rem; background:#ffffff; border:1px solid #cbd5e1; border-radius:6px; padding:0.35rem 0.5rem; cursor:pointer;">
+                    <input type="checkbox" name="vacationMonth" value="7"
+                      style="accent-color:var(--primary); cursor:pointer;">
+                    <span>ก.ค.</span>
+                  </label>
+                  <label class="vacation-month-chip"
+                    style="display:flex; align-items:center; gap:0.35rem; font-size:0.8rem; background:#ffffff; border:1px solid #cbd5e1; border-radius:6px; padding:0.35rem 0.5rem; cursor:pointer;">
+                    <input type="checkbox" name="vacationMonth" value="8"
+                      style="accent-color:var(--primary); cursor:pointer;">
+                    <span>ส.ค.</span>
+                  </label>
+                  <label class="vacation-month-chip"
+                    style="display:flex; align-items:center; gap:0.35rem; font-size:0.8rem; background:#ffffff; border:1px solid #cbd5e1; border-radius:6px; padding:0.35rem 0.5rem; cursor:pointer;">
+                    <input type="checkbox" name="vacationMonth" value="9"
+                      style="accent-color:var(--primary); cursor:pointer;">
+                    <span>ก.ย.</span>
+                  </label>
+                  <label class="vacation-month-chip"
+                    style="display:flex; align-items:center; gap:0.35rem; font-size:0.8rem; background:#ffffff; border:1px solid #cbd5e1; border-radius:6px; padding:0.35rem 0.5rem; cursor:pointer;">
+                    <input type="checkbox" name="vacationMonth" value="10"
+                      style="accent-color:var(--primary); cursor:pointer;">
+                    <span>ต.ค.</span>
+                  </label>
+                  <label class="vacation-month-chip"
+                    style="display:flex; align-items:center; gap:0.35rem; font-size:0.8rem; background:#ffffff; border:1px solid #cbd5e1; border-radius:6px; padding:0.35rem 0.5rem; cursor:pointer;">
+                    <input type="checkbox" name="vacationMonth" value="11"
+                      style="accent-color:var(--primary); cursor:pointer;">
+                    <span>พ.ย.</span>
+                  </label>
+                  <label class="vacation-month-chip"
+                    style="display:flex; align-items:center; gap:0.35rem; font-size:0.8rem; background:#ffffff; border:1px solid #cbd5e1; border-radius:6px; padding:0.35rem 0.5rem; cursor:pointer;">
+                    <input type="checkbox" name="vacationMonth" value="12"
+                      style="accent-color:var(--primary); cursor:pointer;">
+                    <span>ธ.ค.</span>
+                  </label>
+                </div>
+                <div
+                  style="margin-top:0.5rem; font-size:0.75rem; color:#64748b; display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+                  <span>💡 แนะนำตั้งค่าด่วน:</span>
+                  <button type="button" class="btn-sm" id="btnPresetSummerVacation"
+                    style="background:#ede9fe; color:#6d28d9; border:none; border-radius:4px; padding:0.2rem 0.5rem; cursor:pointer; font-size:0.75rem; font-weight:600;">
+                    ปิดเทอมใหญ่ (มี.ค. - เม.ย.)
+                  </button>
+                  <button type="button" class="btn-sm" id="btnPresetMidtermVacation"
+                    style="background:#ede9fe; color:#6d28d9; border:none; border-radius:4px; padding:0.2rem 0.5rem; cursor:pointer; font-size:0.75rem; font-weight:600;">
+                    ปิดเทอมเล็ก (ต.ค.)
+                  </button>
+                  <button type="button" class="btn-sm" id="btnClearVacationMonths"
+                    style="background:#f1f5f9; color:#64748b; border:none; border-radius:4px; padding:0.2rem 0.5rem; cursor:pointer; font-size:0.75rem;">
+                    ล้างทั้งหมด
+                  </button>
+                </div>
+              </div>
+
               <button class="btn-fastwork" id="btnSaveShopSettings">บันทึกการตั้งค่า</button>
             </div>
           </div>
@@ -1489,7 +1654,7 @@
         <h3 class="modal-title" id="expenseModalTitle">บันทึกค่าใช้จ่าย & ต้นทุนวัตถุดิบ</h3>
         <button class="close-modal-btn" data-close="expenseModal">&times;</button>
       </div>
-      <form id="expenseForm" class="modal-body">
+      <form id="expenseForm" class="modal-body" novalidate>
         <input type="hidden" id="expenseEditId">
 
         <div class="form-row two-col mb-3">
@@ -1593,12 +1758,21 @@
 
         <!-- Section: เกณฑ์แจ้งเตือนสต๊อกต่ำ -->
         <div class="form-group mb-3">
-          <label class="form-label font-bold" for="expMinQty" id="expMinQtyLabel" style="color:var(--danger);">
-            ⚠️ เกณฑ์เตือนสั่งซื้อขั้นต่ำ (Min Qty)
-          </label>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.35rem;">
+            <label class="form-label font-bold mb-0" for="expMinQty" id="expMinQtyLabel" style="color:var(--danger);">
+              ⚠️ เกณฑ์เตือนสั่งซื้อขั้นต่ำ (Min Qty)
+            </label>
+            <label
+              style="display:inline-flex; align-items:center; gap:0.35rem; font-size:0.8rem; font-weight:600; color:var(--text-muted); cursor:pointer;">
+              <input type="checkbox" id="expNoAlertCheckbox" style="cursor:pointer; accent-color:var(--primary);">
+              <span>ไม่ต้องเตือนซื้อ (ของใช้/ตกแต่งร้าน)</span>
+            </label>
+          </div>
           <input type="number" id="expMinQty" class="form-input font-bold"
             style="color:var(--danger); border-color:#fecaca; background:#fffbfb;" placeholder="เช่น 5 หรือ 10" min="0"
             step="any">
+          <span class="field-hint" id="expMinQtyHint">หากคงเหลือต่ำกว่าเกณฑ์นี้ ระบบจะเตือนสั่งซื้อ (หรือติ๊ก
+            "ไม่ต้องเตือนซื้อ" สำหรับของใช้ถาวร)</span>
         </div>
 
         <!-- Live Stock & Unit Cost Auto-Calculation Preview -->
@@ -1909,13 +2083,24 @@
             <span class="field-hint">จำนวนในร้านตอนนี้</span>
           </div>
           <div class="form-group">
-            <label class="form-label font-bold" for="stockItemMin" style="color:var(--danger);">
-              ⚠️ จุดเตือนขั้นต่ำ
-            </label>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <label class="form-label font-bold mb-0" for="stockItemMin" id="stockItemMinLabel"
+                style="color:var(--danger);">
+                ⚠️ จุดเตือนขั้นต่ำ
+              </label>
+            </div>
             <input type="number" id="stockItemMin" class="form-input font-bold"
               style="color:var(--danger); border-color:#fecaca; background:#fff7f7;" placeholder="5" min="0" step="any"
               value="5" required>
-            <span class="field-hint">น้อยกว่านี้จะเตือนซื้อ</span>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:2px;">
+              <span class="field-hint" id="stockItemMinHint">น้อยกว่านี้จะเตือนซื้อ</span>
+              <label
+                style="display:inline-flex; align-items:center; gap:0.25rem; font-size:0.75rem; color:var(--text-muted); cursor:pointer;">
+                <input type="checkbox" id="stockItemNoAlertCheckbox"
+                  style="cursor:pointer; accent-color:var(--primary);">
+                <span>ไม่เตือน</span>
+              </label>
+            </div>
           </div>
           <div class="form-group">
             <label class="form-label font-bold" for="stockItemCost">
