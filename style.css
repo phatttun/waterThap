@@ -1697,6 +1697,20 @@ body {
   font-weight: 600;
 }
 
+.cal-vacation-badge {
+  font-size: 0.6rem;
+  background-color: #ede9fe;
+  color: #6d28d9;
+  padding: 0.05rem 0.3rem;
+  border-radius: var(--radius-full);
+  font-weight: 700;
+}
+
+.cal-day-cell.vacation-day {
+  background-color: #faf5ff;
+  border-color: #ddd6fe;
+}
+
 .cal-day-cell.custom-holiday-day {
   background-color: #fff7ed;
   border-color: #fdba74;
@@ -2515,6 +2529,12 @@ body {
   }
   .stats-grid.five-col > .profit-card {
     grid-column: span 2;
+  }
+}
+
+@media (max-width: 640px) {
+  .vacation-add-grid {
+    grid-template-columns: 1fr !important;
   }
 }
 

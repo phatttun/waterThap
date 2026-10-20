@@ -43,7 +43,7 @@ const DEFAULT_DATA = {
     name: 'ร้านน้ำยายแต๊ป',
     monthlyRent: 10000,
     schoolOpenDays: 20, // วันเปิดเรียนเฉลี่ยต่อเดือน
-    vacationMonths: [] // เดือนปิดเทอมเริ่มต้น (เม.ย. และ ต.ค.)
+    vacationPeriods: []
   },
   dailySales: [],
   expenses: [],
@@ -89,8 +89,12 @@ class WaterFlowApp {
       if (!parsed.shopSettings) {
         parsed.shopSettings = JSON.parse(JSON.stringify(DEFAULT_DATA.shopSettings));
       }
-      if (!Array.isArray(parsed.shopSettings.vacationMonths)) {
-        parsed.shopSettings.vacationMonths = [];
+      // เคลียร์ค่าระบบเดิมที่อาจหลงเหลืออยู่ในเครื่องของผู้ใช้
+      if (parsed.shopSettings.vacationMonths) {
+        delete parsed.shopSettings.vacationMonths;
+      }
+      if (!Array.isArray(parsed.shopSettings.vacationPeriods)) {
+        parsed.shopSettings.vacationPeriods = [];
       }
       if (!Array.isArray(parsed.savedProducts)) {
         parsed.savedProducts = [];
@@ -305,10 +309,38 @@ class WaterFlowApp {
     return '';
   }
 
-  isSchoolOpenDay(dateStr) {
-    return !this.isWeekend(dateStr) && !this.isHoliday(dateStr);
+  // ตรวจสอบว่าวันที่ระบุอยู่ในช่วงปิดเทอมหรือไม่
+  isVacationDay(dateStr) {
+    if (!this.data.shopSettings) return false;
+    const periods = this.data.shopSettings.vacationPeriods || [];
+    for (const p of periods) {
+      if (p.start && p.end) {
+        if (dateStr >= p.start && dateStr <= p.end) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
+  // ดึงชื่อช่วงปิดเทอมของวันที่นั้นๆ (ถ้ามี)
+  getVacationPeriodName(dateStr) {
+    if (!this.data.shopSettings) return '';
+    const periods = this.data.shopSettings.vacationPeriods || [];
+    for (const p of periods) {
+      if (p.start && p.end && dateStr >= p.start && dateStr <= p.end) {
+        return p.name || 'ช่วงปิดเทอมโรงเรียน';
+      }
+    }
+    return '';
+  }
+
+  // วันเปิดเรียนจริง = ไม่ใช่เสาร์-อาทิตย์, ไม่ใช่วันหยุดนักขัตฤกษ์ และไม่อยู่ในช่วงปิดเทอม
+  isSchoolOpenDay(dateStr) {
+    return !this.isWeekend(dateStr) && !this.isHoliday(dateStr) && !this.isVacationDay(dateStr);
+  }
+
+  // คำนวณวันเปิดเรียนจริงของเดือนนั้นอย่างแม่นยำ (หักเสาร์อาทิตย์ วันหยุด และช่วงปิดเทอมจริง)
   getSchoolOpenDaysCount(ym = null) {
     if (!ym) {
       ym = this.formatDate(new Date()).substring(0, 7);
@@ -326,40 +358,64 @@ class WaterFlowApp {
         openDays++;
       }
     }
-    return openDays > 0 ? openDays : 20;
+    return openDays;
   }
 
+  // ตรวจสอบว่าทั้งเดือนนี้เป็นเดือนที่ปิดเทอมทั้งหมดหรือไม่ (เปิดเรียน 0 วัน)
   isVacationMonth(ymOrMonth) {
     if (!this.data.shopSettings) return false;
-    const vMonths = this.data.shopSettings.vacationMonths || [];
-    let m = 0;
-    if (typeof ymOrMonth === 'number') {
-      m = ymOrMonth;
-    } else if (typeof ymOrMonth === 'string') {
-      if (ymOrMonth.includes('-')) {
-        m = parseInt(ymOrMonth.split('-')[1], 10);
-      } else {
-        m = parseInt(ymOrMonth, 10);
-      }
+    let ym = '';
+    if (typeof ymOrMonth === 'string' && ymOrMonth.includes('-')) {
+      ym = ymOrMonth;
+    } else {
+      const nowY = new Date().getFullYear();
+      const m = typeof ymOrMonth === 'number' ? ymOrMonth : parseInt(ymOrMonth, 10);
+      ym = `${nowY}-${String(m).padStart(2, '0')}`;
     }
-    return vMonths.map(Number).includes(m);
+
+    const openDays = this.getSchoolOpenDaysCount(ym);
+    return openDays === 0;
   }
 
+  // คำนวณค่าเช่าของเดือนนั้น:
+  // - ถ้าปิดเทอมทั้งเดือน (เปิด 0 วัน) = ฿0
+  // - ถ้าเปิดบางวัน (เช่น พฤษภาคม เปิด 10-12 วัน) = คำนวณตามสัดส่วน หรือเต็มเดือน
   getRentForMonth(ym) {
-    if (this.isVacationMonth(ym)) {
-      return 0; // เดือนปิดเทอม = ไม่คิดค่าเช่า (฿0)
+    const openDays = this.getSchoolOpenDaysCount(ym);
+    if (openDays === 0) {
+      return 0; // เดือนปิดเทอมเต็มเดือน = ไม่คิดค่าเช่า (฿0)
     }
-    return (this.data.shopSettings && Number(this.data.shopSettings.monthlyRent)) || 10000;
+    const baseRent = (this.data.shopSettings && Number(this.data.shopSettings.monthlyRent)) || 10000;
+    
+    // ตรวจสอบวันทำงานปกติของเดือน (จ.-ศ. ไม่รวมปิดเทอม)
+    const [yearStr, monthStr] = ym.split('-');
+    const year = parseInt(yearStr, 10);
+    const month = parseInt(monthStr, 10);
+    const daysInMonth = new Date(year, month, 0).getDate();
+    let weekdaysCount = 0;
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      if (!this.isWeekend(dStr) && !this.isHoliday(dStr)) weekdaysCount++;
+    }
+
+    // ถ้าเปิดเรียนน้อยกว่า 12 วัน (เช่น เดือนเปิดเทอมกลางเดือน) ปรับค่าเช่าตามสัดส่วนวันที่เปิดจริง
+    if (weekdaysCount > 0 && openDays < weekdaysCount) {
+      const proratedRent = Math.round((baseRent * openDays) / weekdaysCount);
+      return Math.max(0, proratedRent);
+    }
+
+    return baseRent;
   }
 
   getDailyRentForSchoolDay(dateStr = null) {
-    const ym = dateStr ? dateStr.substring(0, 7) : this.formatDate(new Date()).substring(0, 7);
-    if (this.isVacationMonth(ym)) {
-      return 0; // เดือนปิดเทอม = ค่าเช่ารายวันเป็น 0
+    if (!dateStr) dateStr = this.formatDate(new Date());
+    if (this.isVacationDay(dateStr)) {
+      return 0; // วันที่อยู่ในช่วงปิดเทอม = ค่าเช่ารายวันเป็น 0
     }
+    const ym = dateStr.substring(0, 7);
     const rent = this.getRentForMonth(ym);
     const days = this.getSchoolOpenDaysCount(ym);
-    return Math.round(rent / (days > 0 ? days : 20));
+    return days > 0 ? Math.round(rent / days) : 0;
   }
 
   formatThaiMonthYear(year, monthIndex) {
@@ -439,63 +495,209 @@ class WaterFlowApp {
       rentInput.value = this.data.shopSettings.monthlyRent || 10000;
     }
 
-    // Initialize vacation months checkboxes
-    this.updateVacationMonthsUI();
+    // Initialize vacation periods UI
+    this.renderVacationPeriodsUI();
   }
 
-  updateVacationMonthsUI() {
-    const vMonths = (this.data.shopSettings && this.data.shopSettings.vacationMonths) || [];
-    document.querySelectorAll('input[name="vacationMonth"]').forEach(cb => {
-      const val = parseInt(cb.value, 10);
-      cb.checked = vMonths.includes(val);
-      const chip = cb.closest('.vacation-month-chip');
-      if (chip) {
-        if (cb.checked) {
-          chip.style.borderColor = 'var(--primary)';
-          chip.style.backgroundColor = '#eff6ff';
-          chip.style.color = 'var(--primary)';
-          chip.style.fontWeight = '700';
-        } else {
-          chip.style.borderColor = '#cbd5e1';
-          chip.style.backgroundColor = '#ffffff';
-          chip.style.color = 'inherit';
-          chip.style.fontWeight = 'normal';
-        }
-      }
-    });
+  // วาดรายการช่วงเวลาปิดเทอม (กำหนดวัน-ปีชัดเจน)
+  renderVacationPeriodsUI() {
+    const container = document.getElementById('vacationPeriodsListContainer');
+    const badge = document.getElementById('vacationPeriodsCountBadge');
+    const periods = (this.data.shopSettings && this.data.shopSettings.vacationPeriods) || [];
 
-    this.updateVacationChipsStyle();
+    if (badge) {
+      badge.textContent = `${periods.length} ช่วงเวลา`;
+      badge.className = periods.length > 0 ? 'pill-tag purple-tag' : 'pill-tag';
+    }
 
-    const countBadge = document.getElementById('vacationMonthsCountBadge');
-    if (countBadge) {
-      countBadge.textContent = vMonths.length > 0 ? `ปิดเทอม ${vMonths.length} เดือน (ค่าเช่า ฿0)` : 'ไม่มีเดือนปิดเทอม';
-      countBadge.className = vMonths.length > 0 ? 'pill-tag purple-tag' : 'pill-tag';
+    if (!container) return;
+
+    if (periods.length === 0) {
+      container.innerHTML = `
+        <div style="background:#ffffff; border:1px dashed #cbd5e1; border-radius:var(--radius-sm); padding:1rem; text-align:center; color:#94a3b8; font-size:0.8rem;">
+          ยังไม่มีการกำหนดช่วงปิดเทอม (โรงเรียนเปิดเรียนปกติทุกเดือน)
+        </div>
+      `;
+      this.refreshLucide();
+      return;
+    }
+
+    container.innerHTML = periods.map(p => {
+      const startThai = this.formatThaiDate(p.start);
+      const endThai = this.formatThaiDate(p.end);
+      
+      // คำนวณจำนวนวันทั้งหมดในช่วงปิดเทอมนี้
+      const d1 = new Date(p.start);
+      const d2 = new Date(p.end);
+      const diffDays = Math.max(1, Math.round((d2 - d1) / (1000 * 60 * 60 * 24)) + 1);
+
+      return `
+        <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:var(--radius-sm); padding:0.65rem 0.85rem; display:flex; justify-content:space-between; align-items:center; gap:0.5rem; box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+          <div style="min-width:0;">
+            <div style="font-weight:700; color:var(--text-main); font-size:0.85rem; display:flex; align-items:center; gap:0.35rem;">
+              <span class="pill-tag purple-tag" style="font-size:0.7rem; padding:1px 6px;">🏖️ ปิดเทอม</span>
+              <span>${this.escapeHtml(p.name || 'ช่วงปิดเทอม')}</span>
+            </div>
+            <div style="font-size:0.75rem; color:#64748b; margin-top:2px;">
+              <span>📅 ${startThai} ถึง ${endThai}</span>
+              <span style="color:#8b5cf6; font-weight:600; margin-left:4px;">(หยุดรวม ${diffDays} วัน)</span>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:0.35rem; flex-shrink:0;">
+            <button type="button" class="icon-btn-border" onclick="app.editVacationPeriod('${p.id}')" title="แก้ไขช่วงเวลานี้" style="padding:0.25rem 0.45rem; cursor:pointer;">
+              <i data-lucide="edit-3" style="width:13px; height:13px; color:var(--primary);"></i>
+            </button>
+            <button type="button" class="icon-btn-border" onclick="app.removeVacationPeriod('${p.id}')" title="ลบช่วงเวลานี้" style="padding:0.25rem 0.45rem; cursor:pointer;">
+              <i data-lucide="trash-2" style="width:13px; height:13px; color:var(--danger);"></i>
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    this.refreshLucide();
+  }
+
+  // เริ่มต้นแก้ไขช่วงปิดเทอม
+  editVacationPeriod(periodId) {
+    if (!this.data.shopSettings || !Array.isArray(this.data.shopSettings.vacationPeriods)) return;
+    const period = this.data.shopSettings.vacationPeriods.find(p => p.id === periodId);
+    if (!period) return;
+
+    const editIdInput = document.getElementById('editVacationId');
+    const nameInput = document.getElementById('newVacationName');
+    const startInput = document.getElementById('newVacationStart');
+    const endInput = document.getElementById('newVacationEnd');
+    const formTitle = document.getElementById('vacationFormTitle');
+    const btnText = document.getElementById('btnAddVacationText');
+    const btnCancel = document.getElementById('btnCancelEditVacation');
+    const formBox = document.getElementById('vacationFormBox');
+
+    if (editIdInput) editIdInput.value = period.id;
+    if (nameInput) nameInput.value = period.name || '';
+    if (startInput) startInput.value = period.start || '';
+    if (endInput) endInput.value = period.end || '';
+    if (formTitle) formTitle.textContent = `แก้ไขช่วงปิดเทอม: ${period.name || ''}`;
+    if (btnText) btnText.textContent = 'บันทึกแก้ไข';
+    if (btnCancel) btnCancel.style.display = 'inline-block';
+    if (formBox) {
+      formBox.style.borderColor = 'var(--primary)';
+      formBox.style.boxShadow = '0 0 0 2px rgba(99, 102, 241, 0.15)';
+      formBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
   }
 
-  updateVacationChipsStyle() {
-    document.querySelectorAll('input[name="vacationMonth"]').forEach(cb => {
-      const chip = cb.closest('.vacation-month-chip');
-      if (chip) {
-        if (cb.checked) {
-          chip.style.borderColor = 'var(--primary)';
-          chip.style.backgroundColor = '#eff6ff';
-          chip.style.color = 'var(--primary)';
-          chip.style.fontWeight = '700';
-        } else {
-          chip.style.borderColor = '#cbd5e1';
-          chip.style.backgroundColor = '#ffffff';
-          chip.style.color = 'inherit';
-          chip.style.fontWeight = 'normal';
-        }
-      }
-    });
+  // ยกเลิกโหมดแก้ไข
+  cancelEditVacation() {
+    const editIdInput = document.getElementById('editVacationId');
+    const nameInput = document.getElementById('newVacationName');
+    const startInput = document.getElementById('newVacationStart');
+    const endInput = document.getElementById('newVacationEnd');
+    const formTitle = document.getElementById('vacationFormTitle');
+    const btnText = document.getElementById('btnAddVacationText');
+    const btnCancel = document.getElementById('btnCancelEditVacation');
+    const formBox = document.getElementById('vacationFormBox');
 
-    const checkedCount = document.querySelectorAll('input[name="vacationMonth"]:checked').length;
-    const countBadge = document.getElementById('vacationMonthsCountBadge');
-    if (countBadge) {
-      countBadge.textContent = checkedCount > 0 ? `ปิดเทอม ${checkedCount} เดือน (ค่าเช่า ฿0)` : 'ไม่มีเดือนปิดเทอม';
-      countBadge.className = checkedCount > 0 ? 'pill-tag purple-tag' : 'pill-tag';
+    if (editIdInput) editIdInput.value = '';
+    if (nameInput) nameInput.value = '';
+    if (startInput) startInput.value = '';
+    if (endInput) endInput.value = '';
+    if (formTitle) formTitle.textContent = 'เพิ่มช่วงเวลาปิดเทอมใหม่:';
+    if (btnText) btnText.textContent = 'เพิ่ม';
+    if (btnCancel) btnCancel.style.display = 'none';
+    if (formBox) {
+      formBox.style.borderColor = '#cbd5e1';
+      formBox.style.boxShadow = 'none';
+    }
+  }
+
+  // เพิ่มหรือบันทึกแก้ไขช่วงปิดเทอม
+  addVacationPeriod() {
+    const editIdInput = document.getElementById('editVacationId');
+    const nameInput = document.getElementById('newVacationName');
+    const startInput = document.getElementById('newVacationStart');
+    const endInput = document.getElementById('newVacationEnd');
+
+    const editId = editIdInput?.value.trim();
+    const name = nameInput?.value.trim() || 'ปิดเทอม';
+    const start = startInput?.value;
+    const end = endInput?.value;
+
+    if (!start || !end) {
+      this.showToast('กรุณาระบุทั้งวันที่เริ่มและวันที่สิ้นสุดการปิดเทอม', 'error');
+      return;
+    }
+
+    if (start > end) {
+      this.showToast('วันที่เริ่มต้องอยู่ก่อนวันสิ้นสุด', 'error');
+      return;
+    }
+
+    if (!this.data.shopSettings) this.data.shopSettings = {};
+    if (!Array.isArray(this.data.shopSettings.vacationPeriods)) {
+      this.data.shopSettings.vacationPeriods = [];
+    }
+
+    if (editId) {
+      // โหมดแก้ไข
+      const index = this.data.shopSettings.vacationPeriods.findIndex(p => p.id === editId);
+      if (index !== -1) {
+        this.data.shopSettings.vacationPeriods[index] = {
+          ...this.data.shopSettings.vacationPeriods[index],
+          name,
+          start,
+          end
+        };
+      }
+      this.showToast(`แก้ไขข้อมูล "${name}" เรียบร้อยแล้ว`, 'success');
+    } else {
+      // โหมดเพิ่มใหม่
+      const newPeriod = {
+        id: 'vp_' + Date.now(),
+        name,
+        start,
+        end
+      };
+      this.data.shopSettings.vacationPeriods.push(newPeriod);
+      this.showToast(`เพิ่ม "${name}" (${this.formatThaiDate(start)} - ${this.formatThaiDate(end)}) เรียบร้อยแล้ว`, 'success');
+    }
+
+    // เรียงตามวันที่เริ่ม
+    this.data.shopSettings.vacationPeriods.sort((a, b) => a.start.localeCompare(b.start));
+
+    this.saveData();
+    this.cancelEditVacation();
+    this.renderVacationPeriodsUI();
+    this.renderDashboard();
+    this.renderCalendar(); // อัปเดตปฏิทินทันที
+    const todayDate = document.getElementById('dailyFormDate')?.value || this.formatDate(new Date());
+    this.loadDailyFormForDate(todayDate);
+    this.renderTodaySummary(todayDate);
+  }
+
+  // ลบช่วงปิดเทอม
+  removeVacationPeriod(periodId) {
+    if (!this.data.shopSettings || !Array.isArray(this.data.shopSettings.vacationPeriods)) return;
+    const period = this.data.shopSettings.vacationPeriods.find(p => p.id === periodId);
+    const pName = period ? period.name : 'ช่วงปิดเทอม';
+
+    if (confirm(`คุณต้องการลบ "${pName}" ออกใช่หรือไม่?`)) {
+      this.data.shopSettings.vacationPeriods = this.data.shopSettings.vacationPeriods.filter(p => p.id !== periodId);
+      
+      // ถ้ายกเลิกตัวที่กำลังแก้ไขอยู่ ให้รีเซ็ตฟอร์ม
+      const editIdInput = document.getElementById('editVacationId');
+      if (editIdInput && editIdInput.value === periodId) {
+        this.cancelEditVacation();
+      }
+
+      this.saveData();
+      this.renderVacationPeriodsUI();
+      this.renderDashboard();
+      this.renderCalendar(); // อัปเดตปฏิทินทันที
+      const todayDate = document.getElementById('dailyFormDate')?.value || this.formatDate(new Date());
+      this.loadDailyFormForDate(todayDate);
+      this.renderTodaySummary(todayDate);
+      this.showToast(`ลบ "${pName}" แล้ว`, 'info');
     }
   }
 
@@ -1108,20 +1310,13 @@ class WaterFlowApp {
         const name = document.getElementById('settingShopName')?.value.trim() || 'ร้านน้ำยายแต๊ป';
         const rent = parseFloat(document.getElementById('settingMonthlyRent')?.value) || 0;
 
-        // Collect vacation months
-        const selectedVacationMonths = [];
-        document.querySelectorAll('input[name="vacationMonth"]:checked').forEach(cb => {
-          selectedVacationMonths.push(parseInt(cb.value, 10));
-        });
-
         this.data.shopSettings.name = name;
         this.data.shopSettings.monthlyRent = rent;
-        this.data.shopSettings.vacationMonths = selectedVacationMonths.sort((a, b) => a - b);
 
         this.saveData();
         this.updateShopBranding();
-        this.updateVacationMonthsUI();
-        this.showToast(`บันทึกการตั้งค่าร้านค้า & เดือนปิดเทอมเรียบร้อยแล้ว`, 'success');
+        this.renderVacationPeriodsUI();
+        this.showToast(`บันทึกการตั้งค่าร้านค้าเรียบร้อยแล้ว`, 'success');
         this.renderDashboard();
         const todayDate = document.getElementById('dailyFormDate')?.value || this.formatDate(new Date());
         this.loadDailyFormForDate(todayDate);
@@ -1129,56 +1324,14 @@ class WaterFlowApp {
       });
     }
 
-    // Vacation Months Presets & Click Handlers
-    document.querySelectorAll('input[name="vacationMonth"]').forEach(cb => {
-      cb.addEventListener('change', () => {
-        const chip = cb.closest('.vacation-month-chip');
-        if (chip) {
-          if (cb.checked) {
-            chip.style.borderColor = 'var(--primary)';
-            chip.style.backgroundColor = '#eff6ff';
-            chip.style.color = 'var(--primary)';
-            chip.style.fontWeight = '700';
-          } else {
-            chip.style.borderColor = '#cbd5e1';
-            chip.style.backgroundColor = '#ffffff';
-            chip.style.color = 'inherit';
-            chip.style.fontWeight = 'normal';
-          }
-        }
-      });
-    });
-
-    const btnPresetSummer = document.getElementById('btnPresetSummerVacation');
-    if (btnPresetSummer) {
-      btnPresetSummer.addEventListener('click', () => {
-        document.querySelectorAll('input[name="vacationMonth"]').forEach(cb => {
-          const val = parseInt(cb.value, 10);
-          if (val === 3 || val === 4) cb.checked = true; // มี.ค., เม.ย.
-        });
-        this.updateVacationChipsStyle();
-      });
+    // Vacation Periods Add/Save & Cancel Edit Buttons
+    const btnAddVac = document.getElementById('btnAddVacationPeriod');
+    if (btnAddVac) {
+      btnAddVac.addEventListener('click', () => this.addVacationPeriod());
     }
-
-    const btnPresetMidterm = document.getElementById('btnPresetMidtermVacation');
-    if (btnPresetMidterm) {
-      btnPresetMidterm.addEventListener('click', () => {
-        document.querySelectorAll('input[name="vacationMonth"]').forEach(cb => {
-          const val = parseInt(cb.value, 10);
-          if (val === 10) cb.checked = true; // ต.ค.
-        });
-        this.updateVacationChipsStyle();
-      });
-    }
-
-    const btnClearVac = document.getElementById('btnClearVacationMonths');
-    if (btnClearVac) {
-      btnClearVac.addEventListener('click', () => {
-        document.querySelectorAll('input[name="vacationMonth"]').forEach(cb => {
-          cb.checked = false;
-        });
-        this.updateVacationChipsStyle();
-      });
+    const btnCancelVac = document.getElementById('btnCancelEditVacation');
+    if (btnCancelVac) {
+      btnCancelVac.addEventListener('click', () => this.cancelEditVacation());
     }
 
     // Export Data JSON
@@ -2032,9 +2185,10 @@ class WaterFlowApp {
     let dailyRent = 0;
     let rentLabel = '';
 
-    if (this.isVacationMonth(dateStr)) {
+    if (this.isVacationDay(dateStr)) {
       dailyRent = 0;
-      rentLabel = `🏖️ ช่วงเดือนปิดเทอม (ยกเว้นไม่คิดค่าเช่าร้าน ฿0)`;
+      const vName = this.getVacationPeriodName(dateStr) || 'ช่วงปิดเทอม';
+      rentLabel = `🏖️ ${vName} (ยกเว้นไม่คิดค่าเช่าร้าน ฿0)`;
     } else if (isSchoolOpen) {
       dailyRent = this.getDailyRentForSchoolDay(dateStr);
       const openDaysCount = this.getSchoolOpenDaysCount(dateStr.substring(0, 7));
@@ -2321,7 +2475,11 @@ class WaterFlowApp {
       displayThaiLarge.textContent = this.formatThaiDate(selectedDate);
     }
     if (hubStatusTag) {
-      if (isSchoolOpen) {
+      if (this.isVacationDay(selectedDate)) {
+        const vName = this.getVacationPeriodName(selectedDate) || 'ปิดเทอม';
+        hubStatusTag.textContent = `🏖️ ${vName}`;
+        hubStatusTag.className = 'figma-capsule-tag holiday';
+      } else if (isSchoolOpen) {
         hubStatusTag.textContent = 'วันเปิดเรียน';
         hubStatusTag.className = 'figma-capsule-tag open';
       } else if (isHol) {
@@ -2348,7 +2506,10 @@ class WaterFlowApp {
     if (btnOther) btnOther.classList.toggle('active', selectedDate !== todayStr && selectedDate !== yStr);
 
     if (subtitle) {
-      if (isSchoolOpen) {
+      if (this.isVacationDay(selectedDate)) {
+        const vName = this.getVacationPeriodName(selectedDate) || 'ช่วงปิดเทอม';
+        subtitle.textContent = `ยอดขายประจำวัน ${this.formatThaiDate(selectedDate)} (${vName}) ยกเว้นไม่คิดค่าเช่าร้านประจำวัน (฿0)`;
+      } else if (isSchoolOpen) {
         const ym = selectedDate.substring(0, 7);
         const openDays = this.getSchoolOpenDaysCount(ym);
         subtitle.textContent = `ยอดขายประจำวัน ${this.formatThaiDate(selectedDate)} (วันเปิดเรียน) หักต้นทุนวัตถุดิบ + ค่าเช่าร้านเฉลี่ย ฿${this.getDailyRentForSchoolDay(selectedDate)}/วัน (เดือนนี้เปิดจริง ${openDays} วัน)`;
@@ -3257,12 +3418,16 @@ class WaterFlowApp {
       const isWk = this.isWeekend(dayDateStr);
       const isPublicHol = this.isPublicHoliday(dayDateStr);
       const customHol = this.getCustomHoliday(dayDateStr);
-      const isHol = isPublicHol || !!customHol;
+      const isVacation = this.isVacationDay(dayDateStr);
+      const vacationName = isVacation ? this.getVacationPeriodName(dayDateStr) : '';
+      const isHol = isPublicHol || !!customHol || isVacation;
 
       const record = this.data.dailySales.find(d => d.date === dayDateStr);
 
       let dayTypeBadge = '';
-      if (customHol) {
+      if (isVacation) {
+        dayTypeBadge = `<span class="cal-vacation-badge" title="${this.escapeHtml(vacationName || 'ช่วงปิดเทอม')}">ปิดเทอม</span>`;
+      } else if (customHol) {
         dayTypeBadge = `<span class="cal-custom-holiday-badge" title="${this.escapeHtml(customHol.reason || 'วันหยุดพิเศษ')}">หยุดพิเศษ</span>`;
       } else if (isPublicHol) {
         dayTypeBadge = '<span class="cal-holiday-badge" title="วันหยุดนักขัตฤกษ์">วันหยุด</span>';
@@ -3271,7 +3436,7 @@ class WaterFlowApp {
       }
 
       cellsHtml += `
-        <div class="cal-day-cell ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''} ${isWk ? 'weekend-day' : ''} ${isPublicHol ? 'holiday-day' : ''} ${customHol ? 'custom-holiday-day' : ''}" onclick="app.selectCalendarDay('${dayDateStr}')">
+        <div class="cal-day-cell ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''} ${isVacation ? 'vacation-day' : ''} ${isWk ? 'weekend-day' : ''} ${isPublicHol ? 'holiday-day' : ''} ${customHol ? 'custom-holiday-day' : ''}" onclick="app.selectCalendarDay('${dayDateStr}')">
           <div class="cal-day-top">
             <span class="cal-day-number">${day}</span>
             ${dayTypeBadge}
@@ -3283,7 +3448,7 @@ class WaterFlowApp {
               <span class="${record.profit >= 0 ? 'cal-profit-tag' : 'text-danger'}" style="font-weight: 600;">
                 ${record.profit >= 0 ? `+฿${record.profit.toLocaleString()}` : `-฿${Math.abs(record.profit).toLocaleString()}`}
               </span>
-            ` : (isWk || isHol ? `<span class="text-muted" style="font-size:0.65rem; color:${customHol ? '#ea580c' : '#94a3b8'};">${customHol ? 'หยุดพิเศษ' : 'หยุด'}</span>` : '<span class="text-muted" style="font-size:0.65rem;">-</span>')}
+            ` : (isVacation ? `<span class="text-muted" style="font-size:0.65rem; color:#8b5cf6; font-weight:600;">ปิดเทอม</span>` : (isWk || isHol ? `<span class="text-muted" style="font-size:0.65rem; color:${customHol ? '#ea580c' : '#94a3b8'};">${customHol ? 'หยุดพิเศษ' : 'หยุด'}</span>` : '<span class="text-muted" style="font-size:0.65rem;">-</span>'))}
           </div>
         </div>
       `;
@@ -3299,8 +3464,13 @@ class WaterFlowApp {
   }
 
   renderCalendarDayDetails(dateStr) {
+    const isVacation = this.isVacationDay(dateStr);
+    const vacationName = isVacation ? this.getVacationPeriodName(dateStr) : '';
+
     const title = document.getElementById('selectedDayTitle');
-    if (title) title.textContent = `ยอดขายวันที่ ${this.formatThaiDate(dateStr)}`;
+    if (title) {
+      title.textContent = `ยอดขายวันที่ ${this.formatThaiDate(dateStr)}${isVacation ? ` (${vacationName || 'ปิดเทอม'})` : ''}`;
+    }
 
     const record = this.data.dailySales.find(d => d.date === dateStr);
     const profit = record ? record.profit : 0;
@@ -3325,7 +3495,23 @@ class WaterFlowApp {
     const isPubHol = this.isPublicHoliday(dateStr);
     const customHol = this.getCustomHoliday(dateStr);
 
-    if (customHol) {
+    if (isVacation) {
+      if (statusBadge) {
+        statusBadge.className = 'badge-pill-item purple-tag';
+        statusBadge.textContent = `🏖️ ปิดเทอม (${vacationName || 'ช่วงปิดเทอม'})`;
+      }
+      if (reasonNote) {
+        reasonNote.style.display = 'block';
+        reasonNote.innerHTML = `<strong>ช่วงเวลาปิดเทอม:</strong> ${this.escapeHtml(vacationName || 'โรงเรียนปิดภาคเรียน')} (ค่าเช่าร้าน = ฿0)`;
+      }
+      if (toggleBtn) {
+        toggleBtn.className = 'btn-fastwork w-full btn-sm';
+        toggleBtn.style.color = '#ffffff';
+        toggleBtn.style.background = 'var(--amber, #f59e0b)';
+        toggleBtn.style.borderColor = '#d97706';
+      }
+      if (toggleText) toggleText.textContent = '+ เพิ่มวันหยุดพิเศษ';
+    } else if (customHol) {
       if (statusBadge) {
         statusBadge.className = 'badge-pill-item amber-tag';
         statusBadge.textContent = 'วันหยุดพิเศษ (กำหนดเอง)';
@@ -3393,9 +3579,10 @@ class WaterFlowApp {
     if (!listContainer) return;
 
     if (!record) {
-      const isHol = isPubHol || !!customHol;
+      const isHol = isPubHol || !!customHol || isVacation;
       let emptyMsg = 'ยังไม่ได้บันทึกยอดขายของวันนี้';
-      if (customHol) emptyMsg = `วันนี้ถูกกำหนดเป็นวันหยุดพิเศษ: ${customHol.reason || 'น้ำท่วม/โรงเรียนปิด'}`;
+      if (isVacation) emptyMsg = `วันนี้อยู่ในช่วงปิดเทอม: ${vacationName || 'โรงเรียนปิดภาคเรียน'}`;
+      else if (customHol) emptyMsg = `วันนี้ถูกกำหนดเป็นวันหยุดพิเศษ: ${customHol.reason || 'น้ำท่วม/โรงเรียนปิด'}`;
       else if (isPubHol) emptyMsg = 'วันนี้เป็นวันหยุดนักขัตฤกษ์ / โรงเรียนปิด';
       else if (isWk) emptyMsg = 'วันหยุดสุดสัปดาห์ (เสาร์-อาทิตย์)';
 
@@ -3404,9 +3591,11 @@ class WaterFlowApp {
     }
 
     let dayStatusText = 'วันเปิดเรียนปกติ';
-    if (customHol) dayStatusText = `วันหยุดพิเศษ: ${customHol.reason || 'น้ำท่วม/โรงเรียนปิด'} (ค่าเช่า ฿0)`;
+    if (isVacation) dayStatusText = `🏖️ ปิดเทอม: ${vacationName || 'ช่วงปิดเทอม'} (ค่าเช่า ฿0)`;
+    else if (customHol) dayStatusText = `วันหยุดพิเศษ: ${customHol.reason || 'น้ำท่วม/โรงเรียนปิด'} (ค่าเช่า ฿0)`;
     else if (isPubHol) dayStatusText = 'วันหยุดนักขัตฤกษ์ / วันหยุดโรงเรียน (ค่าเช่า ฿0)';
     else if (isWk) dayStatusText = 'วันหยุดเสาร์-อาทิตย์ โรงเรียนปิด (ค่าเช่า ฿0)';
+
 
     listContainer.innerHTML = `
       <div class="day-bill-item">

@@ -1404,109 +1404,62 @@
                 <span class="field-hint">นำไปหักเป็นต้นทุนค่าเช่าในแดชบอร์ดสรุปยอดประจำเดือนปกติ</span>
               </div>
 
-              <!-- Vacation Months (เดือนปิดเทอม: ไม่คิดค่าเช่า) -->
+              <!-- Vacation Periods (กำหนดช่วงวันที่ปิดเทอม/เปิดเทอม ระบุปี แม่นยำไม่เพี้ยน) -->
               <div class="form-group mb-3"
-                style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:var(--radius-md); padding:0.85rem;">
-                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.4rem;">
-                  <label class="form-label font-bold mb-0"
-                    style="color:var(--text-main); display:inline-flex; align-items:center; gap:0.35rem;">
-                    <span>🏖️ เลือกเดือนปิดเทอม</span>
-                  </label>
-                  <span class="pill-tag purple-tag" id="vacationMonthsCountBadge"
+                style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:var(--radius-md); padding:1rem;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.6rem; flex-wrap:wrap; gap:0.4rem;">
+                  <div>
+                    <label class="form-label font-bold mb-0"
+                      style="color:var(--text-main); display:inline-flex; align-items:center; gap:0.35rem; font-size:0.95rem;">
+                      <span>🏖️ กำหนดช่วงวันที่ปิดเทอม (ระบุปี-วันเริ่มต้น-วันสิ้นสุด)</span>
+                    </label>
+                    <span class="field-hint" style="display:block; margin-top:2px;">
+                      ระบบจะคำนวณวันเปิดเรียนจริงของแต่ละเดือนอย่างแม่นยำ ไม่เพี้ยนแม้ปิดเทอมคนละเดือนหรือเปิดเทอมกลางเดือน
+                    </span>
+                  </div>
+                  <span class="pill-tag purple-tag" id="vacationPeriodsCountBadge"
                     style="font-size:0.75rem; font-weight:700;">
-                    ปิดเทอม 0 เดือน
+                    0 ช่วงเวลา
                   </span>
                 </div>
-                <div id="vacationMonthsCheckboxGrid"
-                  style="display:grid; grid-template-columns:repeat(auto-fill, minmax(88px, 1fr)); gap:0.4rem;">
-                  <label class="vacation-month-chip"
-                    style="display:flex; align-items:center; gap:0.35rem; font-size:0.8rem; background:#ffffff; border:1px solid #cbd5e1; border-radius:6px; padding:0.35rem 0.5rem; cursor:pointer;">
-                    <input type="checkbox" name="vacationMonth" value="1"
-                      style="accent-color:var(--primary); cursor:pointer;">
-                    <span>ม.ค.</span>
-                  </label>
-                  <label class="vacation-month-chip"
-                    style="display:flex; align-items:center; gap:0.35rem; font-size:0.8rem; background:#ffffff; border:1px solid #cbd5e1; border-radius:6px; padding:0.35rem 0.5rem; cursor:pointer;">
-                    <input type="checkbox" name="vacationMonth" value="2"
-                      style="accent-color:var(--primary); cursor:pointer;">
-                    <span>ก.พ.</span>
-                  </label>
-                  <label class="vacation-month-chip"
-                    style="display:flex; align-items:center; gap:0.35rem; font-size:0.8rem; background:#ffffff; border:1px solid #cbd5e1; border-radius:6px; padding:0.35rem 0.5rem; cursor:pointer;">
-                    <input type="checkbox" name="vacationMonth" value="3"
-                      style="accent-color:var(--primary); cursor:pointer;">
-                    <span>มี.ค.</span>
-                  </label>
-                  <label class="vacation-month-chip"
-                    style="display:flex; align-items:center; gap:0.35rem; font-size:0.8rem; background:#ffffff; border:1px solid #cbd5e1; border-radius:6px; padding:0.35rem 0.5rem; cursor:pointer;">
-                    <input type="checkbox" name="vacationMonth" value="4"
-                      style="accent-color:var(--primary); cursor:pointer;">
-                    <span>เม.ย.</span>
-                  </label>
-                  <label class="vacation-month-chip"
-                    style="display:flex; align-items:center; gap:0.35rem; font-size:0.8rem; background:#ffffff; border:1px solid #cbd5e1; border-radius:6px; padding:0.35rem 0.5rem; cursor:pointer;">
-                    <input type="checkbox" name="vacationMonth" value="5"
-                      style="accent-color:var(--primary); cursor:pointer;">
-                    <span>พ.ค.</span>
-                  </label>
-                  <label class="vacation-month-chip"
-                    style="display:flex; align-items:center; gap:0.35rem; font-size:0.8rem; background:#ffffff; border:1px solid #cbd5e1; border-radius:6px; padding:0.35rem 0.5rem; cursor:pointer;">
-                    <input type="checkbox" name="vacationMonth" value="6"
-                      style="accent-color:var(--primary); cursor:pointer;">
-                    <span>มิ.ย.</span>
-                  </label>
-                  <label class="vacation-month-chip"
-                    style="display:flex; align-items:center; gap:0.35rem; font-size:0.8rem; background:#ffffff; border:1px solid #cbd5e1; border-radius:6px; padding:0.35rem 0.5rem; cursor:pointer;">
-                    <input type="checkbox" name="vacationMonth" value="7"
-                      style="accent-color:var(--primary); cursor:pointer;">
-                    <span>ก.ค.</span>
-                  </label>
-                  <label class="vacation-month-chip"
-                    style="display:flex; align-items:center; gap:0.35rem; font-size:0.8rem; background:#ffffff; border:1px solid #cbd5e1; border-radius:6px; padding:0.35rem 0.5rem; cursor:pointer;">
-                    <input type="checkbox" name="vacationMonth" value="8"
-                      style="accent-color:var(--primary); cursor:pointer;">
-                    <span>ส.ค.</span>
-                  </label>
-                  <label class="vacation-month-chip"
-                    style="display:flex; align-items:center; gap:0.35rem; font-size:0.8rem; background:#ffffff; border:1px solid #cbd5e1; border-radius:6px; padding:0.35rem 0.5rem; cursor:pointer;">
-                    <input type="checkbox" name="vacationMonth" value="9"
-                      style="accent-color:var(--primary); cursor:pointer;">
-                    <span>ก.ย.</span>
-                  </label>
-                  <label class="vacation-month-chip"
-                    style="display:flex; align-items:center; gap:0.35rem; font-size:0.8rem; background:#ffffff; border:1px solid #cbd5e1; border-radius:6px; padding:0.35rem 0.5rem; cursor:pointer;">
-                    <input type="checkbox" name="vacationMonth" value="10"
-                      style="accent-color:var(--primary); cursor:pointer;">
-                    <span>ต.ค.</span>
-                  </label>
-                  <label class="vacation-month-chip"
-                    style="display:flex; align-items:center; gap:0.35rem; font-size:0.8rem; background:#ffffff; border:1px solid #cbd5e1; border-radius:6px; padding:0.35rem 0.5rem; cursor:pointer;">
-                    <input type="checkbox" name="vacationMonth" value="11"
-                      style="accent-color:var(--primary); cursor:pointer;">
-                    <span>พ.ย.</span>
-                  </label>
-                  <label class="vacation-month-chip"
-                    style="display:flex; align-items:center; gap:0.35rem; font-size:0.8rem; background:#ffffff; border:1px solid #cbd5e1; border-radius:6px; padding:0.35rem 0.5rem; cursor:pointer;">
-                    <input type="checkbox" name="vacationMonth" value="12"
-                      style="accent-color:var(--primary); cursor:pointer;">
-                    <span>ธ.ค.</span>
-                  </label>
+
+                <!-- Vacation Period Adder/Editor Form Box -->
+                <div style="background:#ffffff; border:1px solid #cbd5e1; border-radius:var(--radius-sm); padding:0.75rem 0.85rem; margin-bottom:0.75rem;" id="vacationFormBox">
+                  <input type="hidden" id="editVacationId" value="">
+                  <div style="font-size:0.8rem; font-weight:700; color:var(--text-main); margin-bottom:0.4rem; display:flex; align-items:center; justify-content:space-between;">
+                    <div style="display:flex; align-items:center; gap:0.3rem;">
+                      <i data-lucide="plus-circle" id="vacationFormIcon" style="width:14px;height:14px;color:var(--primary);"></i>
+                      <span id="vacationFormTitle">เพิ่มช่วงเวลาปิดเทอมใหม่:</span>
+                    </div>
+                    <button type="button" id="btnCancelEditVacation" style="display:none; font-size:0.75rem; color:#64748b; background:transparent; border:none; cursor:pointer; text-decoration:underline;">
+                      ยกเลิกแก้ไข
+                    </button>
+                  </div>
+                  <div style="display:grid; grid-template-columns: 1.2fr 1fr 1fr auto; gap:0.5rem; align-items:end;" class="vacation-add-grid">
+                    <div>
+                      <label style="font-size:0.72rem; color:var(--text-muted); font-weight:600; display:block; margin-bottom:2px;">ชื่อช่วงปิดเทอม</label>
+                      <input type="text" id="newVacationName" class="form-input" style="height:34px; font-size:0.8rem;" placeholder="เช่น ปิดเทอมใหญ่ 69, ปิดเทอมเล็ก">
+                    </div>
+                    <div>
+                      <label style="font-size:0.72rem; color:var(--text-muted); font-weight:600; display:block; margin-bottom:2px;">วันที่เริ่มปิดเทอม</label>
+                      <input type="date" id="newVacationStart" class="form-input" style="height:34px; font-size:0.8rem;">
+                    </div>
+                    <div>
+                      <label style="font-size:0.72rem; color:var(--text-muted); font-weight:600; display:block; margin-bottom:2px;">วันสุดท้ายที่ปิด (เปิดเรียนวันถัดไป)</label>
+                      <input type="date" id="newVacationEnd" class="form-input" style="height:34px; font-size:0.8rem;">
+                    </div>
+                    <div>
+                      <button type="button" class="btn-fastwork" id="btnAddVacationPeriod" style="height:34px; padding:0 0.85rem; font-size:0.8rem; white-space:nowrap;">
+                        <i data-lucide="plus" id="btnAddVacationIcon"></i>
+                        <span id="btnAddVacationText">เพิ่ม</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <div
-                  style="margin-top:0.5rem; font-size:0.75rem; color:#64748b; display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
-                  <span>💡 แนะนำตั้งค่าด่วน:</span>
-                  <button type="button" class="btn-sm" id="btnPresetSummerVacation"
-                    style="background:#ede9fe; color:#6d28d9; border:none; border-radius:4px; padding:0.2rem 0.5rem; cursor:pointer; font-size:0.75rem; font-weight:600;">
-                    ปิดเทอมใหญ่ (มี.ค. - เม.ย.)
-                  </button>
-                  <button type="button" class="btn-sm" id="btnPresetMidtermVacation"
-                    style="background:#ede9fe; color:#6d28d9; border:none; border-radius:4px; padding:0.2rem 0.5rem; cursor:pointer; font-size:0.75rem; font-weight:600;">
-                    ปิดเทอมเล็ก (ต.ค.)
-                  </button>
-                  <button type="button" class="btn-sm" id="btnClearVacationMonths"
-                    style="background:#f1f5f9; color:#64748b; border:none; border-radius:4px; padding:0.2rem 0.5rem; cursor:pointer; font-size:0.75rem;">
-                    ล้างทั้งหมด
-                  </button>
+
+                <!-- Existing Vacation Periods List Container -->
+                <div id="vacationPeriodsListContainer" style="display:flex; flex-direction:column; gap:0.4rem;">
+                  <!-- Dynamically rendered via JS -->
                 </div>
               </div>
 
