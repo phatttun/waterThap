@@ -7771,3 +7771,48 @@ body {
   }
 }
 
+/* Compact Sort Order Toggle Button */
+.sort-order-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.65rem;
+  height: 32px;
+  background: #ffffff;
+  color: var(--text-main);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.15s ease;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.sort-order-toggle:hover {
+  background: var(--primary-light);
+  border-color: var(--primary-border);
+  color: var(--primary);
+}
+
+.sort-order-toggle:active {
+  transform: scale(0.97);
+}
+
+.sort-order-toggle .sort-arrow-icon {
+  width: 14px;
+  height: 14px;
+  color: var(--primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sort-order-toggle[data-order="oldest"] .sort-arrow-icon {
+  transform: rotate(180deg);
+}
+

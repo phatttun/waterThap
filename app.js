@@ -1027,26 +1027,27 @@ class WaterFlowApp {
       });
     }
 
-    // Sort order change listeners for Sales, Expenses, Recipes, and Stock
-    const dailySalesSort = document.getElementById('dailySalesSortOrder');
-    if (dailySalesSort) {
-      dailySalesSort.addEventListener('change', () => this.renderDailyHistoryTable());
-    }
+    // Helper to toggle sort buttons
+    const bindSortToggle = (btnId, onToggle) => {
+      const btn = document.getElementById(btnId);
+      if (!btn) return;
+      btn.addEventListener('click', () => {
+        const current = btn.dataset.order || 'newest';
+        const next = current === 'newest' ? 'oldest' : 'newest';
+        btn.dataset.order = next;
+        const textSpan = btn.querySelector('.sort-text');
+        if (textSpan) {
+          textSpan.textContent = next === 'newest' ? 'ล่าสุด' : 'เก่าสุด';
+        }
+        if (typeof onToggle === 'function') onToggle(next);
+      });
+    };
 
-    const expenseSort = document.getElementById('expenseSortOrder');
-    if (expenseSort) {
-      expenseSort.addEventListener('change', () => this.renderExpenses());
-    }
-
-    const recipeSort = document.getElementById('recipeSortOrder');
-    if (recipeSort) {
-      recipeSort.addEventListener('change', () => this.renderRecipes());
-    }
-
-    const stockSort = document.getElementById('stockSortOrder');
-    if (stockSort) {
-      stockSort.addEventListener('change', () => this.renderStock());
-    }
+    // Sort order change listeners for Sales, Expenses, Recipes, and Stock (Toggle Buttons)
+    bindSortToggle('dailySalesSortOrder', () => this.renderDailyHistoryTable());
+    bindSortToggle('expenseSortOrder', () => this.renderExpenses());
+    bindSortToggle('recipeSortOrder', () => this.renderRecipes());
+    bindSortToggle('stockSortOrder', () => this.renderStock());
 
     // Modal Close
     document.querySelectorAll('[data-close]').forEach(btn => {
@@ -2422,7 +2423,8 @@ class WaterFlowApp {
     const feedWrap = document.getElementById('todaySalesMobileCards');
     const countBadge = document.getElementById('todayBillCountBadge');
 
-    const sortOrder = document.getElementById('dailySalesSortOrder')?.value || 'newest';
+    const sortEl = document.getElementById('dailySalesSortOrder');
+    const sortOrder = sortEl?.dataset?.order || sortEl?.value || 'newest';
     const list = [...this.data.dailySales].sort((a, b) => {
       const dateCmp = (a.date || '').localeCompare(b.date || '');
       const idA = String(a.id || '');
@@ -2591,7 +2593,8 @@ class WaterFlowApp {
       return;
     }
 
-    const sortOrder = document.getElementById('expenseSortOrder')?.value || 'newest';
+    const sortEl = document.getElementById('expenseSortOrder');
+    const sortOrder = sortEl?.dataset?.order || sortEl?.value || 'newest';
     const sorted = [...list].sort((a, b) => {
       // เปรียบเทียบตามวันที่ และ id (timestamp)
       const dateCmp = (a.date || '').localeCompare(b.date || '');
@@ -3792,7 +3795,8 @@ class WaterFlowApp {
       return true;
     });
 
-    const recipeSort = document.getElementById('recipeSortOrder')?.value || 'newest';
+    const sortEl = document.getElementById('recipeSortOrder');
+    const recipeSort = sortEl?.dataset?.order || sortEl?.value || 'newest';
     filtered.sort((a, b) => {
       const idA = String(a.id || '');
       const idB = String(b.id || '');
@@ -6125,6 +6129,14 @@ class WaterFlowApp {
         this.saveStockItem();
       });
     }
+
+    const quickRestockForm = document.getElementById('quickRestockForm');
+    if (quickRestockForm) {
+      quickRestockForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        this.handleQuickRestockSubmit();
+      });
+    }
   }
 
   // ==========================================
@@ -6192,7 +6204,8 @@ class WaterFlowApp {
     }
 
     // Sort according to stockSortOrder (default: newest)
-    const stockSort = document.getElementById('stockSortOrder')?.value || 'newest';
+    const stockSortEl = document.getElementById('stockSortOrder');
+    const stockSort = stockSortEl?.dataset?.order || stockSortEl?.value || 'newest';
     const sorted = [...list].sort((a, b) => {
       const idA = String(a.id || '');
       const idB = String(b.id || '');
@@ -6387,14 +6400,54 @@ class WaterFlowApp {
     const note = `พิมพ์ปรับจำนวนจาก ${oldQty} เป็น ${parsed}`;
     this.logStockAction(item.name, actionType, diff, parsed, item.unit || '', note);
 
+    // ถ้าพิมพ์เพิ่มจำนวน (diff > 0) ให้สร้างบิลรายจ่ายของเดือนปัจจุบันอัตโนมัติ (จำนวนที่เพิ่ม × ต้นทุนต่อหน่วย)
+    if (diff > 0 && (Number(item.unitCost) || 0) > 0) {
+      if (!Array.isArray(this.data.expenses)) this.data.expenses = [];
+      const expenseAmount = parseFloat((diff * item.unitCost).toFixed(2));
+      const todayStr = this.formatDate(new Date());
+      const newExp = {
+        id: 'e_' + Date.now() + Math.random().toString(36).substring(2, 5),
+        date: todayStr,
+        title: item.name,
+        category: item.category || 'INGREDIENT',
+        amount: expenseAmount,
+        qtyDesc: `${diff} ${item.unit || 'หน่วย'} (ราคา ฿${item.unitCost}/${item.unit || 'หน่วย'})`,
+        packSize: diff,
+        packUnit: item.unit || 'หน่วย',
+        crateBottles: (item.unit || '').includes('ลัง') ? 24 : null,
+        minQty: item.minQty,
+        supplier: item.supplier || '',
+        note: `พิมพ์เติมสต๊อก (+${diff}): ลงรายจ่ายอัตโนมัติ`,
+        stockItemId: item.id
+      };
+      this.data.expenses.unshift(newExp);
+    }
+
     this.saveData();
+    this.syncRecipesWithExpenses();
     this.renderStock();
     this.renderLowStockAlertView();
+    this.renderExpenses();
+    this.renderRecipes();
+    this.calculatePricing();
     this.renderDashboard();
-    this.showToast(`ปรับยอดคงเหลือ "${item.name}" เป็น ${parsed} ${item.unit || ''} (บันทึกประวัติแล้ว)`, 'success');
+
+    if (diff > 0 && (Number(item.unitCost) || 0) > 0) {
+      const expVal = (diff * item.unitCost).toFixed(2);
+      this.showToast(`ปรับยอด "${item.name}" เป็น ${parsed} ${item.unit || ''} (หักต้นทุนรายจ่ายเดือนนี้ ฿${this.formatCurrency(expVal)} อัตโนมัติ)`, 'success');
+    } else {
+      this.showToast(`ปรับยอดคงเหลือ "${item.name}" เป็น ${parsed} ${item.unit || ''} (บันทึกประวัติแล้ว)`, 'success');
+    }
   }
 
   adjustStockQty(itemId, delta) {
+    if (delta > 0) {
+      // เมื่อกดปุ่ม + ให้เปิดหน้าต่างเติมของ เพื่อให้ตรวจ/แก้ราคา และคำนวณต้นทุนเฉลี่ยถ่วงน้ำหนัก (Moving Average Cost)
+      this.openQuickRestockModal(itemId, delta);
+      return;
+    }
+
+    // เมื่อกดปุ่ม - : ตัดสต๊อกออก ไม่สร้างบิลรายจ่ายซ้ำ (เพราะคิดเงินไปตั้งแต่ตอนซื้อเข้าแล้ว)
     const item = (this.data.stockItems || []).find(x => x.id === itemId);
     if (!item) return;
 
@@ -6405,8 +6458,8 @@ class WaterFlowApp {
     const actualDiff = newQty - oldQty;
     item.qty = newQty;
 
-    const actionType = delta > 0 ? 'RESTOCK' : 'USE';
-    const note = delta > 0 ? `กดเติมสต๊อก (+${delta})` : `กดเบิก/ตัดใช้สต๊อก (${delta})`;
+    const actionType = 'USE';
+    const note = `กดเบิก/ตัดใช้สต๊อก (${delta})`;
     this.logStockAction(item.name, actionType, actualDiff, newQty, item.unit || '', note);
 
     this.saveData();
@@ -6414,11 +6467,178 @@ class WaterFlowApp {
     this.renderLowStockAlertView();
     this.renderDashboard();
 
-    if (delta > 0) {
-      this.showToast(`เติมสต๊อก ${item.name} +${delta} ${item.unit} (คงเหลือ ${newQty})`, 'success');
-    } else {
-      this.showToast(`ตัดสต๊อก ${item.name} ${delta} ${item.unit} (คงเหลือ ${newQty})`, 'info');
+    this.showToast(`ตัดสต๊อก ${item.name} ${delta} ${item.unit} (คงเหลือ ${newQty})`, 'info');
+  }
+
+  // เปิดหน้าต่างเติมของเข้าร้าน & คำนวณต้นทุนเฉลี่ยถ่วงน้ำหนัก (Moving Average Cost)
+  openQuickRestockModal(itemId, defaultAddQty = 1) {
+    const item = (this.data.stockItems || []).find(x => x.id === itemId);
+    if (!item) return;
+
+    const modal = document.getElementById('quickRestockModal');
+    const form = document.getElementById('quickRestockForm');
+    if (!modal || !form) return;
+
+    form.reset();
+    document.getElementById('quickRestockItemId').value = item.id;
+    document.getElementById('quickRestockModalTitle').textContent = `เติมสต๊อก: ${item.name}`;
+    document.getElementById('quickRestockItemSub').textContent = `หมวด: ${item.category || 'ทั่วไป'} | คำนวณต้นทุนเฉลี่ยถ่วงน้ำหนัก & ลงรายจ่ายอัตโนมัติ`;
+
+    const currentQty = Number(item.qty) || 0;
+    const currentUnitCost = Number(item.unitCost) || 0;
+    const unit = item.unit || 'หน่วย';
+
+    document.getElementById('quickRestockCurrentQtyLabel').textContent = `${currentQty} ${unit}`;
+    document.getElementById('quickRestockCurrentCostLabel').textContent = this.formatCurrency(currentUnitCost);
+    document.getElementById('quickRestockUnitLabel').textContent = unit;
+
+    // ค่าเริ่มต้น
+    const addInput = document.getElementById('quickRestockAddQty');
+    const priceInput = document.getElementById('quickRestockNewPrice');
+    const dateInput = document.getElementById('quickRestockDate');
+    const supInput = document.getElementById('quickRestockSupplier');
+
+    if (addInput) addInput.value = defaultAddQty;
+    if (priceInput) priceInput.value = currentUnitCost;
+    if (dateInput) dateInput.value = this.formatDate(new Date());
+    if (supInput) supInput.value = item.supplier || '';
+
+    // ฟังก์ชันคำนวณสด
+    const updatePreview = () => {
+      const addQty = parseFloat(addInput?.value) || 0;
+      const newPrice = parseFloat(priceInput?.value) || 0;
+      const expenseAmount = addQty * newPrice;
+      const totalQty = currentQty + addQty;
+
+      // สูตรต้นทุนเฉลี่ยถ่วงน้ำหนัก (Moving Average Cost)
+      // ((จำนวนเดิม * ทุนเดิม) + (จำนวนใหม่ * ทุนใหม่)) / จำนวนรวม
+      let weightedAvgCost = currentUnitCost;
+      if (totalQty > 0) {
+        const totalCostSum = (currentQty * currentUnitCost) + (addQty * newPrice);
+        weightedAvgCost = parseFloat((totalCostSum / totalQty).toFixed(2));
+      }
+
+      const expEl = document.getElementById('quickRestockTotalExpensePreview');
+      const qtyEl = document.getElementById('quickRestockTotalQtyPreview');
+      const avgEl = document.getElementById('quickRestockAvgCostPreview');
+      const diffEl = document.getElementById('quickRestockDiffLabel');
+
+      if (expEl) expEl.textContent = this.formatCurrency(expenseAmount);
+      if (qtyEl) qtyEl.textContent = `${totalQty} ${unit}`;
+
+      const diffVal = parseFloat((weightedAvgCost - currentUnitCost).toFixed(2));
+
+      if (avgEl) {
+        avgEl.textContent = `${this.formatCurrency(weightedAvgCost)} / ${unit}`;
+        if (diffVal > 0) {
+          avgEl.style.color = '#ef4444'; // ราคาเฉลี่ยแพงขึ้น
+        } else if (diffVal < 0) {
+          avgEl.style.color = '#10b981'; // ราคาเฉลี่ยถูกลง
+        } else {
+          avgEl.style.color = 'var(--text-main)';
+        }
+      }
+
+      if (diffEl) {
+        if (diffVal > 0) {
+          diffEl.textContent = `🔺 แพงขึ้น +฿${diffVal.toFixed(2)} จากทุนเดิม (฿${currentUnitCost.toFixed(2)})`;
+          diffEl.style.color = '#ef4444';
+        } else if (diffVal < 0) {
+          diffEl.textContent = `🔻 ถูกลง -฿${Math.abs(diffVal).toFixed(2)} จากทุนเดิม (฿${currentUnitCost.toFixed(2)})`;
+          diffEl.style.color = '#10b981';
+        } else {
+          diffEl.textContent = `⚖️ เท่ากับราคาเดิม (฿${currentUnitCost.toFixed(2)})`;
+          diffEl.style.color = 'var(--text-muted)';
+        }
+      }
+    };
+
+    if (addInput) addInput.oninput = updatePreview;
+    if (priceInput) priceInput.oninput = updatePreview;
+    updatePreview();
+
+    modal.classList.add('active');
+    this.refreshLucide();
+    setTimeout(() => {
+      if (addInput) {
+        addInput.focus();
+        addInput.select();
+      }
+    }, 150);
+  }
+
+  // ยืนยันการเติมของ & บันทึกค่าใช้จ่าย & ปรับต้นทุนเฉลี่ย
+  handleQuickRestockSubmit() {
+    const itemId = document.getElementById('quickRestockItemId')?.value;
+    const item = (this.data.stockItems || []).find(x => x.id === itemId);
+    if (!item) return;
+
+    const addQty = parseFloat(document.getElementById('quickRestockAddQty')?.value) || 0;
+    const newPrice = parseFloat(document.getElementById('quickRestockNewPrice')?.value) || 0;
+    const purchaseDate = document.getElementById('quickRestockDate')?.value || this.formatDate(new Date());
+    const supplier = document.getElementById('quickRestockSupplier')?.value.trim() || item.supplier || '';
+
+    if (addQty <= 0) {
+      this.showToast('กรุณาระบุจำนวนที่ซื้อเพิ่มอย่างน้อย 1', 'error');
+      return;
     }
+
+    const currentQty = Number(item.qty) || 0;
+    const currentUnitCost = Number(item.unitCost) || 0;
+    const totalQty = currentQty + addQty;
+    const totalExpense = parseFloat((addQty * newPrice).toFixed(2));
+
+    // คำนวณต้นทุนเฉลี่ยถ่วงน้ำหนัก (Moving Average Cost)
+    let newAvgCost = currentUnitCost;
+    if (totalQty > 0) {
+      const sumValue = (currentQty * currentUnitCost) + (addQty * newPrice);
+      newAvgCost = parseFloat((sumValue / totalQty).toFixed(2));
+    }
+
+    // 1. อัปเดตสต๊อกสินค้า
+    item.qty = totalQty;
+    item.unitCost = newAvgCost;
+    if (supplier) item.supplier = supplier;
+
+    // 2. สร้างบิลรายจ่ายลงในเดือนนั้นอัตโนมัติ (Expenses)
+    if (!Array.isArray(this.data.expenses)) {
+      this.data.expenses = [];
+    }
+
+    const newExpense = {
+      id: 'e_' + Date.now() + Math.random().toString(36).substring(2, 5),
+      date: purchaseDate,
+      title: item.name,
+      category: item.category || 'INGREDIENT',
+      amount: totalExpense,
+      qtyDesc: `${addQty} ${item.unit || 'หน่วย'} (ราคา ฿${newPrice}/${item.unit || 'หน่วย'})`,
+      packSize: addQty,
+      packUnit: item.unit || 'หน่วย',
+      crateBottles: (item.unit || '').includes('ลัง') ? 24 : null,
+      minQty: item.minQty,
+      supplier: supplier,
+      note: `เติมสต๊อกด่วน: ทุนเดิม ฿${currentUnitCost} → ทุนเฉลี่ยใหม่ ฿${newAvgCost}/${item.unit || 'หน่วย'}`,
+      stockItemId: item.id
+    };
+    this.data.expenses.unshift(newExpense);
+
+    // 3. บันทึก Stock Log
+    const logNote = `ซื้อเพิ่ม +${addQty} ${item.unit || ''} (ราคา ฿${newPrice}) บันทึกรายจ่าย ฿${totalExpense} ทุนเฉลี่ยปรับเป็น ฿${newAvgCost}`;
+    this.logStockAction(item.name, 'RESTOCK', addQty, totalQty, item.unit || '', logNote);
+
+    // 4. บันทึกและรีเฟรชทุกหน้าจอ
+    this.saveData();
+    this.syncRecipesWithExpenses();
+    document.getElementById('quickRestockModal')?.classList.remove('active');
+
+    this.renderStock();
+    this.renderLowStockAlertView();
+    this.renderExpenses();
+    this.renderRecipes();
+    this.calculatePricing();
+    this.renderDashboard();
+
+    this.showToast(`เติมสต๊อก ${item.name} +${addQty} สำเร็จ! บันทึกรายจ่าย ฿${this.formatCurrency(totalExpense)} และปรับต้นทุนเฉลี่ยเป็น ฿${newAvgCost} เรียบร้อย 🎉`, 'success');
   }
 
   renderStockHistory() {
@@ -7376,20 +7596,7 @@ class WaterFlowApp {
 
   // Quick Restock right from the emergency card
   quickRestockItem(itemId, addQty) {
-    const item = (this.data.stockItems || []).find(x => x.id === itemId);
-    if (!item) return;
-
-    const oldQty = Number(item.qty) || 0;
-    const newQty = oldQty + addQty;
-    item.qty = newQty;
-
-    this.logStockAction(item.name, 'RESTOCK', addQty, newQty, item.unit || '', `กดเติมด่วนจากการ์ดสินค้าใกล้หมด (+${addQty})`);
-
-    this.saveData();
-    this.renderStock();
-    this.renderLowStockAlertView();
-    this.renderDashboard();
-    this.showToast(`เติมสต๊อก ${item.name} +${addQty} ${item.unit} เรียบร้อยแล้ว!`, 'success');
+    this.openQuickRestockModal(itemId, addQty);
   }
 
   // Copy structured list for LINE / Chat to suppliers
