@@ -361,7 +361,8 @@ class WaterFlowApp {
     return openDays;
   }
 
-  // ตรวจสอบว่าทั้งเดือนนี้เป็นเดือนที่ปิดเทอมทั้งหมดหรือไม่ (เปิดเรียน 0 วัน)
+  // ตรวจสอบว่าเดือนนี้เป็นเดือนปิดเทอมหรือไม่
+  // หากมีวันปิดเทอมในเดือน หรือเปิดเรียนน้อยมาก (เช่น มีช่วงปิดเทอมกินเวลาส่วนใหญ่ของเดือน) ให้ถือเป็นเดือนปิดเทอม (ค่าเช่า ฿0)
   isVacationMonth(ymOrMonth) {
     if (!this.data.shopSettings) return false;
     let ym = '';
@@ -374,20 +375,37 @@ class WaterFlowApp {
     }
 
     const openDays = this.getSchoolOpenDaysCount(ym);
-    return openDays === 0;
+    if (openDays === 0) return true;
+
+    // ตรวจสอบว่าเดือนนี้มีวันปิดเทอมหรือไม่
+    const [yearStr, monthStr] = ym.split('-');
+    const year = parseInt(yearStr, 10);
+    const month = parseInt(monthStr, 10);
+    const daysInMonth = new Date(year, month, 0).getDate();
+    let vacationDaysCount = 0;
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      if (this.isVacationDay(dStr)) vacationDaysCount++;
+    }
+
+    // ถ้ามีวันปิดเทอมตั้งแต่ 10 วันขึ้นไป หรือเปิดเรียนจริงเหลือน้อยกว่า 5 วัน ให้ถือว่าเป็นเดือนปิดเทอม (ยกเว้นค่าเช่า)
+    return vacationDaysCount >= 10 || (vacationDaysCount > 0 && openDays <= 5);
   }
 
   // คำนวณค่าเช่าของเดือนนั้น:
-  // - ถ้าปิดเทอมทั้งเดือน (เปิด 0 วัน) = ฿0
-  // - ถ้าเปิดบางวัน (เช่น พฤษภาคม เปิด 10-12 วัน) = คำนวณตามสัดส่วน หรือเต็มเดือน
+  // - ถ้าเป็นเดือนปิดเทอม หรือเปิดเรียน 0 วัน = ฿0 (ไม่คิดค่าเช่าเลย)
+  // - ถ้าเปิดเรียนเต็มเดือนปกติ = ค่าเช่าเต็มเดือนปกติ
   getRentForMonth(ym) {
+    if (this.isVacationMonth(ym)) {
+      return 0; // เดือนปิดเทอม = ไม่คิดค่าเช่า (฿0)
+    }
     const openDays = this.getSchoolOpenDaysCount(ym);
     if (openDays === 0) {
-      return 0; // เดือนปิดเทอมเต็มเดือน = ไม่คิดค่าเช่า (฿0)
+      return 0; // ไม่มีวันเปิดเรียน = ไม่คิดค่าเช่า (฿0)
     }
     const baseRent = (this.data.shopSettings && Number(this.data.shopSettings.monthlyRent)) || 10000;
     
-    // ตรวจสอบวันทำงานปกติของเดือน (จ.-ศ. ไม่รวมปิดเทอม)
+    // ตรวจสอบวันทำงานปกติของเดือน (จ.-ศ. ไม่รวมวันหยุดนักขัตฤกษ์)
     const [yearStr, monthStr] = ym.split('-');
     const year = parseInt(yearStr, 10);
     const month = parseInt(monthStr, 10);
@@ -398,7 +416,7 @@ class WaterFlowApp {
       if (!this.isWeekend(dStr) && !this.isHoliday(dStr)) weekdaysCount++;
     }
 
-    // ถ้าเปิดเรียนน้อยกว่า 12 วัน (เช่น เดือนเปิดเทอมกลางเดือน) ปรับค่าเช่าตามสัดส่วนวันที่เปิดจริง
+    // หากเดือนนี้มีช่วงปิดเทอม ให้คิดค่าเช่าตามสัดส่วนวันที่เปิดจริง
     if (weekdaysCount > 0 && openDays < weekdaysCount) {
       const proratedRent = Math.round((baseRent * openDays) / weekdaysCount);
       return Math.max(0, proratedRent);
@@ -1780,18 +1798,55 @@ class WaterFlowApp {
       profitStatusElem.style.display = 'none';
     }
 
-    // Rent Progress Bar in Sidebar
+    // Rent Progress Bar in Dashboard & Sidebar
     const rentProgressPercent = totalRentForPeriod > 0 ? Math.min(100, Math.max(0, (grossProfitBeforeRent / totalRentForPeriod) * 100)) : 100;
     const progressBar = document.getElementById('rentProgressBar');
     const progressText = document.getElementById('rentProgressText');
-    if (progressBar) progressBar.style.width = `${rentProgressPercent.toFixed(0)}%`;
+    const rentCoverageCard = document.getElementById('dashRentCoverageCard');
+
+    if (progressBar) {
+      if (totalRentForPeriod === 0) {
+        progressBar.style.width = '100%';
+        progressBar.style.background = 'linear-gradient(90deg, #8b5cf6 0%, #10b981 100%)';
+      } else {
+        progressBar.style.width = `${rentProgressPercent.toFixed(0)}%`;
+        progressBar.style.background = 'linear-gradient(90deg, #8b5cf6 0%, #10b981 100%)';
+      }
+    }
     if (progressText) {
-      if (grossProfitBeforeRent >= totalRentForPeriod) {
+      if (totalRentForPeriod === 0) {
+        progressText.textContent = `🏖️ ปิดเทอม (ไม่คิดค่าเช่าร้าน ฿0)`;
+        progressText.style.color = '#7e22ce';
+      } else if (grossProfitBeforeRent >= totalRentForPeriod) {
         progressText.textContent = `กำไรครอบคลุมค่าเช่าร้านแล้ว! (${rentProgressPercent.toFixed(0)}%)`;
         progressText.style.color = '#047857';
       } else {
         progressText.textContent = `กำไรเบื้องต้น ฿${grossProfitBeforeRent.toLocaleString()} / ฿${totalRentForPeriod.toLocaleString()} (${rentProgressPercent.toFixed(0)}%)`;
         progressText.style.color = '#7e22ce';
+      }
+    }
+
+    // Sidebar Footer Rent Card Update
+    const sidebarRentAmount = document.querySelector('.rent-reminder-card .rent-amount');
+    const sidebarRentFill = document.getElementById('rentProgressBarSidebar');
+    const sidebarRentCaption = document.querySelector('.rent-reminder-card .rent-caption');
+    if (sidebarRentAmount) {
+      if (totalRentForPeriod === 0) {
+        sidebarRentAmount.textContent = '฿0 / ปิดเทอม';
+        sidebarRentAmount.style.color = '#8b5cf6';
+      } else {
+        sidebarRentAmount.textContent = `${this.formatCurrency(totalRentForPeriod)} / เดือน`;
+        sidebarRentAmount.style.color = '';
+      }
+    }
+    if (sidebarRentFill) {
+      sidebarRentFill.style.width = `${rentProgressPercent.toFixed(0)}%`;
+    }
+    if (sidebarRentCaption) {
+      if (totalRentForPeriod === 0) {
+        sidebarRentCaption.textContent = '🏖️ ปิดเทอม ยกเว้นค่าเช่า';
+      } else {
+        sidebarRentCaption.textContent = 'เป้าหมายยอดกำไรคุ้มค่าเช่า';
       }
     }
 
@@ -1826,7 +1881,23 @@ class WaterFlowApp {
           const profit = Number(d.profit) || 0;
           const isProfit = profit >= 0;
           const profitFormatted = isProfit ? `+${this.formatCurrency(profit)}` : `-${this.formatCurrency(Math.abs(profit))}`;
-          const isOpen = !this.isWeekend(d.date) && !this.isPublicHoliday(d.date) && !this.getCustomHoliday(d.date);
+          const isVacation = this.isVacationDay(d.date);
+          const isHol = this.isPublicHoliday(d.date) || !!this.getCustomHoliday(d.date);
+          const isWk = this.isWeekend(d.date);
+          const isOpen = this.isSchoolOpenDay(d.date);
+
+          let pillText = 'วันเปิดเรียน';
+          let pillClass = 'open';
+          if (isVacation) {
+            pillText = '🏖️ ปิดเทอม';
+            pillClass = 'holiday';
+          } else if (isHol) {
+            pillText = 'วันหยุด';
+            pillClass = 'holiday';
+          } else if (isWk) {
+            pillText = 'ส-อา';
+            pillClass = 'holiday';
+          }
 
           return `
             <div class="figma-tx-card ${isProfit ? 'is-profit' : 'is-loss'}">
@@ -1838,8 +1909,8 @@ class WaterFlowApp {
                   <div class="figma-tx-meta">
                     <div class="figma-tx-date-row">
                       <span class="figma-tx-date">${this.formatThaiDate(d.date)}</span>
-                      <span class="figma-tx-pill ${isOpen ? 'open' : 'holiday'}">
-                        ${isOpen ? 'วันเปิดเรียน' : 'วันหยุด'}
+                      <span class="figma-tx-pill ${pillClass}">
+                        ${pillText}
                       </span>
                     </div>
                     <div class="figma-tx-sub">
