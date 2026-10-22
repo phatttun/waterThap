@@ -1664,9 +1664,32 @@
             </div>
             <input type="text" id="expPackUnitCustom" class="form-input mt-1" style="display:none;"
               placeholder="พิมพ์ระบุหน่วย เช่น ถัง, แกลลอน">
-            <span class="field-hint" id="expPackUnitHint">ระบุจำนวนและเลือกหน่วยนับ (หากเลือก "ลัง"
-              จะมีช่องขวดต่อลัง)</span>
+            <span class="field-hint" id="expPackUnitHint">ระบุจำนวนและเลือกหน่วยนับสต๊อก</span>
           </div>
+        </div>
+
+        <!-- Section: ขนาด/น้ำหนัก/ปริมาตรบรรจุต่อชิ้น/ห่อ (เพื่อช่วยคำนวณสูตรชงน้ำได้แม่นยำ เช่น ถุงละ 400g, กระป๋องละ 388g, ขวดละ 1000ml) -->
+        <div id="expNetWeightContainer" class="form-group mb-3" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:var(--radius-md); padding:0.6rem 0.85rem; margin-top:0.75rem;">
+          <label class="form-label font-bold mb-1" for="expNetWeight" style="font-size:0.85rem; color:var(--primary); display:flex; justify-content:space-between; align-items:center;">
+            <span>⚖️ ปริมาณ/ขนาดบรรจุต่อชิ้น (สำหรับคำนวณสูตรชงน้ำ)</span>
+            <span style="font-size:0.75rem; font-weight:normal; color:var(--text-muted);">(ระบุหรือไม่ก็ได้)</span>
+          </label>
+          <div style="display:flex; gap:0.4rem; align-items:center;">
+            <div class="input-with-affix" style="flex:1.2;">
+              <input type="number" id="expNetWeight" class="form-input font-bold" placeholder="เช่น 400, 388, 1000" min="0" step="any">
+            </div>
+            <select id="expNetUnit" class="form-input font-bold" style="flex:1; min-width:110px; cursor:pointer; background:#ffffff;">
+              <option value="g" selected>กรัม (g)</option>
+              <option value="ml">มล. (ml)</option>
+              <option value="kg">กิโลกรัม (kg)</option>
+              <option value="ลิตร">ลิตร (L)</option>
+              <option value="oz">ออนซ์ (oz)</option>
+              <option value="ชิ้น">ชิ้น/ใบ</option>
+            </select>
+          </div>
+          <span class="field-hint" style="font-size:0.75rem; color:var(--text-muted); margin-top:0.3rem;">
+            💡 เช่น ซื้อชาตรามือ 1 ถุง ระบุ <strong>400 กรัม</strong> เพื่อให้เวลาทำสูตรชงตัดใช้เป็นกรัมได้ถูกต้องตรงเป๊ะ
+          </span>
         </div>
 
         <!-- Section: กรณีเลือกหน่วยเป็น "ลัง" -> กรอกจำนวนขวดใน 1 ลัง เพื่อคำนวณตัดสต๊อกเป็นขวด -->

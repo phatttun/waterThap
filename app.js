@@ -4259,6 +4259,16 @@ class WaterFlowApp {
           }
         }
 
+        // Net Weight / Volume per piece setup
+        const netWeightInput = document.getElementById('expNetWeight');
+        const netUnitInput = document.getElementById('expNetUnit');
+        if (netWeightInput) {
+          netWeightInput.value = (exp.netWeight !== undefined && exp.netWeight !== null && exp.netWeight !== '') ? exp.netWeight : '';
+        }
+        if (netUnitInput) {
+          netUnitInput.value = exp.netUnit || 'g';
+        }
+
         const expSupplierEl = document.getElementById('expSupplier');
         if (expSupplierEl) expSupplierEl.value = exp.supplier || '';
         document.getElementById('expNote').value = exp.note || '';
@@ -4311,6 +4321,10 @@ class WaterFlowApp {
       document.getElementById('expPackUnit').value = 'ลัง';
       const customUnitInput = document.getElementById('expPackUnitCustom');
       if (customUnitInput) customUnitInput.style.display = 'none';
+      const netWeightInput = document.getElementById('expNetWeight');
+      const netUnitInput = document.getElementById('expNetUnit');
+      if (netWeightInput) netWeightInput.value = '';
+      if (netUnitInput) netUnitInput.value = 'g';
       const crateBottlesInput = document.getElementById('expCrateBottles');
       if (crateBottlesInput) crateBottlesInput.value = 24;
       const expMinInput = document.getElementById('expMinQty');
@@ -4352,7 +4366,7 @@ class WaterFlowApp {
     this.updateExpenseModalPreview();
 
     // Wire live preview calculation listeners
-    ['expAmount', 'expPackSize', 'expPackUnit', 'expTitle', 'expCrateBottles', 'expMinQty', 'expPackUnitCustom'].forEach(id => {
+    ['expAmount', 'expPackSize', 'expPackUnit', 'expTitle', 'expCrateBottles', 'expMinQty', 'expPackUnitCustom', 'expNetWeight', 'expNetUnit'].forEach(id => {
       const el = document.getElementById(id);
       if (el) {
         el.oninput = () => {
@@ -4361,16 +4375,18 @@ class WaterFlowApp {
           }
           this.updateExpenseModalPreview();
         };
-        if (id === 'expPackUnit') {
+        if (id === 'expPackUnit' || id === 'expNetUnit') {
           el.onchange = () => {
-            const customInput = document.getElementById('expPackUnitCustom');
-            if (el.value === 'CUSTOM') {
-              if (customInput) {
-                customInput.style.display = 'block';
-                customInput.focus();
+            if (id === 'expPackUnit') {
+              const customInput = document.getElementById('expPackUnitCustom');
+              if (el.value === 'CUSTOM') {
+                if (customInput) {
+                  customInput.style.display = 'block';
+                  customInput.focus();
+                }
+              } else {
+                if (customInput) customInput.style.display = 'none';
               }
-            } else {
-              if (customInput) customInput.style.display = 'none';
             }
             this.updateExpenseModalPreview();
           };
@@ -4476,6 +4492,9 @@ class WaterFlowApp {
     const costPreviewEl = document.getElementById('expCalculatedUnitCostPreview');
     const syncStatusEl = document.getElementById('expStockStatusSyncPreview');
 
+    const netWeightVal = parseFloat(document.getElementById('expNetWeight')?.value) || 0;
+    const netUnitVal = document.getElementById('expNetUnit')?.value || 'g';
+
     if (costPreviewEl) {
       if (isCrate) {
         const totalBottles = packSize * bottlesPerCrate;
@@ -4484,7 +4503,13 @@ class WaterFlowApp {
         costPreviewEl.innerHTML = `฿${bottleCost.toFixed(2)} / ขวด <span style="font-size:0.8rem; font-weight:normal; color:var(--text-muted);">(ลังละ ฿${crateCost.toFixed(2)})</span>`;
       } else {
         const unitCost = packSize > 0 ? (amount / packSize) : 0;
-        costPreviewEl.textContent = `฿${unitCost.toFixed(2)} / ${unit}`;
+        let previewHtml = `฿${unitCost.toFixed(2)} / ${unit}`;
+        if (netWeightVal > 0 && unitCost > 0) {
+          const costPerNet = unitCost / netWeightVal;
+          const displayCostPerNet = costPerNet < 0.01 ? costPerNet.toFixed(4) : costPerNet.toFixed(2);
+          previewHtml += ` <span style="font-size:0.8rem; font-weight:600; color:var(--primary); background:rgba(37,99,235,0.08); padding:0.15rem 0.45rem; border-radius:4px; margin-left:0.3rem;">(ตก ฿${displayCostPerNet} / ${netUnitVal})</span>`;
+        }
+        costPreviewEl.innerHTML = previewHtml;
       }
     }
 
@@ -4907,7 +4932,12 @@ class WaterFlowApp {
         let packSize = Number(matchedExp.packSize) || 0;
         let packUnit = matchedExp.packUnit || '';
 
-        if (!packSize || packSize <= 0) {
+        // Prioritize netWeight & netUnit if available (e.g. bought 1 ถุง but netWeight is 400 g)
+        if (matchedExp.netWeight && Number(matchedExp.netWeight) > 0) {
+          const totalNetWeight = (packSize > 0 ? packSize : 1) * Number(matchedExp.netWeight);
+          packSize = totalNetWeight;
+          packUnit = matchedExp.netUnit || 'g';
+        } else if (!packSize || packSize <= 0) {
           const qty = `${matchedExp.qtyDesc || ''} ${matchedExp.title || ''}`;
           const mlM = qty.match(/(\d+(\.\d+)?)\s*(ml|มล|มิลลิลิตร)/i);
           const lM = qty.match(/(\d+(\.\d+)?)\s*(l|liter|ลิตร)/i);
@@ -5127,7 +5157,7 @@ class WaterFlowApp {
 
     let pPrice = calcData ? (calcData.packPrice || '') : '';
     let pSize = calcData ? (calcData.packSize || '') : '';
-    let pUnit = calcData ? (calcData.packUnit || 'กรัม') : 'กรัม';
+    let pUnit = calcData ? (calcData.packUnit || amountUnit || 'กรัม') : (amountUnit || 'กรัม');
     let pUse = calcData ? (calcData.useAmount || '') : '';
     let selectedExpId = calcData ? (calcData.expenseId || '') : '';
 
@@ -5148,8 +5178,14 @@ class WaterFlowApp {
       const latestExp = this.data.expenses.find(e => e.id === selectedExpId);
       if (latestExp && latestExp.amount !== undefined) {
         pPrice = parseFloat(latestExp.amount) || 0;
-        if (latestExp.packSize) pSize = parseFloat(latestExp.packSize) || pSize;
-        if (latestExp.packUnit) pUnit = latestExp.packUnit;
+        if (latestExp.netWeight && Number(latestExp.netWeight) > 0) {
+          const packMulti = Number(latestExp.packSize) > 0 ? Number(latestExp.packSize) : 1;
+          pSize = packMulti * Number(latestExp.netWeight);
+          pUnit = latestExp.netUnit || 'g';
+        } else {
+          if (latestExp.packSize) pSize = parseFloat(latestExp.packSize) || pSize;
+          if (latestExp.packUnit) pUnit = latestExp.packUnit;
+        }
         if (pUse > 0 && pPrice > 0 && pSize > 0) {
           cost = Math.round(((pPrice / pSize) * pUse) * 100) / 100;
         }
@@ -5191,15 +5227,27 @@ class WaterFlowApp {
               ${(this.data.expenses || []).map(exp => {
       const s = exp.packSize || '';
       const u = exp.packUnit || '';
+      const nw = exp.netWeight || '';
+      const nu = exp.netUnit || '';
       const isSelected = selectedExpId && selectedExpId === exp.id ? 'selected' : '';
+      let displaySpec = '';
+      if (nw) {
+        displaySpec = s ? ` / ${s} ${u} (${nw} ${nu})` : ` / ${nw} ${nu}`;
+      } else if (s) {
+        displaySpec = ` / ${s} ${u}`;
+      } else if (exp.qtyDesc) {
+        displaySpec = ` / ${this.escapeHtml(exp.qtyDesc)}`;
+      }
       return `<option value="${exp.id}" ${isSelected}
                   data-title="${this.escapeHtml(exp.title)}" 
                   data-amount="${exp.amount}" 
                   data-qty="${this.escapeHtml(exp.qtyDesc || '')}" 
                   data-packsize="${s}" 
                   data-packunit="${this.escapeHtml(u)}" 
+                  data-netweight="${nw}" 
+                  data-netunit="${this.escapeHtml(nu)}" 
                   data-note="${this.escapeHtml(exp.note || '')}">
-                  ${this.escapeHtml(exp.title)} (฿${exp.amount}${s ? ` / ${s} ${u}` : (exp.qtyDesc ? ` / ${this.escapeHtml(exp.qtyDesc)}` : '')})
+                  ${this.escapeHtml(exp.title)} (฿${exp.amount}${displaySpec})
                 </option>`;
     }).join('')}
             </select>
@@ -5292,6 +5340,9 @@ class WaterFlowApp {
         let explicitSize = parseFloat(opt.getAttribute('data-packsize'));
         let explicitUnit = opt.getAttribute('data-packunit') || '';
 
+        const explicitNetWeight = parseFloat(opt.getAttribute('data-netweight'));
+        const explicitNetUnit = opt.getAttribute('data-netunit') || '';
+
         // ถ้าช่องชื่อว่าง ให้กรอกชื่อวัตถุดิบ (ตัดวงเล็บด้านหลังออก)
         if (!nameInput.value.trim()) {
           nameInput.value = title.split('(')[0].trim();
@@ -5301,8 +5352,18 @@ class WaterFlowApp {
         packPriceInput.value = amount;
 
         // แยกตัวเลขขนาดและหน่วยจากบันทึก เช่น 400g, 48 กป., 1000 ใบ
-        let parsedSize = explicitSize > 0 ? explicitSize : 0;
-        let parsedUnit = explicitUnit || '';
+        let parsedSize = 0;
+        let parsedUnit = '';
+
+        if (!isNaN(explicitNetWeight) && explicitNetWeight > 0) {
+          // หากผู้ใช้ระบุขนาด/น้ำหนักบรรจุ เช่น 400g, 388g, 1000ml ให้ใช้ขนาดนี้เป็นหลักในการคำนวณสูตร
+          const packMulti = explicitSize > 0 ? explicitSize : 1;
+          parsedSize = packMulti * explicitNetWeight;
+          parsedUnit = explicitNetUnit || 'g';
+        } else if (explicitSize > 0) {
+          parsedSize = explicitSize;
+          parsedUnit = explicitUnit || 'หน่วย';
+        }
 
         if (!parsedSize || parsedSize <= 0) {
           const textToParse = `${qty} ${title}`;
@@ -6189,6 +6250,10 @@ class WaterFlowApp {
       const supplier = document.getElementById('expSupplier')?.value.trim() || '';
       const note = document.getElementById('expNote')?.value.trim() || '';
 
+      const netWeightParsed = parseFloat(document.getElementById('expNetWeight')?.value);
+      const netWeight = (!isNaN(netWeightParsed) && netWeightParsed > 0) ? netWeightParsed : null;
+      const netUnit = netWeight ? (document.getElementById('expNetUnit')?.value || 'g') : null;
+
       const noAlertChecked = document.getElementById('expNoAlertCheckbox')?.checked || false;
       let effectiveMinQty = 0;
       if (noAlertChecked) {
@@ -6207,6 +6272,8 @@ class WaterFlowApp {
         qtyDesc,
         packSize,
         packUnit,
+        netWeight,
+        netUnit,
         crateBottles,
         minQty: effectiveMinQty,
         supplier,
