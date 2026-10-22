@@ -404,7 +404,7 @@ class WaterFlowApp {
       return 0; // ไม่มีวันเปิดเรียน = ไม่คิดค่าเช่า (฿0)
     }
     const baseRent = (this.data.shopSettings && Number(this.data.shopSettings.monthlyRent)) || 10000;
-    
+
     // ตรวจสอบวันทำงานปกติของเดือน (จ.-ศ. ไม่รวมวันหยุดนักขัตฤกษ์)
     const [yearStr, monthStr] = ym.split('-');
     const year = parseInt(yearStr, 10);
@@ -543,7 +543,7 @@ class WaterFlowApp {
     container.innerHTML = periods.map(p => {
       const startThai = this.formatThaiDate(p.start);
       const endThai = this.formatThaiDate(p.end);
-      
+
       // คำนวณจำนวนวันทั้งหมดในช่วงปิดเทอมนี้
       const d1 = new Date(p.start);
       const d2 = new Date(p.end);
@@ -701,7 +701,7 @@ class WaterFlowApp {
 
     if (confirm(`คุณต้องการลบ "${pName}" ออกใช่หรือไม่?`)) {
       this.data.shopSettings.vacationPeriods = this.data.shopSettings.vacationPeriods.filter(p => p.id !== periodId);
-      
+
       // ถ้ายกเลิกตัวที่กำลังแก้ไขอยู่ ให้รีเซ็ตฟอร์ม
       const editIdInput = document.getElementById('editVacationId');
       if (editIdInput && editIdInput.value === periodId) {
@@ -2898,7 +2898,7 @@ class WaterFlowApp {
           const isLow = minQ > 0 && curQty <= minQ;
           const badgeClass = isLow ? 'stock-badge-low' : 'stock-badge-normal';
           const badgeIcon = isLow ? '⚠️' : '📊';
-          const badgeStyle = isLow 
+          const badgeStyle = isLow
             ? 'background:#fef2f2; color:#dc2626; border:1px solid #fecaca; font-weight:700; border-radius:9999px; padding:0.15rem 0.5rem; font-size:0.75rem; display:inline-flex; align-items:center; gap:0.25rem;'
             : 'background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; font-weight:700; border-radius:9999px; padding:0.15rem 0.5rem; font-size:0.75rem; display:inline-flex; align-items:center; gap:0.25rem;';
           stockBalanceBadge = `<span style="${badgeStyle}" title="ปริมาณคงเหลือในสต๊อกปัจจุบัน">${badgeIcon} คงเหลือในสต๊อก: <strong>${curQty} ${this.escapeHtml(stockUnit)}</strong></span>`;
@@ -3943,9 +3943,45 @@ class WaterFlowApp {
 
         if (matchedExp && matchedExp.amount !== undefined) {
           const latestPrice = parseFloat(matchedExp.amount) || 0;
-          const latestSize = parseFloat(matchedExp.packSize) || (ing.calcData?.packSize || 1);
-          const latestUnit = matchedExp.packUnit || ing.calcData?.packUnit || 'กรัม';
-          const useAmount = ing.calcData?.useAmount !== undefined ? parseFloat(ing.calcData.useAmount) : 0;
+          let latestSize = parseFloat(matchedExp.packSize) || (ing.calcData?.packSize || 1);
+          let latestUnit = matchedExp.packUnit || ing.calcData?.packUnit || 'กรัม';
+
+          // รองรับ netWeight เช่น ซื้อ 1 ถุง แต่น้ำหนักสุทธิ 400 g
+          if (matchedExp.netWeight && Number(matchedExp.netWeight) > 0) {
+            const packMulti = latestSize > 0 ? latestSize : 1;
+            latestSize = packMulti * Number(matchedExp.netWeight);
+            latestUnit = matchedExp.netUnit || 'g';
+          }
+
+          let useAmount = ing.calcData?.useAmount !== undefined ? parseFloat(ing.calcData.useAmount) : 0;
+          const ingAmountStr = String(ing.amount || '');
+          const parsedIngAmount = parseFloat(ingAmountStr) || 0;
+
+          // ตรวจสอบการแปลงหน่วย: ถ้าสูตรเดิมระบุเป็น g (เช่น 439.2 g) แต่ useAmount หรือ latestUnit มีขนาดเป็นถุง/ห่อ
+          if (ingAmountStr.includes('g') || ingAmountStr.includes('กรัม')) {
+            if (latestUnit === 'g' || latestUnit === 'กรัม') {
+              useAmount = parsedIngAmount;
+            } else if (latestUnit === 'kg' || latestUnit === 'กก') {
+              useAmount = Math.round((parsedIngAmount / 1000) * 1000) / 1000;
+            } else if (latestUnit.includes('ถุง') || latestUnit.includes('ห่อ') || latestUnit.includes('แพ็ค') || latestUnit === 'หน่วย') {
+              const bagGrams = latestSize > 10 ? latestSize : 400;
+              useAmount = Math.round((parsedIngAmount / bagGrams) * 1000) / 1000;
+            } else if (useAmount > 10 && latestSize <= 5) {
+              // กรณีเดิมที่ useAmount บันทึกไว้ 439.2 โดยเข้าใจว่าเป็นถุง
+              const bagGrams = 400;
+              useAmount = Math.round((parsedIngAmount / bagGrams) * 1000) / 1000;
+            }
+          } else if (ingAmountStr.includes('ml') || ingAmountStr.includes('มล')) {
+            if (latestUnit === 'ml' || latestUnit === 'มล') {
+              useAmount = parsedIngAmount;
+            } else if (latestUnit === 'l' || latestUnit === 'ลิตร' || latestUnit === 'liter') {
+              useAmount = Math.round((parsedIngAmount / 1000) * 1000) / 1000;
+            } else if (latestUnit === 'kg' || latestUnit === 'กก') {
+              useAmount = Math.round((parsedIngAmount / 1000) * 1000) / 1000;
+            } else if (latestUnit === 'g' || latestUnit === 'กรัม') {
+              useAmount = parsedIngAmount;
+            }
+          }
 
           if (!ing.calcData) {
             ing.calcData = {
@@ -3960,14 +3996,28 @@ class WaterFlowApp {
             ing.calcData.packPrice = latestPrice;
             ing.calcData.packSize = latestSize;
             ing.calcData.packUnit = latestUnit;
+            ing.calcData.useAmount = useAmount;
           }
 
           if (latestPrice > 0 && latestSize > 0 && useAmount > 0) {
-            const updatedCost = Math.round(((latestPrice / latestSize) * useAmount) * 100) / 100;
+            let updatedCost = Math.round(((latestPrice / latestSize) * useAmount) * 100) / 100;
+            // ป้องกันความผิดพลาดทางตัวเลข เช่น ค่าต้นทุนวัตถุดิบรายการเดียวในโหลเกิน 5,000 บาท
+            if (updatedCost > 5000 && parsedIngAmount > 0) {
+              updatedCost = Math.round(((latestPrice / 400) * parsedIngAmount) * 100) / 100;
+            }
             if (ing.cost !== updatedCost) {
               ing.cost = updatedCost;
               modified = true;
             }
+          }
+        } else if (Number(ing.cost) > 5000) {
+          // หากไม่มี matchedExp แต่ต้นทุนเดิมสูงผิดปกติ (เช่น ชาไทย 35,136 บาท)
+          const parsedIngAmount = parseFloat(String(ing.amount || '')) || 0;
+          if (parsedIngAmount > 0) {
+            // คำนวณราคาเฉลี่ยชาผง (~80 บาท / 400g = 0.2 บาท/g)
+            const healedCost = Math.round(parsedIngAmount * 0.2 * 100) / 100;
+            ing.cost = healedCost;
+            modified = true;
           }
         }
       });
@@ -4612,6 +4662,8 @@ class WaterFlowApp {
       }
     }
 
+    const litersInput = document.getElementById('recJarLiters');
+
     if (isCup) {
       if (titleElem && !editIdInput.value) titleElem.textContent = 'สร้างสูตรชงน้ำใหม่ (ต่อ 1 แก้ว)';
       else if (titleElem) titleElem.textContent = 'แก้ไขสูตรชงน้ำต่อ 1 แก้ว';
@@ -4619,6 +4671,12 @@ class WaterFlowApp {
       if (jarYieldSec) jarYieldSec.style.display = 'none';
       if (singleCupSec) singleCupSec.style.display = 'none';
       if (divider) divider.style.display = 'none';
+
+      // ปลด required ของฟิลด์ที่ถูกซ่อนเพื่อไม่ให้บล็อกการ Submit ในโหมด 1 แก้ว
+      if (litersInput) litersInput.removeAttribute('required');
+      document.querySelectorAll('#singleCupContainer .single-cup-row input').forEach(inp => {
+        inp.removeAttribute('required');
+      });
 
       if (batchTitle) batchTitle.textContent = 'รายการส่วนผสมต่อ 1 แก้ว:';
       if (batchHint) batchHint.textContent = 'ใส่วัตถุดิบและปริมาณที่ใช้ชงใน 1 แก้ว (กด 🧮 เพื่อเลือกคำนวณต้นทุนจากของที่ซื้อจริง)';
@@ -4642,6 +4700,11 @@ class WaterFlowApp {
       if (jarYieldSec) jarYieldSec.style.display = 'grid';
       if (singleCupSec) singleCupSec.style.display = 'block';
       if (divider) divider.style.display = 'block';
+
+      if (litersInput) litersInput.setAttribute('required', 'required');
+      document.querySelectorAll('#singleCupContainer .single-cup-row input').forEach(inp => {
+        inp.setAttribute('required', 'required');
+      });
 
       if (batchTitle) batchTitle.textContent = 'รายการส่วนผสมต่อ 1 โหล/ถัง (คำนวณจากสูตร 1 แก้ว):';
       if (batchHint) batchHint.textContent = 'ดึงและคูณขยายจากสูตร 1 แก้วด้านบนให้อัตโนมัติ (สามารถกด 🧮 เพื่อผูกกับค่าใช้จ่ายที่ซื้อจริง หรือปรับแก้ได้อิสระ)';
@@ -4692,12 +4755,12 @@ class WaterFlowApp {
           priceInput.value = rec.sellingPrice !== undefined ? rec.sellingPrice : (rec.suggestedPrice || 25);
         }
 
-        // ดึงสัดส่วน 1 แก้ว (ถ้ามี) หรือใส่เริ่มต้น
+        // ดึงสัดส่วน 1 แก้ว (ถ้ามี) หรือใส่เริ่มต้นเมื่ออยู่ในโหมดโหล
         if (rec.singleCupProportions && rec.singleCupProportions.length > 0) {
           rec.singleCupProportions.forEach(cupItem => {
             this.addSingleCupRow(cupItem.name, cupItem.amount, cupItem.unit);
           });
-        } else {
+        } else if (activeMode !== 'cup') {
           this.addSingleCupRow('น้ำชาสกัดเข้มข้น', 60, 'ml');
           this.addSingleCupRow('ผงชาไทยตรามือ', 18, 'g');
           this.addSingleCupRow('นมข้นหวาน', 1, 'oz');
@@ -4723,10 +4786,8 @@ class WaterFlowApp {
       const priceInput = document.getElementById('recSellingPrice');
       if (priceInput) priceInput.value = '';
 
-      if (activeMode === 'cup') {
-        // สูตรต่อ 1 แก้ว (ชงสด): เริ่มต้นช่องข้อมูลว่างเปล่า ให้ผู้ใช้กรอกเอง ไม่ใส่ข้อมูลตัวอย่าง
-      } else {
-        // สูตรต่อ 1 โหล (ชงถัง): เริ่มต้นช่องข้อมูลว่างเปล่า ให้ผู้ใช้กรอกเอง ไม่ใส่ข้อมูลตัวอย่าง
+      if (activeMode !== 'cup') {
+        // ในโหมด 1 โหล หากต้องการ ให้ผู้ใช้มีปุ่มกดขยายสูตร
       }
     }
 
@@ -4790,6 +4851,7 @@ class WaterFlowApp {
         <option value="oz" ${unit === 'oz' ? 'selected' : ''}>ออนซ์ (oz)</option>
         <option value="ml" ${unit === 'ml' ? 'selected' : ''}>มล. (ml)</option>
         <option value="g" ${unit === 'g' ? 'selected' : ''}>กรัม (g)</option>
+        <option value="ลูก" ${unit === 'ลูก' ? 'selected' : ''}>ลูก (ผลไม้)</option>
         <option value="ช้อนโต๊ะ" ${unit === 'ช้อนโต๊ะ' ? 'selected' : ''}>ช้อนโต๊ะ (tbsp)</option>
         <option value="ชุด" ${unit === 'ชุด' ? 'selected' : ''}>ชุด (แก้ว/ฝา)</option>
         <option value="ชิ้น" ${unit === 'ชิ้น' ? 'selected' : ''}>ชิ้น/หน่วย</option>
@@ -4867,6 +4929,9 @@ class WaterFlowApp {
         if (name.includes('นม') || name.includes('หวาน') || name.includes('เชื่อม') || name.includes('ไซรัป')) {
           singleCupMilkOz += amount;
         }
+      } else if (unit === 'ช้อนโต๊ะ' || unit === 'tbsp') {
+        // 1 ช้อนโต๊ะ ~ 15 ml
+        singleCupLiquidMl += (amount * 15);
       } else if (unit === 'g') {
         if (name.includes('ชา') || name.includes('กาแฟ') || name.includes('โกโก้')) {
           hasTeaPowderItem = true;
@@ -4977,8 +5042,12 @@ class WaterFlowApp {
           useInPackUnit = recipeAmountVal;
           displayAmount = `${recipeAmountVal} กรัม`;
         } else if (unit === 'g' && (packUnit === 'kg' || packUnit === 'กก')) {
-          useInPackUnit = Math.round((recipeAmountVal / 1000) * 100) / 100;
+          useInPackUnit = Math.round((recipeAmountVal / 1000) * 1000) / 1000;
           displayAmount = `${recipeAmountVal} กรัม (~${useInPackUnit} kg)`;
+        } else if (unit === 'g' && (packUnit.includes('ถุง') || packUnit.includes('ห่อ') || packUnit.includes('แพ็ค') || packUnit === 'หน่วย' || packUnit === '')) {
+          const bagWeight = (packSize > 10 ? packSize : 400);
+          useInPackUnit = Math.round((recipeAmountVal / bagWeight) * 1000) / 1000;
+          displayAmount = `${recipeAmountVal} g (~${useInPackUnit} ${packUnit || 'ถุง'})`;
         } else if (unit === 'oz' && (packUnit === 'ml' || packUnit === 'มล')) {
           // แปลงจาก oz เป็น ml (1 oz = 29.57 ml)
           useInPackUnit = Math.round(recipeAmountVal * 29.57 * 10) / 10;
@@ -5005,14 +5074,54 @@ class WaterFlowApp {
           useInPackUnit = recipeAmountVal;
           displayAmount = `${recipeAmountVal} ml`;
         } else if (unit === 'ml' && (packUnit === 'ลิตร' || packUnit === 'l' || packUnit === 'liter')) {
-          useInPackUnit = Math.round((recipeAmountVal / 1000) * 100) / 100;
+          useInPackUnit = Math.round((recipeAmountVal / 1000) * 1000) / 1000;
           displayAmount = `${recipeAmountVal} ml (~${useInPackUnit} ลิตร)`;
+        } else if (unit === 'ml' && (packUnit === 'kg' || packUnit === 'กก')) {
+          useInPackUnit = Math.round((recipeAmountVal / 1000) * 1000) / 1000;
+          displayAmount = `${recipeAmountVal} ml (~${useInPackUnit} kg)`;
+        } else if (unit === 'ml' && (packUnit === 'g' || packUnit === 'กรัม')) {
+          useInPackUnit = recipeAmountVal;
+          displayAmount = `${recipeAmountVal} ml (~${useInPackUnit} g)`;
+        } else if (unit === 'ช้อนโต๊ะ' || unit === 'tbsp') {
+          // 1 ช้อนโต๊ะ ~ 15 ml หรือ ~15g
+          if (packUnit === 'ml' || packUnit === 'มล') {
+            useInPackUnit = Math.round(recipeAmountVal * 15 * 10) / 10;
+            displayAmount = `${recipeAmountVal} ช้อนโต๊ะ (~${useInPackUnit} ml)`;
+          } else if (packUnit === 'l' || packUnit === 'ลิตร' || packUnit === 'liter') {
+            useInPackUnit = Math.round(((recipeAmountVal * 15) / 1000) * 1000) / 1000;
+            displayAmount = `${recipeAmountVal} ช้อนโต๊ะ (~${useInPackUnit} ลิตร)`;
+          } else if (packUnit === 'g' || packUnit === 'กรัม') {
+            useInPackUnit = Math.round(recipeAmountVal * 15 * 10) / 10;
+            displayAmount = `${recipeAmountVal} ช้อนโต๊ะ (~${useInPackUnit} g)`;
+          } else if (packUnit === 'kg' || packUnit === 'กก') {
+            useInPackUnit = Math.round(((recipeAmountVal * 15) / 1000) * 1000) / 1000;
+            displayAmount = `${recipeAmountVal} ช้อนโต๊ะ (~${useInPackUnit} kg)`;
+          } else if (packUnit.includes('ถุง') || packUnit.includes('ห่อ') || packUnit.includes('แพ็ค')) {
+            const bagWeight = (packSize > 10 ? packSize : 400);
+            useInPackUnit = Math.round(((recipeAmountVal * 15) / bagWeight) * 1000) / 1000;
+            displayAmount = `${recipeAmountVal} ช้อนโต๊ะ (~${useInPackUnit} ${packUnit || 'ถุง'})`;
+          } else {
+            useInPackUnit = recipeAmountVal;
+            displayAmount = `${recipeAmountVal} ช้อนโต๊ะ`;
+          }
+        } else if (unit === 'ลูก' || unit === 'ชิ้น') {
+          useInPackUnit = recipeAmountVal;
+          displayAmount = `${recipeAmountVal} ${unit}`;
         } else if (isPackaging) {
           useInPackUnit = recipeAmountVal;
           displayAmount = `${recipeAmountVal} ${packUnit || 'ชุด'}`;
         } else {
-          useInPackUnit = recipeAmountVal;
-          displayAmount = `${recipeAmountVal} ${unit}`;
+          // หากหน่วยของสูตรเป็น g แต่ packUnit ไม่ตรง
+          if (unit === 'g' && packSize > 0) {
+            useInPackUnit = Math.round((recipeAmountVal / (packSize > 10 ? packSize : 400)) * 1000) / 1000;
+            displayAmount = `${recipeAmountVal} g`;
+          } else if (unit === 'ml' && packSize > 0) {
+            useInPackUnit = Math.round((recipeAmountVal / (packSize > 10 ? packSize : 1000)) * 1000) / 1000;
+            displayAmount = `${recipeAmountVal} ml`;
+          } else {
+            useInPackUnit = recipeAmountVal;
+            displayAmount = `${recipeAmountVal} ${unit}`;
+          }
         }
 
         cost = Math.round(((packPrice / (packSize || 1)) * useInPackUnit) * 100) / 100;
@@ -5186,8 +5295,19 @@ class WaterFlowApp {
           if (latestExp.packSize) pSize = parseFloat(latestExp.packSize) || pSize;
           if (latestExp.packUnit) pUnit = latestExp.packUnit;
         }
+
+        // หากหน่วยของสูตรเป็น g แต่วัตถุดิบเป็นถุง/ห่อ และ pUse บันทึกเป็นจำนวนกรัม (เช่น 439.2) แทนที่จะเป็นจำนวนถุง
+        if ((amountUnit === 'g' || amountUnit === 'กรัม') && (pUnit.includes('ถุง') || pUnit.includes('ห่อ') || pUnit.includes('แพ็ค') || pUnit === 'หน่วย')) {
+          if (pUse > 10 && pSize <= 5) {
+            pUse = Math.round((pUse / 400) * 1000) / 1000;
+          }
+        }
+
         if (pUse > 0 && pPrice > 0 && pSize > 0) {
           cost = Math.round(((pPrice / pSize) * pUse) * 100) / 100;
+          if (cost > 5000 && parseFloat(amountVal) > 0) {
+            cost = Math.round(((pPrice / 400) * parseFloat(amountVal)) * 100) / 100;
+          }
         }
       }
     }
@@ -5195,15 +5315,25 @@ class WaterFlowApp {
     const hasCalc = (pPrice !== '' && pPrice > 0) || (pSize !== '' && pSize > 0) || Boolean(calcData);
     const isCupMode = document.getElementById('recMode')?.value === 'cup';
 
+    const standardUnits = ['oz', 'ml', 'g', 'ลูก', 'ช้อนโต๊ะ', 'ชุด', 'ชิ้น'];
+    const currentUnit = amountUnit || 'oz';
+    const isCustomUnit = currentUnit && !standardUnits.includes(currentUnit);
+
     row.innerHTML = `
       <div class="ingredient-row-main">
         <input type="text" class="form-input ing-name" placeholder="ชื่อวัตถุดิบ (เช่น ผงชาไทย, แก้ว+ฝา)" value="${this.escapeHtml(name)}" required>
         <div style="display:flex; gap:0.35rem; align-items:center;">
-          <div class="input-with-affix" style="flex:1; min-width:110px;">
-            <input type="number" step="any" min="0" class="form-input ing-amount" placeholder="ปริมาณ" value="${this.escapeHtml(String(amountVal))}" style="padding-left:0.6rem; padding-right:2.4rem; font-weight:600; color:var(--text-main);">
-            <span class="affix-right ing-amount-unit-label" style="font-size:0.8rem; font-weight:700; color:var(--primary); pointer-events:none; right:0.5rem;">${this.escapeHtml(amountUnit)}</span>
-          </div>
-          <input type="hidden" class="ing-amount-unit" value="${this.escapeHtml(amountUnit)}">
+          <input type="number" step="any" min="0" class="form-input ing-amount" placeholder="ปริมาณ" value="${this.escapeHtml(String(amountVal))}" style="flex:1; min-width:65px; padding-left:0.6rem; padding-right:0.4rem; font-weight:600; color:var(--text-main);">
+          <select class="form-input ing-amount-unit" style="flex:1; min-width:85px; padding:0.35rem 0.4rem; font-size:0.8rem; font-weight:700; color:var(--primary); background:#ffffff; cursor:pointer;" title="เลือกหน่วยวัด">
+            <option value="oz" ${currentUnit === 'oz' ? 'selected' : ''}>oz</option>
+            <option value="ml" ${currentUnit === 'ml' ? 'selected' : ''}>ml</option>
+            <option value="g" ${currentUnit === 'g' ? 'selected' : ''}>กรัม (g)</option>
+            <option value="ลูก" ${currentUnit === 'ลูก' ? 'selected' : ''}>ลูก</option>
+            <option value="ช้อนโต๊ะ" ${currentUnit === 'ช้อนโต๊ะ' ? 'selected' : ''}>ช้อนโต๊ะ</option>
+            <option value="ชุด" ${currentUnit === 'ชุด' ? 'selected' : ''}>ชุด</option>
+            <option value="ชิ้น" ${currentUnit === 'ชิ้น' ? 'selected' : ''}>ชิ้น</option>
+            ${isCustomUnit ? `<option value="${this.escapeHtml(currentUnit)}" selected>${this.escapeHtml(currentUnit)}</option>` : ''}
+          </select>
           <button type="button" class="ingredient-calc-toggle-btn ${hasCalc ? 'active' : ''}" title="คำนวณจากราคาแพ็กจริง">
             <span>🧮 แพ็ก</span>
           </button>
@@ -5296,8 +5426,16 @@ class WaterFlowApp {
     const setFixedUnit = (newUnit) => {
       if (newUnit) {
         amountUnit = newUnit;
-        if (amountUnitInput) amountUnitInput.value = newUnit;
-        if (amountUnitLabel) amountUnitLabel.textContent = newUnit;
+        if (amountUnitInput) {
+          const optExists = Array.from(amountUnitInput.options).some(o => o.value === newUnit);
+          if (!optExists) {
+            const newOpt = document.createElement('option');
+            newOpt.value = newUnit;
+            newOpt.textContent = newUnit;
+            amountUnitInput.appendChild(newOpt);
+          }
+          amountUnitInput.value = newUnit;
+        }
       }
     };
 
@@ -5457,13 +5595,19 @@ class WaterFlowApp {
         if (singleCupLiquidMl < 50) singleCupLiquidMl = 180;
         const batchScale = isCurrentlyCupMode ? 1 : Math.round(((jarLiters * 1000) / singleCupLiquidMl) * 10) / 10;
 
-        let autoUse = 1;
+        const currentVal = parseFloat(amountInput.value) || 0;
+        const currentInputUnit = amountUnitInput?.value || amountUnit || '';
 
-        if (lowerTitle.includes('แก้ว') || lowerTitle.includes('ฝา') || lowerTitle.includes('หลอด') || parsedUnit.includes('ใบ') || parsedUnit.includes('ชุด')) {
+        // หากผู้ใช้มีกรอกปริมาณและเลือกหน่วยไว้แล้วในแถว ให้เคารพค่านั้นและคำนวณ useAmount ตรงๆ
+        if (currentVal > 0) {
+          syncAmountInputToUseAmount();
+        } else if (lowerTitle.includes('แก้ว') || lowerTitle.includes('ฝา') || lowerTitle.includes('หลอด') || parsedUnit.includes('ใบ') || parsedUnit.includes('ชุด')) {
           // บรรจุภัณฑ์ แก้ว/ฝา/หลอด: ใช้ตามจำนวนแก้วที่เสิร์ฟจริง (ถ้า 1 แก้ว คือ 1 ชุด)
           autoUse = isCurrentlyCupMode ? 1 : totalYieldCups;
           amountInput.value = autoUse;
           setFixedUnit('ชุด');
+          useAmountInput.value = autoUse || 1;
+          runPackCalc();
         } else if (matchedCupAmount > 0 && matchedCupUnit === 'oz') {
           // ถ้ามีสูตร 1 แก้วระบุ oz (เช่น นมสด 1.5 oz, นมข้นหวาน 1 oz, นมข้นจืด 1.5 oz)
           const ozTotal = Math.round((matchedCupAmount * batchScale) * 10) / 10;
@@ -5473,18 +5617,20 @@ class WaterFlowApp {
           if (parsedUnit === 'ml' || parsedUnit === 'มล') {
             autoUse = Math.round(ozTotal * 29.57 * 10) / 10;
           } else if (parsedUnit === 'ลิตร' || parsedUnit === 'l' || parsedUnit === 'liter') {
-            autoUse = Math.round(((ozTotal * 29.57) / 1000) * 100) / 100;
+            autoUse = Math.round(((ozTotal * 29.57) / 1000) * 1000) / 1000;
           } else if (parsedUnit.includes('กป') || parsedUnit.includes('กระป๋อง')) {
-            autoUse = Math.round((ozTotal / 13) * 10) / 10;
+            autoUse = Math.round((ozTotal / 13) * 100) / 100;
           } else if (parsedUnit === 'g' || parsedUnit === 'กรัม') {
             const gPerOz = (lowerTitle.includes('หวาน') || rowName.includes('หวาน')) ? 38.8 : 31;
-            autoUse = Math.round(ozTotal * gPerOz);
+            autoUse = Math.round(ozTotal * gPerOz * 10) / 10;
           } else if (parsedUnit === 'kg' || parsedUnit === 'กก') {
             const gPerOz = (lowerTitle.includes('หวาน') || rowName.includes('หวาน')) ? 38.8 : 31;
-            autoUse = Math.round(((ozTotal * gPerOz) / 1000) * 100) / 100;
+            autoUse = Math.round(((ozTotal * gPerOz) / 1000) * 1000) / 1000;
           } else {
             autoUse = ozTotal;
           }
+          useAmountInput.value = autoUse || 1;
+          runPackCalc();
         } else if (matchedCupAmount > 0 && (matchedCupUnit === 'ml' || matchedCupUnit === 'มล')) {
           const mlTotal = Math.round((matchedCupAmount * batchScale) * 10) / 10;
           amountInput.value = mlTotal;
@@ -5493,10 +5639,12 @@ class WaterFlowApp {
           if (parsedUnit === 'ml' || parsedUnit === 'มล') {
             autoUse = mlTotal;
           } else if (parsedUnit === 'ลิตร' || parsedUnit === 'l' || parsedUnit === 'liter') {
-            autoUse = Math.round((mlTotal / 1000) * 100) / 100;
+            autoUse = Math.round((mlTotal / 1000) * 1000) / 1000;
           } else {
             autoUse = mlTotal;
           }
+          useAmountInput.value = autoUse || 1;
+          runPackCalc();
         } else if (matchedCupAmount > 0 && matchedCupUnit === 'g') {
           // ถ้ามีสูตร 1 แก้วระบุ g (เช่น ผงชาไทย 18g)
           const gTotal = Math.round(matchedCupAmount * batchScale);
@@ -5506,12 +5654,51 @@ class WaterFlowApp {
           if (parsedUnit === 'g' || parsedUnit === 'กรัม') {
             autoUse = gTotal;
           } else if (parsedUnit === 'kg' || parsedUnit === 'กก') {
-            autoUse = Math.round((gTotal / 1000) * 100) / 100;
-          } else if (parsedUnit.includes('ถุง') || parsedUnit.includes('ห่อ')) {
-            autoUse = Math.round((gTotal / (parsedSize > 10 ? parsedSize : 400)) * 10) / 10;
+            autoUse = Math.round((gTotal / 1000) * 1000) / 1000;
+          } else if (parsedUnit.includes('ถุง') || parsedUnit.includes('ห่อ') || parsedUnit.includes('แพ็ค') || parsedUnit === 'หน่วย' || parsedUnit === '') {
+            const bagSize = (parsedSize > 10 ? parsedSize : 400);
+            autoUse = Math.round((gTotal / bagSize) * 1000) / 1000;
           } else {
             autoUse = gTotal;
           }
+          useAmountInput.value = autoUse || 1;
+          runPackCalc();
+        } else if (matchedCupAmount > 0 && matchedCupUnit === 'ลูก') {
+          // ถ้าสูตรระบุเป็น 'ลูก' (เช่น ผลไม้สด/ผลไม้แช่แข็ง)
+          const pieceTotal = Math.round(matchedCupAmount * (isCurrentlyCupMode ? 1 : totalYieldCups));
+          amountInput.value = pieceTotal;
+          setFixedUnit('ลูก');
+          autoUse = pieceTotal;
+          useAmountInput.value = autoUse || 1;
+          runPackCalc();
+        } else if (matchedCupAmount > 0 && (matchedCupUnit === 'ชิ้น' || matchedCupUnit === 'ชุด')) {
+          const pieceTotal = Math.round(matchedCupAmount * (isCurrentlyCupMode ? 1 : totalYieldCups));
+          amountInput.value = pieceTotal;
+          setFixedUnit(matchedCupUnit);
+          autoUse = pieceTotal;
+          useAmountInput.value = autoUse || 1;
+          runPackCalc();
+        } else if (matchedCupAmount > 0 && (matchedCupUnit === 'ช้อนโต๊ะ' || matchedCupUnit === 'tbsp')) {
+          const tbspTotal = Math.round((matchedCupAmount * batchScale) * 10) / 10;
+          amountInput.value = tbspTotal;
+          setFixedUnit('ช้อนโต๊ะ');
+
+          if (parsedUnit === 'ml' || parsedUnit === 'มล') {
+            autoUse = Math.round(tbspTotal * 15 * 10) / 10;
+          } else if (parsedUnit === 'l' || parsedUnit === 'ลิตร' || parsedUnit === 'liter') {
+            autoUse = Math.round(((tbspTotal * 15) / 1000) * 1000) / 1000;
+          } else if (parsedUnit === 'g' || parsedUnit === 'กรัม') {
+            autoUse = Math.round(tbspTotal * 15 * 10) / 10;
+          } else if (parsedUnit === 'kg' || parsedUnit === 'กก') {
+            autoUse = Math.round(((tbspTotal * 15) / 1000) * 1000) / 1000;
+          } else if (parsedUnit.includes('ถุง') || parsedUnit.includes('ห่อ') || parsedUnit.includes('แพ็ค')) {
+            const bagSize = (parsedSize > 10 ? parsedSize : 400);
+            autoUse = Math.round(((tbspTotal * 15) / bagSize) * 1000) / 1000;
+          } else {
+            autoUse = tbspTotal;
+          }
+          useAmountInput.value = autoUse || 1;
+          runPackCalc();
         } else {
           // ถ้าไม่พบการจับคู่กับ 1 แก้วโดยตรง ให้ใช้ fallback ตามชนิดวัตถุดิบ
           if (lowerTitle.includes('นมจืด') || lowerTitle.includes('นมสด') || lowerTitle.includes('เมจิ')) {
@@ -5522,13 +5709,13 @@ class WaterFlowApp {
             if (parsedUnit === 'ml' || parsedUnit === 'มล') {
               autoUse = Math.round(ozPerBatch * 29.57 * 10) / 10;
             } else if (parsedUnit === 'ลิตร' || parsedUnit === 'l' || parsedUnit === 'liter') {
-              autoUse = Math.round(((ozPerBatch * 29.57) / 1000) * 100) / 100;
+              autoUse = Math.round(((ozPerBatch * 29.57) / 1000) * 1000) / 1000;
             } else if (parsedUnit.includes('กป') || parsedUnit.includes('กระป๋อง')) {
-              autoUse = Math.round((ozPerBatch / 13) * 10) / 10;
+              autoUse = Math.round((ozPerBatch / 13) * 100) / 100;
             } else if (parsedUnit === 'g' || parsedUnit === 'กรัม') {
-              autoUse = Math.round(ozPerBatch * 31);
+              autoUse = Math.round(ozPerBatch * 31 * 10) / 10;
             } else if (parsedUnit === 'kg' || parsedUnit === 'กก') {
-              autoUse = Math.round(((ozPerBatch * 31) / 1000) * 100) / 100;
+              autoUse = Math.round(((ozPerBatch * 31) / 1000) * 1000) / 1000;
             } else {
               autoUse = Math.round(ozPerBatch * 10) / 10;
             }
@@ -5538,11 +5725,11 @@ class WaterFlowApp {
             setFixedUnit('oz');
 
             if (parsedUnit.includes('กป') || parsedUnit.includes('กระป๋อง')) {
-              autoUse = Math.round((ozPerBatch / 13) * 10) / 10;
+              autoUse = Math.round((ozPerBatch / 13) * 100) / 100;
             } else if (parsedUnit === 'g' || parsedUnit === 'กรัม') {
-              autoUse = Math.round(ozPerBatch * 38.8);
+              autoUse = Math.round(ozPerBatch * 38.8 * 10) / 10;
             } else if (parsedUnit === 'kg' || parsedUnit === 'กก') {
-              autoUse = Math.round(((ozPerBatch * 38.8) / 1000) * 100) / 100;
+              autoUse = Math.round(((ozPerBatch * 38.8) / 1000) * 1000) / 1000;
             } else {
               autoUse = Math.round(ozPerBatch * 10) / 10;
             }
@@ -5552,11 +5739,11 @@ class WaterFlowApp {
             setFixedUnit('oz');
 
             if (parsedUnit.includes('กป') || parsedUnit.includes('กระป๋อง')) {
-              autoUse = Math.round((ozPerBatch / 13) * 10) / 10;
+              autoUse = Math.round((ozPerBatch / 13) * 100) / 100;
             } else if (parsedUnit === 'g' || parsedUnit === 'กรัม') {
-              autoUse = Math.round(ozPerBatch * 32);
+              autoUse = Math.round(ozPerBatch * 32 * 10) / 10;
             } else if (parsedUnit === 'kg' || parsedUnit === 'กก') {
-              autoUse = Math.round(((ozPerBatch * 32) / 1000) * 100) / 100;
+              autoUse = Math.round(((ozPerBatch * 32) / 1000) * 1000) / 1000;
             } else {
               autoUse = Math.round(ozPerBatch * 10) / 10;
             }
@@ -5568,9 +5755,10 @@ class WaterFlowApp {
             if (parsedUnit === 'g' || parsedUnit === 'กรัม') {
               autoUse = gPerBatch;
             } else if (parsedUnit === 'kg' || parsedUnit === 'กก') {
-              autoUse = Math.round((gPerBatch / 1000) * 100) / 100;
-            } else if (parsedUnit.includes('ถุง') || parsedUnit.includes('ห่อ')) {
-              autoUse = Math.round((gPerBatch / (parsedSize > 10 ? parsedSize : 400)) * 10) / 10;
+              autoUse = Math.round((gPerBatch / 1000) * 1000) / 1000;
+            } else if (parsedUnit.includes('ถุง') || parsedUnit.includes('ห่อ') || parsedUnit.includes('แพ็ค') || parsedUnit === 'หน่วย' || parsedUnit === '') {
+              const bagSize = (parsedSize > 10 ? parsedSize : 400);
+              autoUse = Math.round((gPerBatch / bagSize) * 1000) / 1000;
             } else {
               autoUse = gPerBatch;
             }
@@ -5579,10 +5767,9 @@ class WaterFlowApp {
             amountInput.value = 1;
             setFixedUnit(parsedUnit || 'หน่วย');
           }
+          useAmountInput.value = autoUse || 1;
+          runPackCalc();
         }
-
-        useAmountInput.value = autoUse || 1;
-        runPackCalc();
       });
     }
 
@@ -5605,47 +5792,92 @@ class WaterFlowApp {
         if (packUnit === 'ml' || packUnit === 'มล') {
           calculatedUse = Math.round(numVal * 29.57 * 10) / 10;
         } else if (packUnit === 'ลิตร' || packUnit === 'l' || packUnit === 'liter') {
-          calculatedUse = Math.round(((numVal * 29.57) / 1000) * 100) / 100;
+          calculatedUse = Math.round(((numVal * 29.57) / 1000) * 1000) / 1000;
         } else if (packUnit.includes('กป') || packUnit.includes('กระป๋อง')) {
-          calculatedUse = Math.round((numVal / 13) * 10) / 10;
+          calculatedUse = Math.round((numVal / 13) * 100) / 100;
         } else if (packUnit === 'g' || packUnit === 'กรัม') {
           const gPerOz = lowerRowName.includes('หวาน') ? 38.8 : 31;
-          calculatedUse = Math.round(numVal * gPerOz);
+          calculatedUse = Math.round(numVal * gPerOz * 10) / 10;
         } else if (packUnit === 'kg' || packUnit === 'กก') {
           const gPerOz = lowerRowName.includes('หวาน') ? 38.8 : 31;
-          calculatedUse = Math.round(((numVal * gPerOz) / 1000) * 100) / 100;
+          calculatedUse = Math.round(((numVal * gPerOz) / 1000) * 1000) / 1000;
         } else {
-          calculatedUse = Math.round(numVal * 10) / 10;
+          calculatedUse = numVal;
         }
       } else if (inputUnit === 'g' || inputUnit === 'กรัม') {
         if (packUnit === 'g' || packUnit === 'กรัม') {
-          calculatedUse = Math.round(numVal);
+          calculatedUse = numVal;
         } else if (packUnit === 'kg' || packUnit === 'กก') {
-          calculatedUse = Math.round((numVal / 1000) * 100) / 100;
-        } else if (packUnit.includes('ถุง') || packUnit.includes('ห่อ')) {
-          calculatedUse = Math.round((numVal / (packSize > 10 ? packSize : 400)) * 10) / 10;
+          calculatedUse = Math.round((numVal / 1000) * 1000) / 1000;
+        } else if (packUnit === 'ml' || packUnit === 'มล') {
+          calculatedUse = numVal;
+        } else if (packUnit === 'ลิตร' || packUnit === 'l' || packUnit === 'liter') {
+          calculatedUse = Math.round((numVal / 1000) * 1000) / 1000;
+        } else if (packUnit.includes('ถุง') || packUnit.includes('ห่อ') || packUnit.includes('แพ็ค') || packUnit === 'หน่วย' || packUnit === '') {
+          const bagSize = (packSize > 10 ? packSize : 400);
+          calculatedUse = Math.round((numVal / bagSize) * 1000) / 1000;
         } else {
-          calculatedUse = Math.round(numVal);
+          calculatedUse = numVal;
         }
       } else if (inputUnit === 'ml' || inputUnit === 'มล') {
         if (packUnit === 'ml' || packUnit === 'มล') {
-          calculatedUse = Math.round(numVal);
+          calculatedUse = numVal;
         } else if (packUnit === 'ลิตร' || packUnit === 'l' || packUnit === 'liter') {
-          calculatedUse = Math.round((numVal / 1000) * 100) / 100;
+          calculatedUse = Math.round((numVal / 1000) * 1000) / 1000;
+        } else if (packUnit === 'g' || packUnit === 'กรัม') {
+          // ของเหลว/เนื้อผลไม้ 1 ml ~ 1 g
+          calculatedUse = numVal;
+        } else if (packUnit === 'kg' || packUnit === 'กก') {
+          // 1,000 ml = 1 kg (เช่น 320 ml = 0.32 kg)
+          calculatedUse = Math.round((numVal / 1000) * 1000) / 1000;
+        } else if (packUnit.includes('ถุง') || packUnit.includes('ห่อ') || packUnit.includes('แพ็ค') || packUnit === 'หน่วย' || packUnit === '') {
+          // ถ้าซื้อมาเป็นถุง (เช่น ถุงละ 1 kg หรือ ถุงละ 1000 ml)
+          const bagSize = (packSize > 10 ? packSize : 1000);
+          calculatedUse = Math.round((numVal / bagSize) * 1000) / 1000;
         } else {
-          calculatedUse = Math.round(numVal);
+          calculatedUse = numVal;
         }
-      } else if (packUnit.includes('ถุง') || packUnit.includes('ห่อ')) {
-        // กรณีตัวเลขเป็นกรัมแต่ไม่ได้ใส่หน่วย g
+      } else if (inputUnit === 'ช้อนโต๊ะ' || inputUnit === 'tbsp') {
+        // 1 ช้อนโต๊ะ ~ 15 ml / ~15g (ผง ~10g, น้ำหวาน/นม ~15-20g)
+        if (packUnit === 'ml' || packUnit === 'มล') {
+          calculatedUse = Math.round(numVal * 15 * 10) / 10;
+        } else if (packUnit === 'l' || packUnit === 'ลิตร' || packUnit === 'liter') {
+          calculatedUse = Math.round(((numVal * 15) / 1000) * 1000) / 1000;
+        } else if (packUnit === 'g' || packUnit === 'กรัม') {
+          calculatedUse = Math.round(numVal * 15 * 10) / 10;
+        } else if (packUnit === 'kg' || packUnit === 'กก') {
+          calculatedUse = Math.round(((numVal * 15) / 1000) * 1000) / 1000;
+        } else if (packUnit.includes('ถุง') || packUnit.includes('ห่อ') || packUnit.includes('แพ็ค')) {
+          const bagSize = (packSize > 10 ? packSize : 400);
+          calculatedUse = Math.round(((numVal * 15) / bagSize) * 1000) / 1000;
+        } else {
+          calculatedUse = numVal;
+        }
+      } else if (inputUnit === 'ลูก' || inputUnit === 'ชิ้น' || inputUnit === 'ชุด') {
+        if (packUnit === inputUnit || packUnit === 'ลูก' || packUnit === 'ชิ้น' || packUnit === 'ชุด' || packUnit === 'หน่วย' || packUnit === 'ใบ') {
+          calculatedUse = numVal;
+        } else if (packUnit.includes('ถุง') || packUnit.includes('ห่อ') || packUnit.includes('แพ็ค') || packUnit.includes('กล่อง') || packUnit.includes('ลัง')) {
+          // หากซื้อมาเป็นถุง/แพ็ค โดย packSize คือจำนวนลูก/ชิ้นต่อถุง (เช่น 1 แพ็คมี 10 ลูก)
+          const itemsPerPack = packSize > 0 ? packSize : 1;
+          calculatedUse = Math.round((numVal / itemsPerPack) * 1000) / 1000;
+        } else if (packUnit === 'kg' || packUnit === 'กก') {
+          // หากซื้อผลไม้มาเป็น kg: ผลไม้สดทั่วไป 1 ลูก ~ 0.1-0.15 kg (เฉลี่ย 8 ลูก/kg)
+          calculatedUse = Math.round((numVal / 8) * 1000) / 1000;
+        } else if (packUnit === 'g' || packUnit === 'กรัม') {
+          calculatedUse = Math.round(numVal * 125);
+        } else {
+          calculatedUse = numVal;
+        }
+      } else if (packUnit.includes('ถุง') || packUnit.includes('ห่อ') || packUnit.includes('แพ็ค')) {
         if (numVal > 10 && packSize > 0) {
-          calculatedUse = Math.round((numVal / packSize) * 10) / 10;
+          calculatedUse = Math.round((numVal / packSize) * 1000) / 1000;
         }
       }
 
       if (calculatedUse > 0) {
         useAmountInput.value = calculatedUse;
 
-        // คำนวณต้นทุนต่อโหลทันที
+        // คำนวณต้นทุนทันที (ทั้งโหมด 1 แก้ว และ 1 โหล)
         const price = parseFloat(packPriceInput.value) || 0;
         if (price > 0 && packSize > 0) {
           const calculatedCost = Math.round(((price / packSize) * calculatedUse) * 100) / 100;
@@ -5659,6 +5891,12 @@ class WaterFlowApp {
     };
 
     amountInput.addEventListener('input', syncAmountInputToUseAmount);
+    if (amountUnitInput) {
+      amountUnitInput.addEventListener('change', () => {
+        syncAmountInputToUseAmount();
+        this.updateRecipeModalCalculations();
+      });
+    }
     useAmountInput.addEventListener('input', runPackCalc);
 
     row.querySelector('.btn-icon-danger').addEventListener('click', () => {
@@ -6345,8 +6583,14 @@ class WaterFlowApp {
     if (recipeForm) {
       recipeForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        const editId = document.getElementById('recipeEditId').value;
-        const name = document.getElementById('recName').value.trim();
+        const editId = document.getElementById('recipeEditId')?.value || '';
+        const name = (document.getElementById('recName')?.value || '').trim();
+        if (!name) {
+          this.showToast('กรุณากรอกชื่อเมนูเครื่องดื่ม', 'warning');
+          document.getElementById('recName')?.focus();
+          return;
+        }
+
         const mode = document.getElementById('recMode')?.value || 'jar';
         const isCup = mode === 'cup';
         const jarLiters = isCup ? 0 : (parseFloat(document.getElementById('recJarLiters')?.value) || 6);
@@ -6358,11 +6602,11 @@ class WaterFlowApp {
         const ingRows = document.querySelectorAll('#recipeIngredientsContainer .ingredient-row');
         const ingredients = [];
         ingRows.forEach(row => {
-          const iName = row.querySelector('.ing-name').value.trim();
-          const iAmountNum = row.querySelector('.ing-amount').value.trim();
+          const iName = row.querySelector('.ing-name')?.value.trim() || '';
+          const iAmountNum = row.querySelector('.ing-amount')?.value.trim() || '';
           const iAmountUnit = (row.querySelector('.ing-amount-unit')?.value || '').trim();
           const iAmount = iAmountNum ? `${iAmountNum} ${iAmountUnit}`.trim() : '';
-          const iCost = parseFloat(row.querySelector('.ing-cost').value) || 0;
+          const iCost = parseFloat(row.querySelector('.ing-cost')?.value) || 0;
 
           const pPrice = parseFloat(row.querySelector('.calc-pack-price')?.value) || 0;
           const pSize = parseFloat(row.querySelector('.calc-pack-size')?.value) || 0;
@@ -6420,10 +6664,16 @@ class WaterFlowApp {
           singleCupProportions
         };
 
+        if (!this.data.recipes) {
+          this.data.recipes = [];
+        }
+
         if (editId) {
           const idx = this.data.recipes.findIndex(r => r.id === editId);
           if (idx !== -1) {
             this.data.recipes[idx] = { ...recipeRecord, id: editId };
+          } else {
+            this.data.recipes.unshift({ ...recipeRecord, id: editId });
           }
           this.showToast('แก้ไขสูตรชงน้ำเรียบร้อยแล้ว', 'success');
         } else {
@@ -6433,9 +6683,21 @@ class WaterFlowApp {
         }
 
         this.saveData();
-        document.getElementById('recipeModal').classList.remove('active');
+        const recModal = document.getElementById('recipeModal');
+        if (recModal) recModal.classList.remove('active');
         this.renderRecipes();
       });
+
+      const btnSaveRecipe = document.getElementById('btnSaveRecipe');
+      if (btnSaveRecipe && !btnSaveRecipe._bound) {
+        btnSaveRecipe._bound = true;
+        btnSaveRecipe.addEventListener('click', (e) => {
+          // หากเบราว์เซอร์ไม่ trigger submit ให้อนุญาตการ dispatch submit
+          if (recipeForm.requestSubmit) {
+            recipeForm.requestSubmit();
+          }
+        });
+      }
     }
 
     // Stock Quick Add & Form Submit

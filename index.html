@@ -1684,11 +1684,12 @@
               <option value="kg">กิโลกรัม (kg)</option>
               <option value="ลิตร">ลิตร (L)</option>
               <option value="oz">ออนซ์ (oz)</option>
+              <option value="ลูก">ลูก (ผลไม้/ผลแช่แข็ง)</option>
               <option value="ชิ้น">ชิ้น/ใบ</option>
             </select>
           </div>
           <span class="field-hint" style="font-size:0.75rem; color:var(--text-muted); margin-top:0.3rem;">
-            💡 เช่น ซื้อชาตรามือ 1 ถุง ระบุ <strong>400 กรัม</strong> เพื่อให้เวลาทำสูตรชงตัดใช้เป็นกรัมได้ถูกต้องตรงเป๊ะ
+            💡 เช่น ซื้อชาตรามือ 1 ถุง ระบุ <strong>400 กรัม</strong> หรือสตรอว์เบอร์รี/มะนาว 1 ถุง ระบุ <strong>20 ลูก</strong>
           </span>
         </div>
 
@@ -1795,7 +1796,7 @@
         <h3 class="modal-title" id="recipeModalTitle">สูตรชงน้ำต่อ 1 โหล (Batch Recipe)</h3>
         <button class="close-modal-btn" data-close="recipeModal">&times;</button>
       </div>
-      <form id="recipeForm" class="modal-body">
+      <form id="recipeForm" class="modal-body" novalidate>
         <input type="hidden" id="recipeEditId">
         <input type="hidden" id="recMode" value="jar">
 
