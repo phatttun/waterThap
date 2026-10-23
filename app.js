@@ -6195,56 +6195,60 @@ class WaterFlowApp {
 
       adviceContainer.style.display = 'block';
       adviceContainer.innerHTML = `
-        <div class="recipe-5baht-card" style="background:#fff7ed; border:2px solid #fb923c; border-radius:var(--radius-md); padding:1rem; box-shadow:0 4px 14px rgba(249,115,22,0.12); margin-top:0.75rem;">
+        <div class="recipe-5baht-card">
           <!-- Header Badge -->
-          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.75rem; flex-wrap:wrap; gap:0.5rem;">
+          <div class="opt-header">
             <div>
-              <div style="display:flex; align-items:center; gap:0.4rem; font-weight:800; color:#c2410c; font-size:0.95rem;">
-                <span style="font-size:1.2rem;">⚠️</span>
-                <span>กำไรต่อแก้วน้อยกว่า 5 บาท! (ปัจจุบันได้กำไร ฿${profitPerCup.toFixed(2)} / แก้ว)</span>
+              <div style="display:flex; align-items:center; gap:0.4rem; font-weight:800; color:#c2410c; font-size:0.95rem; line-height:1.35;">
+                <span style="font-size:1.15rem; flex-shrink:0;">⚠️</span>
+                <span>กำไรต่อแก้วน้อยกว่า 5 บาท! <span style="white-space:nowrap;">(ปัจจุบัน ฿${profitPerCup.toFixed(2)}/แก้ว)</span></span>
               </div>
-              <div style="font-size:0.8rem; color:#9a3412; margin-top:2px;">
+              <div style="font-size:0.8rem; color:#9a3412; margin-top:0.3rem; line-height:1.4;">
                 ระบบคำนวณปรับลดอัตราส่วนวัตถุดิบลง <strong>${opt.reductionPercent}%</strong> เพื่อให้ได้กำไรไม่น้อยกว่า <strong>฿5.00/แก้ว</strong> ตามมาตรฐาน
               </div>
             </div>
-            <span class="pill-tag" style="background:#ffedd5; color:#c2410c; font-size:0.75rem; font-weight:800; border:1px solid #fdba74;">
+            <span class="pill-tag" style="background:#ffedd5; color:#c2410c; font-size:0.75rem; font-weight:800; border:1px solid #fdba74; white-space:nowrap;">
               🎯 เป้าหมายกำไร ฿5.00+
             </span>
           </div>
 
           <!-- Overall Comparison Cards -->
-          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:0.5rem; margin-bottom:0.85rem;">
-            <div style="background:#ffffff; border:1px solid #fed7aa; border-radius:var(--radius-sm); padding:0.6rem; text-align:center;">
-              <div style="font-size:0.72rem; color:#78350f; font-weight:600;">สูตรที่ควรปรุง (เดิม)</div>
-              <div style="font-size:1rem; font-weight:800; color:#dc2626;">฿${profitPerCup.toFixed(2)}/แก้ว</div>
-              <div style="font-size:0.7rem; color:#9ca3af;">ต้นทุน ฿${unitCost.toFixed(2)}</div>
+          <div class="opt-stats-grid">
+            <div class="opt-stat-card card-old">
+              <div class="stat-label" style="font-size:0.72rem; color:#78350f; font-weight:600;">สูตรเดิม</div>
+              <div class="stat-val" style="font-size:1rem; font-weight:800; color:#dc2626; margin:2px 0;">฿${profitPerCup.toFixed(2)}</div>
+              <div class="stat-sub" style="font-size:0.7rem; color:#9ca3af;">ต้นทุน ฿${unitCost.toFixed(2)}</div>
             </div>
-            <div style="background:#ecfdf5; border:1.5px solid #10b981; border-radius:var(--radius-sm); padding:0.6rem; text-align:center;">
-              <div style="font-size:0.72rem; color:#065f46; font-weight:700;">ปรับให้ได้กำไร 5 บาท (ใหม่)</div>
-              <div style="font-size:1rem; font-weight:800; color:#059669;">+฿${opt.optimizedProfitPerCup.toFixed(2)}/แก้ว</div>
-              <div style="font-size:0.7rem; color:#047857;">ต้นทุน ฿${opt.optimizedUnitCost.toFixed(2)}</div>
+            <div class="opt-stat-card card-new">
+              <div class="stat-label" style="font-size:0.72rem; color:#065f46; font-weight:700;">ปรับกำไร 5บ.</div>
+              <div class="stat-val" style="font-size:1rem; font-weight:800; color:#059669; margin:2px 0;">+฿${opt.optimizedProfitPerCup.toFixed(2)}</div>
+              <div class="stat-sub" style="font-size:0.7rem; color:#047857;">ต้นทุน ฿${opt.optimizedUnitCost.toFixed(2)}</div>
             </div>
-            <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:var(--radius-sm); padding:0.6rem; text-align:center;">
-              <div style="font-size:0.72rem; color:#1e40af; font-weight:600;">กำไรเพิ่มขึ้นต่อแก้ว</div>
-              <div style="font-size:1rem; font-weight:800; color:#2563eb;">+฿${profitDiff.toFixed(2)}/แก้ว</div>
-              <div style="font-size:0.7rem; color:#1d4ed8;">${!isCup ? `(+฿${Math.round(totalJarProfitDiff).toLocaleString()} ต่อโหล)` : 'ประหยัดต้นทุน'}</div>
+            <div class="opt-stat-card card-diff">
+              <div class="stat-label" style="font-size:0.72rem; color:#1e40af; font-weight:600;">กำไรเพิ่ม</div>
+              <div class="stat-val" style="font-size:1rem; font-weight:800; color:#2563eb; margin:2px 0;">+฿${profitDiff.toFixed(2)}</div>
+              <div class="stat-sub" style="font-size:0.7rem; color:#1d4ed8;">${!isCup ? `(+฿${Math.round(totalJarProfitDiff).toLocaleString()}/โหล)` : 'ประหยัดขึ้น'}</div>
             </div>
           </div>
 
-          <!-- Detailed Ingredient Comparison Table -->
-          <div style="font-size:0.8rem; font-weight:700; color:#7c2d12; margin-bottom:0.4rem; display:flex; align-items:center; gap:0.35rem;">
-            <span>📊</span>
-            <span>เปรียบเทียบสัดส่วน: สูตรที่ควรปรุง vs ปรับให้ได้กำไร 5 บาท (แตกต่างกันเท่าไหร่):</span>
+          <!-- Detailed Ingredient Comparison Header -->
+          <div style="font-size:0.8rem; font-weight:700; color:#7c2d12; margin-bottom:0.45rem; display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; align-items:center; gap:0.35rem;">
+              <span>📊</span>
+              <span>ตารางเปรียบเทียบสัดส่วนปรับลด:</span>
+            </div>
+            <span style="font-size:0.7rem; color:#b45309; font-weight:600;">เป้าหมาย ฿5.00/แก้ว</span>
           </div>
 
-          <div style="background:#ffffff; border:1px solid #fed7aa; border-radius:var(--radius-sm); overflow-x:auto; margin-bottom:0.85rem;">
+          <!-- Desktop Table View -->
+          <div class="opt-desktop-table opt-table-wrap" style="background:#ffffff; border:1px solid #fed7aa; border-radius:var(--radius-sm); overflow-x:auto; margin-bottom:0.85rem;">
             <table style="width:100%; border-collapse:collapse; font-size:0.775rem; text-align:left;">
               <thead>
-                <tr style="background:#ffedd5; color:#9a3412; border-bottom:1px solid #fed7aa;">
+                <tr style="background:#ffedd5; color:#9a3412; border-bottom:1px solid #fed7aa; white-space:nowrap;">
                   <th style="padding:0.45rem 0.6rem; font-weight:700;">วัตถุดิบ</th>
-                  <th style="padding:0.45rem 0.6rem; font-weight:700; text-align:center;">สูตรที่ควรปรุง (เดิม)</th>
-                  <th style="padding:0.45rem 0.6rem; font-weight:700; text-align:center; color:#065f46;">ปรับให้ได้กำไร 5 บ. (ใหม่)</th>
-                  <th style="padding:0.45rem 0.6rem; font-weight:700; text-align:right;">ส่วนต่างที่ลดลง</th>
+                  <th style="padding:0.45rem 0.6rem; font-weight:700; text-align:center;">สูตรเดิม</th>
+                  <th style="padding:0.45rem 0.6rem; font-weight:700; text-align:center; color:#065f46;">สูตรกำไร 5 บ.</th>
+                  <th style="padding:0.45rem 0.6rem; font-weight:700; text-align:right;">ส่วนต่างลดลง</th>
                 </tr>
               </thead>
               <tbody>
@@ -6254,11 +6258,11 @@ class WaterFlowApp {
           return `
                       <tr style="background:${isBgEven}; border-bottom:1px solid #fef3c7;">
                         <td style="padding:0.45rem 0.6rem; font-weight:600; color:#374151;">
-                          ${this.escapeHtml(item.name)} <span style="font-size:0.68rem; color:#10b981; font-weight:700;">(฿0 ฟรี)</span>
+                          ${this.escapeHtml(item.name)} <span style="font-size:0.68rem; color:#10b981; font-weight:700;">(ฟรี)</span>
                         </td>
-                        <td style="padding:0.45rem 0.6rem; text-align:center; color:#4b5563;">${item.origAmountVal} ${item.unit} (฿0.00)</td>
-                        <td style="padding:0.45rem 0.6rem; text-align:center; color:#4b5563;">${item.newAmountVal} ${item.unit} (฿0.00)</td>
-                        <td style="padding:0.45rem 0.6rem; text-align:right; color:#10b981; font-size:0.72rem; font-weight:600;">0 บาท (คงเดิม ไม่ปรับ)</td>
+                        <td style="padding:0.45rem 0.6rem; text-align:center; color:#4b5563;">${item.origAmountVal} ${item.unit}</td>
+                        <td style="padding:0.45rem 0.6rem; text-align:center; color:#4b5563;">${item.newAmountVal} ${item.unit}</td>
+                        <td style="padding:0.45rem 0.6rem; text-align:right; color:#10b981; font-size:0.72rem; font-weight:600;">คงเดิม</td>
                       </tr>
                     `;
         }
@@ -6266,11 +6270,11 @@ class WaterFlowApp {
           return `
                       <tr style="background:${isBgEven}; border-bottom:1px solid #fef3c7;">
                         <td style="padding:0.45rem 0.6rem; font-weight:600; color:#374151;">
-                          ${this.escapeHtml(item.name)} <span style="font-size:0.68rem; color:#9ca3af;">(บรรจุภัณฑ์)</span>
+                          ${this.escapeHtml(item.name)} <span style="font-size:0.68rem; color:#9ca3af;">(แก้ว/ฝา)</span>
                         </td>
-                        <td style="padding:0.45rem 0.6rem; text-align:center; color:#4b5563;">${item.origAmountVal} ${item.unit} (฿${item.origCost.toFixed(2)})</td>
-                        <td style="padding:0.45rem 0.6rem; text-align:center; color:#4b5563;">${item.newAmountVal} ${item.unit} (฿${item.newCost.toFixed(2)})</td>
-                        <td style="padding:0.45rem 0.6rem; text-align:right; color:#9ca3af; font-size:0.72rem;">คงที่ (ไม่ปรับ)</td>
+                        <td style="padding:0.45rem 0.6rem; text-align:center; color:#4b5563;">${item.origAmountVal} ${item.unit}</td>
+                        <td style="padding:0.45rem 0.6rem; text-align:center; color:#4b5563;">${item.newAmountVal} ${item.unit}</td>
+                        <td style="padding:0.45rem 0.6rem; text-align:right; color:#9ca3af; font-size:0.72rem;">คงที่</td>
                       </tr>
                     `;
         }
@@ -6279,37 +6283,114 @@ class WaterFlowApp {
                       <td style="padding:0.45rem 0.6rem; font-weight:700; color:#1f2937;">
                         ${this.escapeHtml(item.name)}
                       </td>
-                      <td style="padding:0.45rem 0.6rem; text-align:center; color:#4b5563;">
-                        ${item.origAmountVal} ${item.unit} <span style="font-size:0.7rem; color:#9ca3af;">(฿${item.origCost.toFixed(2)})</span>
+                      <td style="padding:0.45rem 0.6rem; text-align:center; color:#4b5563; white-space:nowrap;">
+                        ${item.origAmountVal} ${item.unit} <span style="font-size:0.68rem; color:#9ca3af;">(฿${item.origCost.toFixed(2)})</span>
                       </td>
-                      <td style="padding:0.45rem 0.6rem; text-align:center; font-weight:700; color:#059669;">
-                        ${item.newAmountVal} ${item.unit} <span style="font-size:0.7rem; color:#047857;">(฿${item.newCost.toFixed(2)})</span>
+                      <td style="padding:0.45rem 0.6rem; text-align:center; font-weight:700; color:#059669; white-space:nowrap;">
+                        ${item.newAmountVal} ${item.unit} <span style="font-size:0.68rem; color:#047857;">(฿${item.newCost.toFixed(2)})</span>
                       </td>
-                      <td style="padding:0.45rem 0.6rem; text-align:right; font-weight:700; color:#dc2626;">
-                        -${item.diffAmount} ${item.unit} (-฿${item.diffCost.toFixed(2)} | -${item.diffPercent}%)
+                      <td style="padding:0.45rem 0.6rem; text-align:right; font-weight:700; color:#dc2626; white-space:nowrap;">
+                        -${item.diffAmount} ${item.unit} <span style="font-size:0.7rem; color:#b91c1c;">(-฿${item.diffCost.toFixed(2)})</span>
                       </td>
                     </tr>
                   `;
       }).join('')}
               </tbody>
               <tfoot>
-                <tr style="background:#fef3c7; font-weight:800; border-top:1.5px solid #fed7aa; color:#78350f;">
-                  <td style="padding:0.5rem 0.6rem;">รวมต้นทุนทั้งหมด:</td>
+                <tr style="background:#fef3c7; font-weight:800; border-top:1.5px solid #fed7aa; color:#78350f; white-space:nowrap;">
+                  <td style="padding:0.5rem 0.6rem;">ต้นทุนรวม:</td>
                   <td style="padding:0.5rem 0.6rem; text-align:center; color:#dc2626;">฿${unitCost.toFixed(2)}/แก้ว</td>
                   <td style="padding:0.5rem 0.6rem; text-align:center; color:#059669;">฿${opt.optimizedUnitCost.toFixed(2)}/แก้ว</td>
-                  <td style="padding:0.5rem 0.6rem; text-align:right; color:#059669;">ลดลง ฿${unitCostDiff.toFixed(2)}/แก้ว</td>
+                  <td style="padding:0.5rem 0.6rem; text-align:right; color:#059669;">ลดลง ฿${unitCostDiff.toFixed(2)}</td>
                 </tr>
               </tfoot>
             </table>
           </div>
 
+          <!-- Mobile Cards View (Redesigned for Phone screens) -->
+          <div class="opt-mobile-list">
+            ${opt.items.map((item) => {
+        if (item.isZeroCost) {
+          return `
+                <div class="opt-mobile-item">
+                  <div class="opt-mobile-item-header">
+                    <span class="opt-mobile-item-name">${this.escapeHtml(item.name)}</span>
+                    <span class="opt-mobile-item-diff diff-fixed">ฟรี (คงเดิม)</span>
+                  </div>
+                  <div class="opt-mobile-item-body">
+                    <div class="opt-mobile-col">
+                      <span class="opt-mobile-col-label">สูตรเดิม</span>
+                      <span class="opt-mobile-col-val">${item.origAmountVal} ${item.unit} (฿0)</span>
+                    </div>
+                    <div class="opt-mobile-col">
+                      <span class="opt-mobile-col-label">สูตรกำไร 5บ.</span>
+                      <span class="opt-mobile-col-val val-new">${item.newAmountVal} ${item.unit} (฿0)</span>
+                    </div>
+                  </div>
+                </div>
+              `;
+        }
+        if (item.isPkg) {
+          return `
+                <div class="opt-mobile-item">
+                  <div class="opt-mobile-item-header">
+                    <span class="opt-mobile-item-name">${this.escapeHtml(item.name)} <span style="font-size:0.7rem; color:#9ca3af; font-weight:normal;">(แก้ว/ฝา)</span></span>
+                    <span class="opt-mobile-item-diff diff-fixed">คงที่</span>
+                  </div>
+                  <div class="opt-mobile-item-body">
+                    <div class="opt-mobile-col">
+                      <span class="opt-mobile-col-label">สูตรเดิม</span>
+                      <span class="opt-mobile-col-val">${item.origAmountVal} ${item.unit} (฿${item.origCost.toFixed(2)})</span>
+                    </div>
+                    <div class="opt-mobile-col">
+                      <span class="opt-mobile-col-label">สูตรกำไร 5บ.</span>
+                      <span class="opt-mobile-col-val val-new">${item.newAmountVal} ${item.unit} (฿${item.newCost.toFixed(2)})</span>
+                    </div>
+                  </div>
+                </div>
+              `;
+        }
+        return `
+              <div class="opt-mobile-item">
+                <div class="opt-mobile-item-header">
+                  <span class="opt-mobile-item-name">${this.escapeHtml(item.name)}</span>
+                  <span class="opt-mobile-item-diff diff-reduced">ลด -${item.diffAmount} ${item.unit} (-฿${item.diffCost.toFixed(2)})</span>
+                </div>
+                <div class="opt-mobile-item-body">
+                  <div class="opt-mobile-col">
+                    <span class="opt-mobile-col-label">สูตรเดิม</span>
+                    <span class="opt-mobile-col-val" style="color:#6b7280;">${item.origAmountVal} ${item.unit} <span style="font-size:0.72rem;">(฿${item.origCost.toFixed(2)})</span></span>
+                  </div>
+                  <div class="opt-mobile-col">
+                    <span class="opt-mobile-col-label" style="color:#047857;">สูตรใหม่ (กำไร 5บ.)</span>
+                    <span class="opt-mobile-col-val val-new">${item.newAmountVal} ${item.unit} <span style="font-size:0.72rem; color:#047857;">(฿${item.newCost.toFixed(2)})</span></span>
+                  </div>
+                </div>
+              </div>
+            `;
+      }).join('')}
+
+            <!-- Mobile Summary Card -->
+            <div class="opt-mobile-summary-card">
+              <div>
+                <div style="font-weight:700; color:#78350f;">ต้นทุนรวมต่อแก้ว</div>
+                <div style="font-size:0.72rem; color:#b45309;">เดิม ฿${unitCost.toFixed(2)} ➔ ใหม่ ฿${opt.optimizedUnitCost.toFixed(2)}</div>
+              </div>
+              <div style="text-align:right;">
+                <span class="badge-pill-item green-tag" style="font-size:0.8rem; font-weight:800; padding:0.25rem 0.55rem;">
+                  ลดลง ฿${unitCostDiff.toFixed(2)}/แก้ว
+                </span>
+              </div>
+            </div>
+          </div>
+
           <!-- Action Buttons -->
-          <div style="display:flex; justify-content:flex-end; gap:0.5rem; flex-wrap:wrap; align-items:center;">
-            <span style="font-size:0.75rem; color:#9a3412; margin-right:auto;">
-              💡 คลิกปุ่มเพื่ออัปเดตสัดส่วนลงในตารางส่วนผสมทันที
+          <div class="opt-footer-actions" style="display:flex; justify-content:space-between; gap:0.5rem; align-items:center;">
+            <span style="font-size:0.75rem; color:#9a3412;">
+              💡 กดปุ่มเพื่ออัปเดตสัดส่วนลงในสูตรทันที
             </span>
-            <button type="button" id="btnApplyOptimized5Baht" class="btn-fastwork-sm"
-              style="background:#059669; border-color:#047857; color:#ffffff; font-weight:700; padding:0.45rem 0.9rem; box-shadow:0 2px 6px rgba(5,150,105,0.25);">
+            <button type="button" id="btnApplyOptimized5Baht" class="btn-fastwork-sm opt-btn-apply"
+              style="background:#059669; border-color:#047857; color:#ffffff; font-weight:700; padding:0.48rem 0.95rem; box-shadow:0 2px 6px rgba(5,150,105,0.25); display:inline-flex; align-items:center; gap:0.35rem;">
               <span>⚡ ปรับใช้สูตรกำไร 5 บาททันที</span>
             </button>
           </div>
