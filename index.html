@@ -1136,6 +1136,87 @@
           </div>
         </div>
 
+        <!-- Daily Stock Profit Summary Card (รวมยอดกำไรจากการเบิกขายสำเร็จรูป/ลัง รายวัน & ดูประวัติย้อนหลัง) -->
+        <div class="card mb-4" id="stockProfitDailyCard" style="border:1.5px solid #86efac; background:linear-gradient(180deg, #f0fdf4 0%, #ffffff 80px); box-shadow:0 4px 18px rgba(16,185,129,0.08);">
+          <div class="card-header space-between" style="flex-wrap:wrap; gap:0.75rem; background:transparent; border-bottom:1px solid #dcfce7; padding:0.9rem 1.25rem;">
+            <div style="display:flex; align-items:center; gap:0.6rem;">
+              <div style="width:36px; height:36px; background:linear-gradient(135deg, #10b981 0%, #059669 100%); color:#ffffff; border-radius:var(--radius-sm); display:flex; align-items:center; justify-content:center; box-shadow:0 2px 8px rgba(16,185,129,0.3);">
+                <i data-lucide="trending-up" style="width:20px; height:20px;"></i>
+              </div>
+              <div>
+                <div style="display:flex; align-items:center; gap:0.4rem;">
+                  <h3 class="card-title mb-0" style="font-size:1.05rem; color:#065f46;">รวมยอดกำไรจากการเบิกขายสำเร็จรูป/ลัง</h3>
+                  <span class="pill-tag green-tag" style="font-size:0.7rem; font-weight:700;">วันที่ต่อวัน</span>
+                </div>
+                <span class="text-xs text-muted" id="stockProfitDateDisplayLabel">ประจำวันที่ -</span>
+              </div>
+            </div>
+
+            <!-- Date Navigation Tools -->
+            <div style="display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap;">
+              <button type="button" class="btn-outline-fastwork btn-sm" onclick="app.changeStockProfitDate(-1)" title="ย้อนดูวันก่อนหน้า" style="padding:0.35rem 0.65rem;">
+                <i data-lucide="chevron-left" style="width:14px;height:14px;"></i>
+                <span>ย้อนหลัง</span>
+              </button>
+              <input type="date" id="stockProfitDatePicker" class="form-input-sm" style="font-weight:700; height:32px; padding:0.2rem 0.5rem;" onchange="app.setStockProfitDate(this.value)">
+              <button type="button" class="btn-outline-fastwork btn-sm" onclick="app.changeStockProfitDate(1)" title="ดูวันถัดไป" style="padding:0.35rem 0.65rem;">
+                <span>ถัดไป</span>
+                <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
+              </button>
+              <button type="button" class="btn-secondary btn-sm" id="btnStockProfitToday" onclick="app.setStockProfitDateToToday()" style="padding:0.35rem 0.65rem; font-weight:600;">
+                วันนี้
+              </button>
+              <button type="button" class="btn-fastwork btn-sm" onclick="app.openStockProfitHistoryModal()" style="background:#059669; border-color:#059669; padding:0.35rem 0.75rem;">
+                <i data-lucide="history" style="width:14px;height:14px;"></i>
+                <span>ดูประวัติกำไรทั้งหมด</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="card-body" style="padding:1.25rem;">
+            <div style="display:grid; grid-template-columns: minmax(220px, 280px) 1fr; gap:1.25rem; align-items:center;" class="stock-profit-card-grid">
+              <!-- Left: Big Profit Highlight -->
+              <div style="background:#ffffff; border:1.5px solid #a7f3d0; border-radius:var(--radius-md); padding:1rem 1.25rem; text-align:center; box-shadow:0 2px 8px rgba(16,185,129,0.06);">
+                <div class="text-xs text-muted font-bold" style="text-transform:uppercase; letter-spacing:0.5px; color:#047857;">กำไรสุทธิวันที่เลือก</div>
+                <div class="font-bold" id="stockProfitDayTotalVal" style="font-size:2rem; color:#15803d; line-height:1.2; margin:0.35rem 0;">+฿0.00</div>
+                <div style="display:flex; justify-content:center; gap:0.5rem; font-size:0.8rem; margin-top:0.35rem;">
+                  <span class="text-muted">อัตรากำไรเฉลี่ย:</span>
+                  <b id="stockProfitDayMarginVal" class="text-success">0%</b>
+                </div>
+              </div>
+
+              <!-- Right: Sub Metrics & Breakdown -->
+              <div>
+                <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:0.75rem; margin-bottom:0.85rem;" class="stock-profit-metrics-row">
+                  <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:var(--radius-sm); padding:0.6rem 0.85rem;">
+                    <div class="text-xs text-muted">💵 ยอดขายรวม</div>
+                    <div class="font-bold text-main" id="stockProfitDayRevenueVal" style="font-size:1.1rem; margin-top:2px;">฿0.00</div>
+                  </div>
+                  <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:var(--radius-sm); padding:0.6rem 0.85rem;">
+                    <div class="text-xs text-muted">📉 ต้นทุนสินค้ารวม</div>
+                    <div class="font-bold text-muted" id="stockProfitDayCostVal" style="font-size:1.1rem; margin-top:2px;">฿0.00</div>
+                  </div>
+                  <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:var(--radius-sm); padding:0.6rem 0.85rem;">
+                    <div class="text-xs text-muted">📦 เบิกขายไป</div>
+                    <div class="font-bold text-primary" id="stockProfitDayItemsCountVal" style="font-size:1.1rem; margin-top:2px;">0 รายการ</div>
+                  </div>
+                </div>
+
+                <!-- Day Items Mini List Feed -->
+                <div>
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.35rem;">
+                    <span class="text-xs font-bold text-muted">รายการเบิกขายในวันดังกล่าว:</span>
+                    <span class="text-xs text-muted" id="stockProfitDayItemsDetailBadge">0 ชิ้น</span>
+                  </div>
+                  <div id="stockProfitDayItemsList" style="max-height:120px; overflow-y:auto; display:flex; flex-direction:column; gap:0.35rem;">
+                    <!-- Rendered by JS -->
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Interactive Inventory Workspace Card -->
         <div class="card mb-4" style="box-shadow: 0 4px 20px rgba(0,0,0,0.06); border: 1px solid var(--border-color);">
           <div class="card-header space-between"
@@ -2077,6 +2158,18 @@
           </div>
         </div>
 
+        <div class="form-group mb-3" id="stockItemSellingPriceGroup">
+          <label class="form-label font-bold" for="stockItemSellingPrice" style="display:flex; justify-content:space-between; align-items:center;">
+            <span>🏷️ ราคาขาย/หน่วย <span class="text-xs font-normal text-muted">(สำหรับสำเร็จรูป/ลัง เพื่อคิดกำไร)</span></span>
+            <span class="pill-tag purple-tag" style="font-size:0.7rem; font-weight:700;">เฉพาะสำเร็จรูป/ลัง</span>
+          </label>
+          <div class="input-with-affix">
+            <span class="affix-left">฿</span>
+            <input type="number" id="stockItemSellingPrice" class="form-input font-bold text-primary" placeholder="เช่น 240 หรือ 15 (ใส่เพื่อคำนวณกำไรอัตโนมัติเมื่อกด -)" min="0" step="any">
+          </div>
+          <span class="field-hint">เมื่อกดปุ่ม <b>-</b> (เบิกขาย) ระบบจะดึงราคาขายนี้มาคำนวณกำไรสุทธิให้อัตโนมัติ</span>
+        </div>
+
         <!-- Live Stock Value Preview Card (Theme matching other modals) -->
         <div class="calc-preview-card mb-3"
           style="background:linear-gradient(135deg, rgba(0, 80, 240, 0.04) 0%, rgba(16, 185, 129, 0.05) 100%); border:1.5px solid var(--border-color); border-radius:var(--radius-md); padding:0.85rem 1rem;">
@@ -2231,6 +2324,173 @@
           </button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Stock Use & Profit Calculation Modal (สำหรับสินค้าสำเร็จรูป/ลัง คิดกำไรทันทีเมื่อกด -) -->
+  <div class="modal-backdrop" id="stockUseProfitModal">
+    <div class="modal-dialog" style="max-width: 490px;">
+      <div class="modal-header">
+        <div style="display:flex; align-items:center; gap:0.6rem;">
+          <div class="icon-circle" style="background:#dcfce7; color:#15803d;">
+            <i data-lucide="trending-up"></i>
+          </div>
+          <div>
+            <h3 class="modal-title" id="stockUseProfitModalTitle" style="margin-bottom:0;">เบิกขายสำเร็จรูป/ลัง & คิดกำไร</h3>
+            <span class="text-xs text-muted" id="stockUseProfitItemSub">คำนวณกำไรสุทธิ และบันทึกเข้ายอดขายอัตโนมัติ</span>
+          </div>
+        </div>
+        <button class="close-modal-btn" data-close="stockUseProfitModal">&times;</button>
+      </div>
+      <form id="stockUseProfitForm" class="modal-body">
+        <input type="hidden" id="stockUseProfitItemId">
+
+        <!-- Current Stock Info Badge -->
+        <div class="mb-3"
+          style="background:#f8fafc; border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:0.75rem 1rem; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <span class="text-xs text-muted" style="display:block;">คงเหลือในร้านตอนนี้:</span>
+            <b class="text-main" id="stockUseProfitCurrentQtyLabel">0</b>
+          </div>
+          <div style="text-align:right;">
+            <span class="text-xs text-muted" style="display:block;">ต้นทุนซื้อ/หน่วย:</span>
+            <b class="text-amber" id="stockUseProfitCurrentCostLabel">฿0.00</b>
+          </div>
+        </div>
+
+        <div class="form-row two-col mb-3">
+          <div class="form-group">
+            <label class="form-label font-bold" for="stockUseProfitQty">
+              📤 จำนวนที่เบิกขาย
+            </label>
+            <div class="input-with-affix">
+              <input type="number" id="stockUseProfitQty" class="form-input font-bold" placeholder="1" min="0.01"
+                step="any" value="1" required>
+              <span class="affix-right text-xs text-muted font-bold" id="stockUseProfitUnitLabel">หน่วย</span>
+            </div>
+            <span class="field-hint" id="stockUseProfitRemainingPreview" style="color:var(--text-muted);">คงเหลือหลังเบิก: -</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label font-bold" for="stockUseProfitSellingPrice">
+              🏷️ ราคาขายต่อหน่วย
+            </label>
+            <div class="input-with-affix">
+              <span class="affix-left">฿</span>
+              <input type="number" id="stockUseProfitSellingPrice" class="form-input font-bold text-primary" placeholder="0.00"
+                min="0" step="any" required>
+            </div>
+            <span class="field-hint" id="stockUseProfitPerUnitHint" style="font-weight:600;">กำไรต่อหน่วย: -</span>
+          </div>
+        </div>
+
+        <!-- Profit Calculation Live Preview Card -->
+        <div class="calc-preview-card mb-3"
+          style="background:linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(59, 130, 246, 0.05) 100%); border:1.5px solid #86efac; border-radius:var(--radius-md); padding:0.85rem 1rem;">
+          <div class="calc-preview-row mb-1">
+            <span style="font-size:0.85rem; color:var(--text-muted);">💵 ยอดขายรวมที่ได้รับ:</span>
+            <span class="font-bold text-main" id="stockUseProfitTotalRevenuePreview" style="font-size:1.05rem;">฿0.00</span>
+          </div>
+          <div class="calc-preview-row mb-1">
+            <span style="font-size:0.85rem; color:var(--text-muted);">📉 ต้นทุนรวมที่หัก:</span>
+            <span class="font-bold text-muted" id="stockUseProfitTotalCostPreview" style="font-size:0.95rem;">฿0.00</span>
+          </div>
+          <div class="calc-preview-row mb-1" style="padding-top:0.4rem; border-top:1px dashed #bbf7d0;">
+            <span style="font-size:0.95rem; font-weight:700; color:var(--text-main);">✨ กำไรสุทธิที่ได้:</span>
+            <span class="font-bold" id="stockUseProfitTotalProfitPreview"
+              style="font-size:1.35rem; color:#15803d;">+฿0.00</span>
+          </div>
+          <div class="calc-preview-row">
+            <span style="font-size:0.8rem; color:var(--text-muted);">อัตรากำไร (Margin %):</span>
+            <span id="stockUseProfitMarginPctPreview" class="pill-tag green-tag" style="font-size:0.75rem; font-weight:700;">0%</span>
+          </div>
+        </div>
+
+        <div class="form-group mb-3">
+          <label class="form-label" for="stockUseProfitDate">📅 วันที่เบิกขาย</label>
+          <input type="date" id="stockUseProfitDate" class="form-input" style="height:36px;">
+        </div>
+
+        <!-- Checkbox: Link to Daily Sales -->
+        <div class="form-group mb-3" style="background:#f1f5f9; border:1px solid #cbd5e1; border-radius:var(--radius-sm); padding:0.75rem 0.9rem;">
+          <label style="display:flex; align-items:flex-start; gap:0.5rem; cursor:pointer; font-size:0.85rem; margin:0; user-select:none;">
+            <input type="checkbox" id="stockUseProfitAddToDailySales" checked style="margin-top:0.2rem; cursor:pointer; accent-color:var(--primary); width:16px; height:16px;">
+            <div>
+              <b style="color:var(--text-main); display:block;">บันทึกยอดขายและกำไรนี้ เข้าสู่สถิติยอดขายวันนี้ (Daily Sales) ทันที</b>
+              <span class="text-xs text-muted" style="display:block; margin-top:2px;">นำยอดขาย ฿ และต้นทุน ไปรวมในรายงานสรุปยอดขายประจำวันและแดชบอร์ดให้อัตโนมัติ</span>
+            </div>
+          </label>
+        </div>
+
+        <div class="form-group mb-3">
+          <label class="form-label" for="stockUseProfitNote">📝 หมายเหตุเพิ่มเติม (ถ้ามี)</label>
+          <input type="text" id="stockUseProfitNote" class="form-input" placeholder="เช่น ลูกค้าซื้อหน้าร้าน, ยกลังงานเลี้ยง">
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" data-close="stockUseProfitModal">ยกเลิก</button>
+          <button type="submit" class="btn-fastwork" style="background:#16a34a; border-color:#16a34a;">
+            <i data-lucide="check"></i>
+            <span>ยืนยันตัดสต๊อก & คิดกำไร</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Stock Profit History Modal (ดูประวัติสรุปกำไรย้อนหลังทุกวัน) -->
+  <div class="modal-backdrop" id="stockProfitHistoryModal">
+    <div class="modal-dialog modal-lg" style="max-width: 720px;">
+      <div class="modal-header">
+        <div style="display:flex; align-items:center; gap:0.6rem;">
+          <div class="icon-circle" style="background:#dcfce7; color:#15803d;">
+            <i data-lucide="history"></i>
+          </div>
+          <div>
+            <h3 class="modal-title" style="margin-bottom:0;">ประวัติสรุปกำไรจากการเบิกขายสำเร็จรูป/ลัง</h3>
+            <span class="text-xs text-muted">แสดงประวัติรวมยอดกำไรแยกรายวัน สามารถคลิกดูรายละเอียดของแต่ละวันได้</span>
+          </div>
+        </div>
+        <button class="close-modal-btn" data-close="stockProfitHistoryModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- All-Time Profit Summary Cards -->
+        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:0.75rem; margin-bottom:1rem;" class="stock-profit-modal-summary-grid">
+          <div style="background:#f0fdf4; border:1.5px solid #a7f3d0; border-radius:var(--radius-sm); padding:0.75rem 1rem;">
+            <div class="text-xs text-muted font-bold" style="color:#047857;">กำไรสุทธิสะสมทั้งหมด</div>
+            <div class="font-bold" id="stockProfitHistAllTimeProfit" style="font-size:1.35rem; color:#15803d; margin-top:2px;">+฿0.00</div>
+          </div>
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:var(--radius-sm); padding:0.75rem 1rem;">
+            <div class="text-xs text-muted">ยอดขายสะสม</div>
+            <div class="font-bold text-main" id="stockProfitHistAllTimeRevenue" style="font-size:1.2rem; margin-top:2px;">฿0.00</div>
+          </div>
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:var(--radius-sm); padding:0.75rem 1rem;">
+            <div class="text-xs text-muted">จำนวนวันที่มียอดเบิกขาย</div>
+            <div class="font-bold text-primary" id="stockProfitHistTotalDays" style="font-size:1.2rem; margin-top:2px;">0 วัน</div>
+          </div>
+        </div>
+
+        <!-- History Table -->
+        <div class="table-responsive" style="max-height: 380px; overflow-y:auto; border:1px solid var(--border-color); border-radius:var(--radius-sm);">
+          <table class="fastwork-table">
+            <thead>
+              <tr>
+                <th>วันที่</th>
+                <th style="text-align:center;">จำนวนที่เบิกขาย</th>
+                <th style="text-align:right;">ยอดขายรวม</th>
+                <th style="text-align:right;">ต้นทุนรวม</th>
+                <th style="text-align:right;">กำไรสุทธิ</th>
+                <th style="text-align:center; width:90px;">เลือกดู</th>
+              </tr>
+            </thead>
+            <tbody id="stockProfitHistoryTableBody">
+              <!-- Rendered by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" data-close="stockProfitHistoryModal">ปิดหน้าต่าง</button>
+      </div>
     </div>
   </div>
 

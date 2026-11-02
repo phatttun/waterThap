@@ -58,6 +58,7 @@ class WaterFlowApp {
     this.data = this.loadData();
     this.currentCalendarDate = new Date();
     this.selectedCalendarDayStr = this.formatDate(new Date());
+    this.selectedStockProfitDate = this.formatDate(new Date());
     this.holidayPickerMonthDate = new Date();
     this.selectedBatchHolidayDates = new Set();
     this.charts = {
@@ -6800,7 +6801,15 @@ class WaterFlowApp {
       });
     }
 
-    const quickRestockForm = document.getElementById('quickRestockForm');
+        const stockUseProfitForm = document.getElementById('stockUseProfitForm');
+    if (stockUseProfitForm) {
+      stockUseProfitForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        this.handleStockUseProfitSubmit();
+      });
+    }
+
+const quickRestockForm = document.getElementById('quickRestockForm');
     if (quickRestockForm) {
       quickRestockForm.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -6860,6 +6869,9 @@ class WaterFlowApp {
     const tabFilterLowText = document.getElementById('tabFilterLowText');
     if (tabFilterAllText) tabFilterAllText.textContent = `ทั้งหมด (${list.length})`;
     if (tabFilterLowText) tabFilterLowText.textContent = `⚠️ สินค้าใกล้หมด (${lowCount})`;
+
+    // Render Daily Stock Profit Card
+    this.renderStockProfitCard();
 
     if (list.length === 0) {
       tbody.innerHTML = `
@@ -6990,6 +7002,17 @@ class WaterFlowApp {
           <td>
             <div class="font-bold text-main" style="font-size:0.9rem;">${this.formatCurrency(unitCost)}</div>
             <div class="text-xs text-muted">ต่อ${this.escapeHtml(unit)}</div>
+            ${(() => {
+              if (item.category === 'STOCK') {
+                const sPrice = Number(item.sellingPrice) || 0;
+                if (sPrice > 0) {
+                  const uProfit = sPrice - unitCost;
+                  const profitSign = uProfit >= 0 ? '+' : '';
+                  return `<div style="margin-top:3px;"><span class="pill-tag green-tag" style="font-size:0.68rem; padding:0.12rem 0.4rem; white-space:nowrap; display:inline-block;" title="ราคาขาย ฿${this.formatCurrency(sPrice)} / ${this.escapeHtml(unit)}">🏷️ ขาย ฿${sPrice} (กำไร ${profitSign}฿${this.formatCurrency(uProfit)})</span></div>`;
+                }
+              }
+              return '';
+            })()}
           </td>
           <td>
             <div class="font-bold ${isLow ? 'text-danger' : 'text-primary'}" style="font-size:1rem;">${this.formatCurrency(itemTotalVal)}</div>
@@ -7024,7 +7047,7 @@ class WaterFlowApp {
     }
   }
 
-  logStockAction(itemName, actionType, changeQty, currentQty, unit, note = '') {
+  logStockAction(itemName, actionType, changeQty, currentQty, unit, note = '', extra = {}) {
     if (!Array.isArray(this.data.stockLogs)) {
       this.data.stockLogs = [];
     }
@@ -7043,7 +7066,13 @@ class WaterFlowApp {
       changeQty: changeQty,
       resultingQty: currentQty,
       unit: unit,
-      note: note
+      note: note,
+      profit: extra.profit !== undefined ? extra.profit : null,
+      revenue: extra.revenue !== undefined ? extra.revenue : null,
+      cost: extra.cost !== undefined ? extra.cost : null,
+      sellingPrice: extra.sellingPrice !== undefined ? extra.sellingPrice : null,
+      unitCost: extra.unitCost !== undefined ? extra.unitCost : null,
+      isStockSale: Boolean(extra.isStockSale)
     };
 
     this.data.stockLogs.unshift(logEntry);
@@ -7067,7 +7096,11 @@ class WaterFlowApp {
     item.qty = parsed;
 
     const actionType = diff > 0 ? 'RESTOCK' : 'USE';
-    const note = `พิมพ์ปรับจำนวนจาก ${oldQty} เป็น ${parsed}`;
+    let note = `พิมพ์ปรับจำนวนจาก ${oldQty} เป็น ${parsed}`;
+    if (diff < 0 && item.category === 'STOCK' && (Number(item.sellingPrice) || 0) > 0) {
+      const uProfit = (Number(item.sellingPrice) - (Number(item.unitCost) || 0)) * Math.abs(diff);
+      note += ` | กำไรที่ได้ +฿${uProfit.toFixed(2)} (ขาย @฿${item.sellingPrice})`;
+    }
     this.logStockAction(item.name, actionType, diff, parsed, item.unit || '', note);
 
     // ถ้าพิมพ์เพิ่มจำนวน (diff > 0) ให้สร้างบิลรายจ่ายของเดือนปัจจุบันอัตโนมัติ (จำนวนที่เพิ่ม × ต้นทุนต่อหน่วย)
@@ -7117,10 +7150,17 @@ class WaterFlowApp {
       return;
     }
 
-    // เมื่อกดปุ่ม - : ตัดสต๊อกออก ไม่สร้างบิลรายจ่ายซ้ำ (เพราะคิดเงินไปตั้งแต่ตอนซื้อเข้าแล้ว)
     const item = (this.data.stockItems || []).find(x => x.id === itemId);
     if (!item) return;
 
+    // เมื่อกดปุ่ม - : ถ้าเป็นสินค้าหมวด "สำเร็จรูป/ลัง" (category === 'STOCK')
+    // ให้เปิด Modal คำนวณกำไรจากการเบิกขายทันที
+    if (item.category === 'STOCK') {
+      this.openStockUseProfitModal(itemId, Math.abs(delta) || 1);
+      return;
+    }
+
+    // สำหรับสินค้าหมวดอื่นๆ (วัตถุดิบชง / บรรจุภัณฑ์ / อื่นๆ) ตัดสต๊อกออกตามปกติทันที
     const oldQty = Number(item.qty) || 0;
     const newQty = Math.max(0, oldQty + delta);
     if (oldQty === newQty) return;
@@ -7311,6 +7351,568 @@ class WaterFlowApp {
     this.showToast(`เติมสต๊อก ${item.name} +${addQty} สำเร็จ! บันทึกรายจ่าย ฿${this.formatCurrency(totalExpense)} และปรับต้นทุนเฉลี่ยเป็น ฿${newAvgCost} เรียบร้อย 🎉`, 'success');
   }
 
+  // เปิดหน้าต่างเบิกขายสินค้าสำเร็จรูป/ลัง & คิดกำไรสุทธิ
+  openStockUseProfitModal(itemId, defaultUseQty = 1) {
+    const item = (this.data.stockItems || []).find(x => x.id === itemId);
+    if (!item) return;
+
+    const modal = document.getElementById('stockUseProfitModal');
+    const form = document.getElementById('stockUseProfitForm');
+    if (!modal || !form) return;
+
+    form.reset();
+    document.getElementById('stockUseProfitItemId').value = item.id;
+    document.getElementById('stockUseProfitModalTitle').textContent = `เบิกขาย: ${item.name} & คิดกำไร`;
+    document.getElementById('stockUseProfitItemSub').textContent = `หมวด: สำเร็จรูป/ลัง | คำนวณกำไรสุทธิและบันทึกประวัติการเบิกขาย`;
+
+    const currentQty = Number(item.qty) || 0;
+    const currentUnitCost = Number(item.unitCost) || 0;
+    const unit = item.unit || 'หน่วย';
+
+    // หาราคาขายเริ่มต้น: ถ้ามี sellingPrice ใช้ค่านั้น หรือหาจาก savedProducts หรือตั้งต้นทุน * 1.3
+    let initialSellingPrice = Number(item.sellingPrice) || 0;
+    if (initialSellingPrice <= 0 && Array.isArray(this.data.savedProducts)) {
+      const cleanItemName = item.name.trim().toLowerCase();
+      const matchedSaved = this.data.savedProducts.find(p => p.name && (p.name.trim().toLowerCase() === cleanItemName || cleanItemName.includes(p.name.trim().toLowerCase()) || p.name.trim().toLowerCase().includes(cleanItemName)));
+      if (matchedSaved && Number(matchedSaved.sellingPrice) > 0) {
+        initialSellingPrice = Number(matchedSaved.sellingPrice);
+      }
+    }
+    if (initialSellingPrice <= 0 && currentUnitCost > 0) {
+      initialSellingPrice = Math.ceil(currentUnitCost * 1.3);
+    }
+
+    document.getElementById('stockUseProfitCurrentQtyLabel').textContent = `${currentQty} ${unit}`;
+    document.getElementById('stockUseProfitCurrentCostLabel').textContent = `฿${this.formatCurrency(currentUnitCost)}`;
+    document.getElementById('stockUseProfitUnitLabel').textContent = unit;
+
+    const qtyInput = document.getElementById('stockUseProfitQty');
+    const sellPriceInput = document.getElementById('stockUseProfitSellingPrice');
+    const dateInput = document.getElementById('stockUseProfitDate');
+    const noteInput = document.getElementById('stockUseProfitNote');
+    const addSalesCb = document.getElementById('stockUseProfitAddToDailySales');
+
+    if (qtyInput) {
+      qtyInput.value = defaultUseQty > 0 ? defaultUseQty : 1;
+    }
+    if (sellPriceInput) {
+      sellPriceInput.value = initialSellingPrice > 0 ? initialSellingPrice : '';
+    }
+    if (dateInput) {
+      dateInput.value = this.formatDate(new Date());
+    }
+    if (noteInput) {
+      noteInput.value = '';
+    }
+    if (addSalesCb) {
+      addSalesCb.checked = true;
+    }
+
+    // ฟังก์ชันคำนวณสด
+    const updatePreview = () => {
+      const qty = parseFloat(qtyInput?.value) || 0;
+      const sellPrice = parseFloat(sellPriceInput?.value) || 0;
+      const totalRevenue = parseFloat((qty * sellPrice).toFixed(2));
+      const totalCost = parseFloat((qty * currentUnitCost).toFixed(2));
+      const totalProfit = parseFloat((totalRevenue - totalCost).toFixed(2));
+      const unitProfit = parseFloat((sellPrice - currentUnitCost).toFixed(2));
+      const marginPct = totalRevenue > 0 ? parseFloat(((totalProfit / totalRevenue) * 100).toFixed(1)) : 0;
+      const remaining = currentQty - qty;
+
+      const revEl = document.getElementById('stockUseProfitTotalRevenuePreview');
+      const costEl = document.getElementById('stockUseProfitTotalCostPreview');
+      const profitEl = document.getElementById('stockUseProfitTotalProfitPreview');
+      const marginEl = document.getElementById('stockUseProfitMarginPctPreview');
+      const perUnitHint = document.getElementById('stockUseProfitPerUnitHint');
+      const remEl = document.getElementById('stockUseProfitRemainingPreview');
+
+      if (revEl) revEl.textContent = this.formatCurrency(totalRevenue);
+      if (costEl) costEl.textContent = this.formatCurrency(totalCost);
+
+      if (profitEl) {
+        if (totalProfit > 0) {
+          profitEl.textContent = `+฿${this.formatCurrency(totalProfit)}`;
+          profitEl.style.color = '#15803d';
+        } else if (totalProfit < 0) {
+          profitEl.textContent = `-฿${this.formatCurrency(Math.abs(totalProfit))}`;
+          profitEl.style.color = '#dc2626';
+        } else {
+          profitEl.textContent = `฿0.00`;
+          profitEl.style.color = 'var(--text-main)';
+        }
+      }
+
+      if (marginEl) {
+        marginEl.textContent = `${marginPct}%`;
+        marginEl.className = totalProfit > 0 ? 'pill-tag green-tag' : (totalProfit < 0 ? 'pill-tag red-tag' : 'pill-tag blue-tag');
+      }
+
+      if (perUnitHint) {
+        if (sellPrice > 0) {
+          if (unitProfit >= 0) {
+            perUnitHint.textContent = `กำไรต่อ${unit}: +฿${unitProfit.toFixed(2)}`;
+            perUnitHint.style.color = '#15803d';
+          } else {
+            perUnitHint.textContent = `ขาดทุนต่อ${unit}: -฿${Math.abs(unitProfit).toFixed(2)}`;
+            perUnitHint.style.color = '#dc2626';
+          }
+        } else {
+          perUnitHint.textContent = `กำไรต่อหน่วย: -`;
+          perUnitHint.style.color = 'var(--text-muted)';
+        }
+      }
+
+      if (remEl) {
+        remEl.textContent = `คงเหลือหลังเบิก: ${remaining} ${unit}`;
+        if (remaining < 0) {
+          remEl.style.color = '#dc2626';
+          remEl.textContent += ' ⚠️ (เกินสต๊อกที่มี)';
+        } else {
+          remEl.style.color = 'var(--text-muted)';
+        }
+      }
+    };
+
+    if (qtyInput) qtyInput.oninput = updatePreview;
+    if (sellPriceInput) sellPriceInput.oninput = updatePreview;
+    updatePreview();
+
+    modal.classList.add('active');
+    this.refreshLucide();
+    setTimeout(() => {
+      if (sellPriceInput && (!sellPriceInput.value || parseFloat(sellPriceInput.value) <= 0)) {
+        sellPriceInput.focus();
+        sellPriceInput.select();
+      } else if (qtyInput) {
+        qtyInput.focus();
+        qtyInput.select();
+      }
+    }, 150);
+  }
+
+  // ยืนยันการเบิกขาย & คิดกำไร & ตัดสต๊อก
+  handleStockUseProfitSubmit() {
+    const itemId = document.getElementById('stockUseProfitItemId')?.value;
+    const item = (this.data.stockItems || []).find(x => x.id === itemId);
+    if (!item) return;
+
+    const useQty = parseFloat(document.getElementById('stockUseProfitQty')?.value) || 0;
+    const sellPrice = parseFloat(document.getElementById('stockUseProfitSellingPrice')?.value) || 0;
+    const saleDate = document.getElementById('stockUseProfitDate')?.value || this.formatDate(new Date());
+    const userNote = document.getElementById('stockUseProfitNote')?.value.trim() || '';
+    const addToDailySales = document.getElementById('stockUseProfitAddToDailySales')?.checked ?? true;
+
+    if (useQty <= 0) {
+      this.showToast('กรุณาระบุจำนวนที่ต้องการเบิกขายอย่างน้อย 0.01', 'error');
+      return;
+    }
+
+    const currentQty = Number(item.qty) || 0;
+    const currentUnitCost = Number(item.unitCost) || 0;
+    const unit = item.unit || 'หน่วย';
+
+    if (useQty > currentQty) {
+      if (!confirm(`จำนวนที่เบิกขาย (${useQty} ${unit}) มากกว่าสต๊อกที่มีในร้าน (${currentQty} ${unit}) ต้องการดำเนินการต่อหรือไม่?`)) {
+        return;
+      }
+    }
+
+    const newQty = Math.max(0, currentQty - useQty);
+    const totalRevenue = parseFloat((useQty * sellPrice).toFixed(2));
+    const totalCost = parseFloat((useQty * currentUnitCost).toFixed(2));
+    const totalProfit = parseFloat((totalRevenue - totalCost).toFixed(2));
+
+    // 1. อัปเดตสต๊อกสินค้า และจำราคาขายไว้
+    item.qty = newQty;
+    if (sellPrice > 0) {
+      item.sellingPrice = sellPrice;
+    }
+
+    // 2. บันทึก Stock Log พร้อมกำไรที่ได้
+    const profitStr = totalProfit >= 0 ? `+฿${totalProfit.toFixed(2)}` : `-฿${Math.abs(totalProfit).toFixed(2)}`;
+    const logNote = `เบิกขาย ${useQty} ${unit} (@฿${sellPrice.toFixed(2)} ทุน ฿${currentUnitCost.toFixed(2)}) กำไร ${profitStr}${addToDailySales ? ' [ลงยอดขายวันนี้แล้ว]' : ''}${userNote ? ' • ' + userNote : ''}`;
+    this.logStockAction(item.name, 'USE', -useQty, newQty, unit, logNote, {
+      profit: totalProfit,
+      revenue: totalRevenue,
+      cost: totalCost,
+      sellingPrice: sellPrice,
+      unitCost: currentUnitCost,
+      isStockSale: true,
+      category: item.category || 'STOCK'
+    });
+
+    // 3. ถ้าติ๊กบันทึกเข้า Daily Sales (ยอดขายรายวัน)
+    if (addToDailySales && (totalRevenue > 0 || totalCost > 0)) {
+      if (!Array.isArray(this.data.dailySales)) {
+        this.data.dailySales = [];
+      }
+
+      const existingIndex = this.data.dailySales.findIndex(d => d.date === saleDate);
+      if (existingIndex !== -1) {
+        const ex = this.data.dailySales[existingIndex];
+        ex.revenue = parseFloat(((Number(ex.revenue) || 0) + totalRevenue).toFixed(2));
+        ex.cost = parseFloat(((Number(ex.cost) || 0) + totalCost).toFixed(2));
+        ex.materialCost = parseFloat(((Number(ex.materialCost) || 0) + totalCost).toFixed(2));
+        ex.profit = parseFloat(((Number(ex.profit) || 0) + totalProfit).toFixed(2));
+        const saleDesc = `ขาย ${item.name} x${useQty} ${unit} (กำไร ${profitStr})`;
+        ex.note = ex.note ? `${ex.note}, ${saleDesc}` : saleDesc;
+      } else {
+        const costInfo = this.getSystemCostForDate(saleDate, totalRevenue);
+        const dailyRent = costInfo.dailyRent || 0;
+        const newRecord = {
+          id: 'd_' + Date.now(),
+          date: saleDate,
+          revenue: totalRevenue,
+          cost: parseFloat((totalCost + dailyRent).toFixed(2)),
+          materialCost: totalCost,
+          dailyRent: dailyRent,
+          profit: parseFloat((totalRevenue - totalCost - dailyRent).toFixed(2)),
+          note: `ขาย ${item.name} x${useQty} ${unit} (กำไร ${profitStr})`
+        };
+        this.data.dailySales.unshift(newRecord);
+      }
+    }
+
+    // 4. บันทึกและรีเฟรชทุกหน้าจอ
+    this.saveData();
+    document.getElementById('stockUseProfitModal')?.classList.remove('active');
+
+    this.renderStock();
+    this.renderLowStockAlertView();
+    this.renderDashboard();
+    this.renderTodaySummary(saleDate);
+    this.renderCalendar();
+    this.renderStockHistory();
+
+    const toastMsg = totalProfit >= 0
+      ? `✅ เบิกขาย "${item.name}" ${useQty} ${unit} สำเร็จ! ได้กำไร +฿${this.formatCurrency(totalProfit)} (คงเหลือ ${newQty} ${unit})`
+      : `⚠️ เบิกขาย "${item.name}" ${useQty} ${unit} ขาดทุน -฿${this.formatCurrency(Math.abs(totalProfit))} (คงเหลือ ${newQty} ${unit})`;
+    this.showToast(toastMsg, totalProfit >= 0 ? 'success' : 'info');
+  }
+
+  
+  // Helper: แยกแยะและดึงข้อมูลกำไร ยอดขาย ต้นทุน จาก Stock Log
+  parseProfitInfoFromLog(log) {
+    if (!log) return null;
+    let profit = null;
+    let revenue = null;
+    let cost = null;
+
+    if (log.profit !== null && log.profit !== undefined && !isNaN(Number(log.profit))) {
+      profit = Number(log.profit);
+      revenue = log.revenue !== null && log.revenue !== undefined ? Number(log.revenue) : null;
+      cost = log.cost !== null && log.cost !== undefined ? Number(log.cost) : null;
+    } else if (log.note) {
+      // Regex parse จาก note เช่น "กำไร +฿50.00" หรือ "กำไร -฿10.00"
+      const profitMatch = log.note.match(/กำไร\s*([+-]?)\s*฿?([0-9,]+(?:\.[0-9]+)?)/);
+      if (profitMatch) {
+        const sign = profitMatch[1] === '-' ? -1 : 1;
+        const val = parseFloat(profitMatch[2].replace(/,/g, '')) || 0;
+        profit = sign * val;
+      }
+      const revMatch = log.note.match(/@฿([0-9,]+(?:\.[0-9]+)?)/);
+      const costMatch = log.note.match(/ทุน\s*฿([0-9,]+(?:\.[0-9]+)?)/);
+      const qty = Math.abs(Number(log.changeQty) || 1);
+      if (revMatch) revenue = (parseFloat(revMatch[1].replace(/,/g, '')) || 0) * qty;
+      if (costMatch) cost = (parseFloat(costMatch[1].replace(/,/g, '')) || 0) * qty;
+    }
+
+    if (profit === null) return null;
+    return {
+      profit: parseFloat(profit.toFixed(2)),
+      revenue: revenue !== null ? parseFloat(revenue.toFixed(2)) : 0,
+      cost: cost !== null ? parseFloat(cost.toFixed(2)) : 0
+    };
+  }
+
+  // รวบรวมข้อมูลกำไรสต๊อกสำหรับวันที่กำหนด
+  getStockProfitDataForDate(targetDateStr) {
+    const logs = this.data.stockLogs || [];
+    const dateLogs = logs.filter(l => l.date === targetDateStr && l.actionType === 'USE');
+    
+    let totalProfit = 0;
+    let totalRevenue = 0;
+    let totalCost = 0;
+    let totalQty = 0;
+    const saleItems = [];
+
+    dateLogs.forEach(log => {
+      const parsed = this.parseProfitInfoFromLog(log);
+      if (parsed !== null) {
+        const qty = Math.abs(Number(log.changeQty) || 0);
+        totalProfit += parsed.profit;
+        totalRevenue += parsed.revenue;
+        totalCost += parsed.cost;
+        totalQty += qty;
+        saleItems.push({
+          id: log.id,
+          time: log.time || '-',
+          itemName: log.itemName,
+          qty: qty,
+          unit: log.unit || 'หน่วย',
+          profit: parsed.profit,
+          revenue: parsed.revenue,
+          cost: parsed.cost,
+          note: log.note || ''
+        });
+      }
+    });
+
+    const marginPct = totalRevenue > 0 ? ((totalProfit / totalRevenue) * 100) : 0;
+
+    return {
+      date: targetDateStr,
+      totalProfit: parseFloat(totalProfit.toFixed(2)),
+      totalRevenue: parseFloat(totalRevenue.toFixed(2)),
+      totalCost: parseFloat(totalCost.toFixed(2)),
+      totalQty: totalQty,
+      marginPct: parseFloat(marginPct.toFixed(1)),
+      items: saleItems
+    };
+  }
+
+  // Render Daily Stock Profit Card ในหน้าสต๊อก
+  renderStockProfitCard() {
+    const cardEl = document.getElementById('stockProfitDailyCard');
+    if (!cardEl) return;
+
+    if (!this.selectedStockProfitDate) {
+      this.selectedStockProfitDate = this.formatDate(new Date());
+    }
+
+    const todayStr = this.formatDate(new Date());
+    const isToday = (this.selectedStockProfitDate === todayStr);
+
+    // Update Date Controls
+    const datePicker = document.getElementById('stockProfitDatePicker');
+    const labelEl = document.getElementById('stockProfitDateDisplayLabel');
+    const todayBtn = document.getElementById('btnStockProfitToday');
+
+    if (datePicker) datePicker.value = this.selectedStockProfitDate;
+    if (labelEl) {
+      labelEl.textContent = `ประจำวันที่ ${this.formatThaiDate(this.selectedStockProfitDate)} ${isToday ? '(วันนี้)' : ''}`;
+    }
+    if (todayBtn) {
+      if (isToday) {
+        todayBtn.className = 'btn-fastwork btn-sm';
+        todayBtn.style.background = '#059669';
+        todayBtn.style.borderColor = '#059669';
+      } else {
+        todayBtn.className = 'btn-secondary btn-sm';
+        todayBtn.style.background = '';
+        todayBtn.style.borderColor = '';
+      }
+    }
+
+    // Get Data
+    const data = this.getStockProfitDataForDate(this.selectedStockProfitDate);
+
+    // Update Highlights
+    const totalEl = document.getElementById('stockProfitDayTotalVal');
+    const marginEl = document.getElementById('stockProfitDayMarginVal');
+    const revEl = document.getElementById('stockProfitDayRevenueVal');
+    const costEl = document.getElementById('stockProfitDayCostVal');
+    const countEl = document.getElementById('stockProfitDayItemsCountVal');
+    const detailBadge = document.getElementById('stockProfitDayItemsDetailBadge');
+    const listEl = document.getElementById('stockProfitDayItemsList');
+
+    if (totalEl) {
+      if (data.totalProfit > 0) {
+        totalEl.textContent = `+${this.formatCurrency(data.totalProfit)}`;
+        totalEl.style.color = '#15803d';
+      } else if (data.totalProfit < 0) {
+        totalEl.textContent = `-${this.formatCurrency(Math.abs(data.totalProfit))}`;
+        totalEl.style.color = '#dc2626';
+      } else {
+        totalEl.textContent = `฿0.00`;
+        totalEl.style.color = 'var(--text-main)';
+      }
+    }
+
+    if (marginEl) {
+      marginEl.textContent = `${data.marginPct}%`;
+      marginEl.className = data.totalProfit >= 0 ? 'text-success' : 'text-danger';
+    }
+
+    if (revEl) revEl.textContent = this.formatCurrency(data.totalRevenue);
+    if (costEl) costEl.textContent = this.formatCurrency(data.totalCost);
+    if (countEl) countEl.textContent = `${data.items.length} รายการ`;
+    if (detailBadge) detailBadge.textContent = `รวม ${data.totalQty} ชิ้น/ลัง`;
+
+    // Render Mini List of Items for the Day
+    if (listEl) {
+      if (data.items.length === 0) {
+        listEl.innerHTML = `
+          <div class="text-center text-muted py-2" style="font-size:0.8rem; background:#f8fafc; border:1px dashed #cbd5e1; border-radius:var(--radius-sm);">
+            ไม่มีรายการเบิกขายสำเร็จรูปในวันที่เลือก (เมื่อกดปุ่ม <b>-</b> ที่สินค้าสำเร็จรูป/ลัง ระบบจะคิดกำไรและรวมยอดให้อัตโนมัติ)
+          </div>
+        `;
+      } else {
+        listEl.innerHTML = data.items.map(item => {
+          const profitColor = item.profit >= 0 ? '#15803d' : '#dc2626';
+          const profitSign = item.profit >= 0 ? '+' : '';
+          return `
+            <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:var(--radius-sm); padding:0.45rem 0.65rem; display:flex; justify-content:space-between; align-items:center; font-size:0.82rem;">
+              <div style="display:flex; align-items:center; gap:0.45rem; overflow:hidden;">
+                <span class="text-xs text-muted" style="white-space:nowrap;">⏰ ${item.time}</span>
+                <b class="text-main" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${this.escapeHtml(item.itemName)}</b>
+                <span class="pill-tag purple-tag" style="font-size:0.68rem; padding:0.05rem 0.35rem;">${item.qty} ${this.escapeHtml(item.unit)}</span>
+              </div>
+              <div style="text-align:right; white-space:nowrap; flex-shrink:0;">
+                <span style="font-weight:700; color:${profitColor}; font-size:0.9rem;">${profitSign}฿${this.formatCurrency(item.profit)}</span>
+                <span class="text-xs text-muted ml-1" title="ยอดขาย ฿${this.formatCurrency(item.revenue)} / ทุน ฿${this.formatCurrency(item.cost)}">(ขาย ฿${this.formatCurrency(item.revenue)})</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+  }
+
+  // เปลี่ยนวันที่ดูสรุปกำไร (ย้อนหลัง / ถัดไป)
+  changeStockProfitDate(offset) {
+    if (!this.selectedStockProfitDate) {
+      this.selectedStockProfitDate = this.formatDate(new Date());
+    }
+    const parts = this.selectedStockProfitDate.split('-');
+    if (parts.length === 3) {
+      const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+      d.setDate(d.getDate() + offset);
+      this.selectedStockProfitDate = this.formatDate(d);
+      this.renderStockProfitCard();
+      this.refreshLucide();
+    }
+  }
+
+  // ตั้งค่าวันที่ดูสรุปกำไรจาก Date Picker
+  setStockProfitDate(dateStr) {
+    if (!dateStr) return;
+    this.selectedStockProfitDate = dateStr;
+    this.renderStockProfitCard();
+    this.refreshLucide();
+  }
+
+  // กลับมาดูวันที่ปัจจุบัน (วันนี้)
+  setStockProfitDateToToday() {
+    this.selectedStockProfitDate = this.formatDate(new Date());
+    this.renderStockProfitCard();
+    this.refreshLucide();
+  }
+
+  // เปิด Modal ดูประวัติสรุปกำไรย้อนหลังทั้งหมดแยกรายวัน
+  openStockProfitHistoryModal() {
+    const modal = document.getElementById('stockProfitHistoryModal');
+    const tbody = document.getElementById('stockProfitHistoryTableBody');
+    if (!modal || !tbody) return;
+
+    const logs = this.data.stockLogs || [];
+    const dateMap = {};
+
+    logs.forEach(log => {
+      if (log.actionType === 'USE') {
+        const parsed = this.parseProfitInfoFromLog(log);
+        if (parsed !== null) {
+          const dStr = log.date;
+          if (!dateMap[dStr]) {
+            dateMap[dStr] = {
+              date: dStr,
+              totalProfit: 0,
+              totalRevenue: 0,
+              totalCost: 0,
+              totalQty: 0,
+              itemsCount: 0
+            };
+          }
+          dateMap[dStr].totalProfit += parsed.profit;
+          dateMap[dStr].totalRevenue += parsed.revenue;
+          dateMap[dStr].totalCost += parsed.cost;
+          dateMap[dStr].totalQty += Math.abs(Number(log.changeQty) || 0);
+          dateMap[dStr].itemsCount++;
+        }
+      }
+    });
+
+    const datesList = Object.values(dateMap).sort((a, b) => b.date.localeCompare(a.date));
+
+    // Summary All-Time
+    let allTimeProfit = 0;
+    let allTimeRevenue = 0;
+    datesList.forEach(d => {
+      allTimeProfit += d.totalProfit;
+      allTimeRevenue += d.totalRevenue;
+    });
+
+    const allProfitEl = document.getElementById('stockProfitHistAllTimeProfit');
+    const allRevEl = document.getElementById('stockProfitHistAllTimeRevenue');
+    const allDaysEl = document.getElementById('stockProfitHistTotalDays');
+
+    if (allProfitEl) {
+      allProfitEl.textContent = `+${this.formatCurrency(allTimeProfit)}`;
+      allProfitEl.style.color = allTimeProfit >= 0 ? '#15803d' : '#dc2626';
+    }
+    if (allRevEl) allRevEl.textContent = this.formatCurrency(allTimeRevenue);
+    if (allDaysEl) allDaysEl.textContent = `${datesList.length} วัน`;
+
+    if (datesList.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="6" class="text-center text-muted py-4">
+            ยังไม่มีประวัติการเบิกขายสำเร็จรูปในระบบ (เมื่อเริ่มมีการตัดสต๊อกสำเร็จรูป/ลัง ระบบจะสรุปแยกวันให้อัตโนมัติ)
+          </td>
+        </tr>
+      `;
+    } else {
+      tbody.innerHTML = datesList.map(row => {
+        const isCurrentSelected = (row.date === this.selectedStockProfitDate);
+        const profitColor = row.totalProfit >= 0 ? '#15803d' : '#dc2626';
+        const profitSign = row.totalProfit >= 0 ? '+' : '';
+
+        return `
+          <tr style="${isCurrentSelected ? 'background:#f0fdf4;' : ''}">
+            <td>
+              <div class="font-bold text-main" style="font-size:0.9rem;">${this.formatThaiDate(row.date)}</div>
+              <div class="text-xs text-muted">${row.date === this.formatDate(new Date()) ? '🌟 วันนี้' : ''}</div>
+            </td>
+            <td style="text-align:center;">
+              <span class="pill-tag blue-tag" style="font-weight:700;">${row.itemsCount} รายการ (${row.totalQty} ชิ้น/ลัง)</span>
+            </td>
+            <td style="text-align:right;" class="font-bold text-main">
+              ${this.formatCurrency(row.totalRevenue)}
+            </td>
+            <td style="text-align:right;" class="font-bold text-muted">
+              ${this.formatCurrency(row.totalCost)}
+            </td>
+            <td style="text-align:right;" class="font-bold" style="color:${profitColor}; font-size:1rem;">
+              <span style="color:${profitColor};">${profitSign}${this.formatCurrency(row.totalProfit)}</span>
+            </td>
+            <td style="text-align:center;">
+              <button type="button" class="btn-outline-fastwork btn-sm" onclick="app.selectDateFromProfitHistory('${row.date}')" style="padding:0.25rem 0.55rem; font-size:0.75rem;">
+                ${isCurrentSelected ? '✓ กำลังดู' : 'เลือกดู'}
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    modal.classList.add('active');
+    this.refreshLucide();
+  }
+
+  // เลือกวันจากตารางประวัติกำไร แล้วนำไปแสดงบนการ์ดหน้าสต๊อกทันที
+  selectDateFromProfitHistory(dateStr) {
+    this.selectedStockProfitDate = dateStr;
+    this.renderStockProfitCard();
+    document.getElementById('stockProfitHistoryModal')?.classList.remove('active');
+    this.refreshLucide();
+
+    // เลื่อนหน้าจอไปที่การ์ดกำไรอย่างนุ่มนวล
+    const cardEl = document.getElementById('stockProfitDailyCard');
+    if (cardEl) {
+      cardEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+
   renderStockHistory() {
     const tbody = document.getElementById('stockHistoryTableBody');
     const badge = document.getElementById('stockLogsCountBadge');
@@ -7440,6 +8042,7 @@ class WaterFlowApp {
           noAlertCb.checked = (currentMin === 0);
         }
         document.getElementById('stockItemCost').value = item.unitCost;
+        const sellEl = document.getElementById('stockItemSellingPrice'); if (sellEl) sellEl.value = item.sellingPrice || '';
         const supEl = document.getElementById('stockItemSupplier');
         if (supEl) supEl.value = item.supplier || '';
         document.getElementById('stockItemNote').value = item.note || '';
@@ -7456,6 +8059,7 @@ class WaterFlowApp {
         noAlertCb.checked = false;
       }
       document.getElementById('stockItemCost').value = 25;
+      const sellEl = document.getElementById('stockItemSellingPrice'); if (sellEl) sellEl.value = '';
       const supEl = document.getElementById('stockItemSupplier');
       if (supEl) supEl.value = '';
     }
@@ -7484,7 +8088,7 @@ class WaterFlowApp {
     this.updateStockModalPreview();
 
     // Wire live preview calculation listeners
-    ['stockItemQty', 'stockItemMin', 'stockItemCost'].forEach(id => {
+    ['stockItemQty', 'stockItemMin', 'stockItemCost', 'stockItemSellingPrice'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.oninput = () => this.updateStockModalPreview();
     });
@@ -7535,6 +8139,7 @@ class WaterFlowApp {
     const noAlertCb = document.getElementById('stockItemNoAlertCheckbox');
     const minQty = (noAlertCb && noAlertCb.checked) ? 0 : (parseFloat(document.getElementById('stockItemMin').value) || 0);
     const unitCost = parseFloat(document.getElementById('stockItemCost').value) || 0;
+    const sellingPrice = parseFloat(document.getElementById('stockItemSellingPrice')?.value) || 0;
     const supplier = document.getElementById('stockItemSupplier')?.value.trim() || '';
     const note = document.getElementById('stockItemNote').value.trim();
 
@@ -7554,7 +8159,7 @@ class WaterFlowApp {
       const idx = this.data.stockItems.findIndex(x => x.id === id);
       if (idx !== -1) {
         const oldItem = { ...this.data.stockItems[idx] };
-        savedItem = { id, name, category, unit, qty, minQty, unitCost, supplier, note };
+        savedItem = { id, name, category, unit, qty, minQty, unitCost, sellingPrice, supplier, note };
         this.data.stockItems[idx] = savedItem;
         this.syncStockToExpenses(savedItem, oldItem);
         this.showToast(`แก้ไขสต๊อก "${name}" และอัปเดตบันทึกต้นทุนเรียบร้อย`, 'success');
@@ -7569,6 +8174,7 @@ class WaterFlowApp {
         qty,
         minQty,
         unitCost,
+        sellingPrice,
         supplier,
         note
       };

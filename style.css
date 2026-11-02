@@ -8042,3 +8042,17 @@ body {
 }
 
 
+
+
+/* Daily Stock Profit Card & Modal Styling */
+@media (max-width: 768px) {
+  .stock-profit-card-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .stock-profit-metrics-row {
+    grid-template-columns: 1fr !important;
+  }
+  .stock-profit-modal-summary-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
