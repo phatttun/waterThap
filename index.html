@@ -583,6 +583,11 @@
                 <span class="pill-lbl">ยกลัง</span>
                 <span class="pill-val text-purple" id="expCategoryStock">฿0</span>
               </div>
+              <div class="feh-stat-pill" onclick="app.setExpenseCategory('FRIDGE_DRINK')">
+                <span class="pill-dot" style="background:#0284c7;"></span>
+                <span class="pill-lbl">น้ำในตู้</span>
+                <span class="pill-val" style="color:#0284c7;" id="expCategoryFridgeDrink">฿0</span>
+              </div>
             </div>
           </div>
 
@@ -600,6 +605,10 @@
               <i data-lucide="box"></i>
               <span>บรรจุภัณฑ์ & แก้ว</span>
             </button>
+            <button type="button" class="figma-pill-filter" data-cat="FRIDGE_DRINK">
+              <i data-lucide="snowflake"></i>
+              <span>น้ำขายในตู้</span>
+            </button>
             <button type="button" class="figma-pill-filter" data-cat="STOCK">
               <i data-lucide="archive"></i>
               <span>ยกลัง/สำเร็จรูป</span>
@@ -612,6 +621,7 @@
               <option value="ALL">ALL</option>
               <option value="INGREDIENT">INGREDIENT</option>
               <option value="PACKAGING">PACKAGING</option>
+              <option value="FRIDGE_DRINK">FRIDGE_DRINK</option>
               <option value="STOCK">STOCK</option>
               <option value="OTHER">OTHER</option>
             </select>
@@ -1248,11 +1258,11 @@
               <div class="radio-tab-group" id="stockFilterTabs">
                 <label class="radio-tab">
                   <input type="radio" name="stockSubFilter" value="all" checked>
-                  <span id="tabFilterAllText">ทั้งหมด (0)</span>
+                  <span id="tabFilterAllText">มีสต๊อก (0)</span>
                 </label>
                 <label class="radio-tab">
                   <input type="radio" name="stockSubFilter" value="low">
-                  <span id="tabFilterLowText" style="color:var(--danger); font-weight:700;">⚠️ ใกล้หมด (0)</span>
+                  <span id="tabFilterLowText" style="color:var(--danger); font-weight:700;">⚠️ เตือนซื้อ (0)</span>
                 </label>
                 <label class="radio-tab">
                   <input type="radio" name="stockSubFilter" value="INGREDIENT">
@@ -1261,6 +1271,10 @@
                 <label class="radio-tab">
                   <input type="radio" name="stockSubFilter" value="PACKAGING">
                   <span>🥤 บรรจุภัณฑ์</span>
+                </label>
+                <label class="radio-tab">
+                  <input type="radio" name="stockSubFilter" value="FRIDGE_DRINK">
+                  <span>🧊 น้ำขายในตู้</span>
                 </label>
                 <label class="radio-tab">
                   <input type="radio" name="stockSubFilter" value="STOCK">
@@ -1627,6 +1641,28 @@
               </div>
             </div>
           </div>
+
+          <!-- Danger Zone: Delete / Reset All Data -->
+          <div class="card" style="border: 1.5px solid #fee2e2; margin-top: 1.25rem;">
+            <div class="card-header" style="background: #fff5f5; border-bottom: 1.5px solid #fee2e2;">
+              <div class="card-header-title" style="color: #dc2626;">
+                <i data-lucide="trash-2" style="color: #dc2626;"></i>
+                <span>พื้นที่อันตราย: ลบข้อมูลทั้งหมดในระบบ (Reset All Data)</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <p class="text-sm text-muted mb-3" style="line-height: 1.55;">
+                ลบข้อมูลทั้งหมดในระบบ รวมถึง <strong>ยอดขายประจำวัน, บันทึกค่าใช้จ่าย & วัตถุดิบ, สต๊อกสินค้า, สูตรชงน้ำ, สินค้าเมนูขาย และปฏิทินวันหยุด</strong> โดยระบบจะล้างข้อมูลและคืนค่าระบบกลับเป็นค่าเริ่มต้นว่างเปล่าทั้งหมด
+              </p>
+              <div style="background: #fef2f2; border-left: 3.5px solid #ef4444; padding: 0.7rem 0.95rem; border-radius: var(--radius-sm); margin-bottom: 1rem; font-size: 0.82rem; color: #991b1b; line-height: 1.5;">
+                ⚠️ <strong>ข้อควรระวัง:</strong> ข้อมูลที่ถูกลบจะไม่สามารถกู้คืนได้ แนะนำให้กด <em>"ดาวน์โหลดไฟล์สำรองข้อมูล (Export JSON)"</em> ด้านบนเก็บไว้ก่อนดำเนินการ
+              </div>
+              <button type="button" class="btn-danger-solid" id="btnOpenResetAllModal">
+                <i data-lucide="alert-triangle" style="width: 17px; height: 17px;"></i>
+                <span>ลบข้อมูลทั้งหมดในระบบ</span>
+              </button>
+            </div>
+          </div>
         </div>
       </section>
     </main>
@@ -1739,6 +1775,7 @@
             <select id="expCategory" class="form-input">
               <option value="INGREDIENT">🍵 วัตถุดิบชงน้ำ</option>
               <option value="PACKAGING">🥤 บรรจุภัณฑ์</option>
+              <option value="FRIDGE_DRINK">🧊 น้ำขายในตู้</option>
               <option value="STOCK">📦 สินค้าสำเร็จรูป</option>
               <option value="OTHER">🛠️ ค่าใช้จ่ายอื่นๆ</option>
             </select>
@@ -1832,24 +1869,24 @@
           </span>
         </div>
 
-        <!-- Section: กรณีเลือกหน่วยเป็น "ลัง" -> กรอกจำนวนขวดใน 1 ลัง เพื่อคำนวณตัดสต๊อกเป็นขวด -->
+        <!-- Section: กรณีเลือกหน่วยเป็น "ลัง / แพ็ค / กล่อง" -> กรอกจำนวนขวด/ชิ้นใน 1 ลัง/แพ็ค/กล่อง เพื่อคำนวณต้นทุนต่อหน่วยบรรจุจริง -->
         <div id="expCrateBottlesContainer"
           style="display:none; background:#eff6ff; border:1.5px dashed #93c5fd; border-radius:var(--radius-md); padding:0.75rem 1rem; margin-bottom:1rem;">
           <div class="form-row two-col mb-0" style="align-items:center;">
             <div class="form-group mb-0">
-              <label class="form-label font-bold" for="expCrateBottles" style="color:#1d4ed8; font-size:0.85rem;">
+              <label class="form-label font-bold" for="expCrateBottles" style="color:#1d4ed8; font-size:0.85rem;" id="expSubUnitsLabel">
                 🍾 จำนวนขวดใน 1 ลัง <span class="text-danger">*</span>
               </label>
               <div class="input-with-affix">
                 <input type="number" id="expCrateBottles" class="form-input font-bold" style="color:#1d4ed8;"
-                  placeholder="เช่น 24 หรือ 12" min="1" step="1" value="24">
-                <span class="affix-right">ขวด/ลัง</span>
+                  placeholder="เช่น 12 หรือ 24" min="1" step="1" value="12">
+                <span class="affix-right" id="expSubUnitsAffix">ขวด/ลัง</span>
               </div>
-              <span class="field-hint" style="color:#3b82f6;">ระบุจำนวนขวดต่อลัง เพื่อแปลงเป็นสต๊อกขวดจริง</span>
+              <span class="field-hint" style="color:#3b82f6;" id="expSubUnitsHint">ระบุจำนวนชิ้น/ขวดต่อลัง เพื่อคำนวณราคาต้นทุนต่อหน่วยบรรจุจริง</span>
             </div>
             <div
               style="background:#ffffff; border-radius:var(--radius-sm); padding:0.6rem 0.85rem; border:1px solid #bfdbfe;">
-              <div style="font-size:0.75rem; color:#64748b; font-weight:600;">สรุปการรับเข้าคลัง:</div>
+              <div style="font-size:0.75rem; color:#64748b; font-weight:600;">สรุปต้นทุนต่อหน่วยบรรจุจริง:</div>
               <div id="expCrateTotalBottlesSummary" style="font-size:0.95rem; font-weight:700; color:#1d4ed8;">
                 (ตกขวดละ ฿0.00)
               </div>
@@ -1973,6 +2010,13 @@
                 required>
               <span class="affix-right">ลิตร</span>
             </div>
+            <div style="display:flex; gap:0.35rem; margin-top:0.35rem; align-items:center; flex-wrap:wrap;">
+              <span style="font-size:0.75rem; color:var(--text-muted); font-weight:600;">เลือกด่วน:</span>
+              <button type="button" class="btn-fastwork-xs btn-liter-preset" data-liters="5" style="padding:2px 8px; font-size:0.75rem; border-radius:4px; border:1px solid var(--border-color); background:#fff; cursor:pointer;">5 ลิตร</button>
+              <button type="button" class="btn-fastwork-xs btn-liter-preset" data-liters="6" style="padding:2px 8px; font-size:0.75rem; border-radius:4px; border:1px solid var(--border-color); background:#fff; cursor:pointer;">6 ลิตร</button>
+              <button type="button" class="btn-fastwork-xs btn-liter-preset" data-liters="8" style="padding:2px 8px; font-size:0.75rem; border-radius:4px; border:1px solid var(--border-color); background:#fff; cursor:pointer;">8 ลิตร</button>
+              <button type="button" class="btn-fastwork-xs btn-liter-preset" data-liters="10" style="padding:2px 8px; font-size:0.75rem; border-radius:4px; border:1px solid var(--border-color); background:#fff; cursor:pointer;">10 ลิตร</button>
+            </div>
             <span class="field-hint">เช่น 5 ลิตร หรือ 6 ลิตร</span>
           </div>
 
@@ -2055,7 +2099,7 @@
         <!-- Recipe Cost Summary in Modal -->
         <div class="calc-preview-card mb-3">
           <div class="calc-preview-row" id="modalRecipeJarCostRow">
-            <span id="modalRecipeJarCostLabel">ต้นทุนวัตถุดิบรักษาระดับต่อ 1 โหล:</span>
+            <span id="modalRecipeJarCostLabel">ต้นทุนวัตถุดิบต่อ 1 โหล/ถัง (6 ลิตร):</span>
             <span class="font-bold text-amber" id="modalRecipeTotalJarCost">฿0.00</span>
           </div>
           <div class="calc-preview-row">
@@ -2168,10 +2212,11 @@
           <div class="form-group">
             <label class="form-label" for="stockItemCategory">หมวดหมู่สินค้า</label>
             <select id="stockItemCategory" class="form-input">
-              <option value="INGREDIENT">วัตถุดิบเครื่องดื่ม (นม/ชา/ผงชง)</option>
-              <option value="PACKAGING">บรรจุภัณฑ์ (แก้ว/หลอด/ฝา/ถุง)</option>
-              <option value="STOCK">สินค้าสำเร็จรูป/ยกลัง (พร้อมขาย)</option>
-              <option value="OTHER">อุปกรณ์และอื่นๆ</option>
+              <option value="INGREDIENT">🍵 วัตถุดิบเครื่องดื่ม (นม/ชา/ผงชง)</option>
+              <option value="PACKAGING">🥤 บรรจุภัณฑ์ (แก้ว/หลอด/ฝา/ถุง)</option>
+              <option value="FRIDGE_DRINK">🧊 น้ำขายในตู้ (น้ำอัดลม/น้ำเปล่า/ขวดแช่เย็น)</option>
+              <option value="STOCK">📦 สินค้าสำเร็จรูป/ยกลัง (พร้อมขาย)</option>
+              <option value="OTHER">🛠️ อุปกรณ์และอื่นๆ</option>
             </select>
           </div>
           <div class="form-group">
@@ -2704,6 +2749,57 @@
           </button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- MODAL: CONFIRM RESET ALL DATA -->
+  <div class="modal-backdrop" id="resetAllDataModal">
+    <div class="modal-dialog" style="max-width: 480px;">
+      <div class="modal-header" style="border-bottom: 1.5px solid #fee2e2; background: #fff5f5;">
+        <div style="display:flex; align-items:center; gap:0.5rem; color:#dc2626; font-weight:800; font-size:1rem;">
+          <i data-lucide="alert-triangle" style="color:#dc2626; width:22px; height:22px;"></i>
+          <span>ยืนยันการลบข้อมูลทั้งหมดในระบบ</span>
+        </div>
+        <button type="button" class="modal-close" data-close="resetAllDataModal" id="btnCloseResetAllModal">&times;</button>
+      </div>
+      <div class="modal-body" style="padding:1.25rem;">
+        <div style="text-align:center; margin-bottom:1rem;">
+          <div style="width:52px; height:52px; border-radius:50%; background:#fee2e2; color:#dc2626; display:inline-flex; align-items:center; justify-content:center; margin-bottom:0.75rem;">
+            <i data-lucide="trash-2" style="width:28px; height:28px;"></i>
+          </div>
+          <h3 style="font-size:1.05rem; font-weight:800; color:#1f2937; margin-bottom:0.35rem;">คุณแน่ใจหรือไม่ว่าต้องการลบข้อมูลทั้งหมด?</h3>
+          <p style="font-size:0.83rem; color:#6b7280; line-height:1.5;">
+            ข้อมูลต่อไปนี้ทั้งหมดจะถูกลบออกจากเครื่องและคลาวด์อย่างถาวร:
+          </p>
+        </div>
+
+        <div style="background:#f9fafb; border:1px solid #e5e7eb; border-radius:var(--radius-sm); padding:0.75rem 1rem; margin-bottom:1rem; font-size:0.82rem; color:#374151;">
+          <ul style="margin:0; padding-left:1.2rem; line-height:1.75;">
+            <li>📊 ประวัติและยอดขายประจำวันทั้งหมด (<strong id="resetCountSales">0</strong> วัน)</li>
+            <li>💸 บันทึกต้นทุนและค่าใช้จ่ายวัตถุดิบ (<strong id="resetCountExpenses">0</strong> รายการ)</li>
+            <li>📦 สต๊อกสินค้าและประวัติการเบิกขาย (<strong id="resetCountStock">0</strong> รายการ)</li>
+            <li>🍵 สูตรชงน้ำทั้งหมด (<strong id="resetCountRecipes">0</strong> สูตร)</li>
+            <li>🍹 รายการสินค้าเมนูขาย (<strong id="resetCountProducts">0</strong> รายการ)</li>
+            <li>📅 ปฏิทินวันหยุดพิเศษและช่วงปิดเทอม</li>
+          </ul>
+        </div>
+
+        <div style="margin-bottom:1.15rem;">
+          <label style="font-size:0.82rem; font-weight:700; color:#374151; display:block; margin-bottom:0.4rem;">
+            พิมพ์คำว่า <span style="color:#dc2626; font-weight:800; background:#fee2e2; padding:0.1rem 0.45rem; border-radius:3px;">DELETE</span> หรือ <span style="color:#dc2626; font-weight:800; background:#fee2e2; padding:0.1rem 0.45rem; border-radius:3px;">ลบ</span> เพื่อยืนยัน:
+          </label>
+          <input type="text" id="inputConfirmDeleteAll" class="form-input" placeholder="พิมพ์คำว่า DELETE หรือ ลบ" autocomplete="off"
+            style="font-size:0.95rem; font-weight:700; text-align:center; letter-spacing:1px; border-color:#fca5a5; height:42px;">
+        </div>
+
+        <div style="display:flex; gap:0.5rem; justify-content:flex-end;">
+          <button type="button" class="btn-secondary" data-close="resetAllDataModal" id="btnCancelResetAll">ยกเลิก</button>
+          <button type="button" class="btn-danger-solid" id="btnConfirmDeleteAll" disabled>
+            <i data-lucide="trash-2" style="width:16px; height:16px;"></i>
+            <span>ยืนยันลบข้อมูลทั้งหมด</span>
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 

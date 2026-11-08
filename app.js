@@ -49,6 +49,7 @@ const DEFAULT_DATA = {
   expenses: [],
   recipes: [],
   stockItems: [],
+  stockLogs: [],
   savedProducts: [],
   customHolidays: []
 };
@@ -65,6 +66,7 @@ class WaterFlowApp {
       trend: null,
       breakdown: null
     };
+    this.currentStockFilter = 'all';
 
     this.initElements();
     this.bindEvents();
@@ -105,6 +107,35 @@ class WaterFlowApp {
       }
       if (!Array.isArray(parsed.stockItems)) {
         parsed.stockItems = [];
+      }
+      // ตรวจสอบและแปลงหน่วยสต๊อกเดิมที่อาจบันทึกเป็นหน่วยยกลัง ให้กลายเป็นหน่วยขวด/ชิ้น พร้อมคำนวณจำนวนคงเหลือและต้นทุนต่อขวด
+      if (Array.isArray(parsed.stockItems) && Array.isArray(parsed.expenses)) {
+        parsed.stockItems.forEach(stk => {
+          if (!stk) return;
+          const isCrateUnit = (stk.unit || '').includes('ลัง') || (stk.unit || '').toLowerCase() === 'crate';
+          if (isCrateUnit) {
+            const matchedExp = parsed.expenses.find(e => (e.stockItemId && String(e.stockItemId) === String(stk.id)) || (e.title && String(e.title).toLowerCase() === String(stk.name).toLowerCase()));
+            const crateBottles = Number(stk.crateBottles) || (matchedExp && Number(matchedExp.crateBottles)) || 12;
+            if (crateBottles > 1) {
+              const oldQty = Number(stk.qty) || 0;
+              stk.qty = Math.round(oldQty * crateBottles * 100) / 100;
+              stk.crateBottles = crateBottles;
+              stk.rawUnit = stk.unit;
+              let pieceName = 'ขวด';
+              const nameLower = String(stk.name || '').toLowerCase();
+              if (nameLower.includes('กระป๋อง') || nameLower.includes('กป')) pieceName = 'กระป๋อง';
+              else if (nameLower.includes('แก้ว') || nameLower.includes('ฝา') || nameLower.includes('หลอด')) pieceName = 'ใบ';
+              else if (nameLower.includes('ถุง') || nameLower.includes('ห่อ')) pieceName = 'ถุง';
+              stk.unit = pieceName;
+              if (Number(stk.unitCost) > 0) {
+                stk.unitCost = parseFloat((Number(stk.unitCost) / crateBottles).toFixed(2));
+              }
+              if (stk.minQty > 0) {
+                stk.minQty = Math.round(stk.minQty * crateBottles);
+              }
+            }
+          }
+        });
       }
       return parsed;
     } catch (e) {
@@ -1220,34 +1251,30 @@ class WaterFlowApp {
       });
     }
 
-    // Stock Filter Tabs & Search
+    // Stock Filter Tabs & Search (Optimized for Mobile, iPad, and Desktop)
+    const stockFilterTabs = document.getElementById('stockFilterTabs');
+    if (stockFilterTabs) {
+      stockFilterTabs.addEventListener('click', (e) => {
+        const label = e.target.closest('.radio-tab');
+        if (!label) return;
+        const radio = label.querySelector('input[name="stockSubFilter"]');
+        if (radio) {
+          radio.checked = true;
+          this.setStockFilter(radio.value);
+        }
+      });
+    }
+
     document.querySelectorAll('input[name="stockSubFilter"]').forEach(radio => {
       radio.addEventListener('change', (e) => {
-        const filterVal = e.target.value;
-        if (filterVal === 'low') {
-          this.switchTab('stock-low');
-          return;
-        }
-        const rows = document.querySelectorAll('#stockTableBody tr');
-        rows.forEach(tr => {
-          if (filterVal === 'all') {
-            tr.style.display = '';
-          } else {
-            const cat = tr.dataset.category;
-            tr.style.display = (cat === filterVal) ? '' : 'none';
-          }
-        });
+        this.setStockFilter(e.target.value);
       });
     });
 
     const stockSearch = document.getElementById('stockSearchInput');
     if (stockSearch) {
-      stockSearch.addEventListener('input', (e) => {
-        const query = e.target.value.toLowerCase().trim();
-        document.querySelectorAll('#stockTableBody tr').forEach(tr => {
-          const text = tr.innerText.toLowerCase();
-          tr.style.display = text.includes(query) ? '' : 'none';
-        });
+      stockSearch.addEventListener('input', () => {
+        this.applyStockFilter();
       });
     }
 
@@ -1401,6 +1428,34 @@ class WaterFlowApp {
       });
     }
 
+    // Reset All Data Modal & Actions
+    const btnOpenResetAll = document.getElementById('btnOpenResetAllModal');
+    if (btnOpenResetAll) {
+      btnOpenResetAll.addEventListener('click', () => {
+        this.openResetAllModal();
+      });
+    }
+
+    const inputConfirmDelete = document.getElementById('inputConfirmDeleteAll');
+    const btnConfirmDelete = document.getElementById('btnConfirmDeleteAll');
+    if (inputConfirmDelete && btnConfirmDelete) {
+      inputConfirmDelete.addEventListener('input', (e) => {
+        const val = (e.target.value || '').trim().toUpperCase();
+        const isValid = val === 'DELETE' || val === 'ลบ';
+        btnConfirmDelete.disabled = !isValid;
+      });
+
+      inputConfirmDelete.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !btnConfirmDelete.disabled) {
+          this.resetAllData();
+        }
+      });
+
+      btnConfirmDelete.addEventListener('click', () => {
+        this.resetAllData();
+      });
+    }
+
     // Recipe ingredient dynamic row
     const btnAddIngredientRow = document.getElementById('btnAddIngredientRow');
     if (btnAddIngredientRow) {
@@ -1435,6 +1490,45 @@ class WaterFlowApp {
       map[s.date].profit += Number(s.profit) || 0;
     });
     return Object.values(map);
+  }
+
+  openResetAllModal() {
+    const modal = document.getElementById('resetAllDataModal');
+    if (!modal) return;
+
+    const countSales = document.getElementById('resetCountSales');
+    const countExpenses = document.getElementById('resetCountExpenses');
+    const countStock = document.getElementById('resetCountStock');
+    const countRecipes = document.getElementById('resetCountRecipes');
+    const countProducts = document.getElementById('resetCountProducts');
+
+    if (countSales) countSales.textContent = (this.data.dailySales || []).length;
+    if (countExpenses) countExpenses.textContent = (this.data.expenses || []).length;
+    if (countStock) countStock.textContent = (this.data.stockItems || []).length;
+    if (countRecipes) countRecipes.textContent = (this.data.recipes || []).length;
+    if (countProducts) countProducts.textContent = (this.data.savedProducts || []).length;
+
+    const input = document.getElementById('inputConfirmDeleteAll');
+    const btn = document.getElementById('btnConfirmDeleteAll');
+    if (input) input.value = '';
+    if (btn) btn.disabled = true;
+
+    modal.classList.add('active');
+    this.refreshLucide();
+    if (input) setTimeout(() => input.focus(), 100);
+  }
+
+  closeResetAllModal() {
+    const modal = document.getElementById('resetAllDataModal');
+    if (modal) modal.classList.remove('active');
+  }
+
+  resetAllData() {
+    this.data = JSON.parse(JSON.stringify(DEFAULT_DATA));
+    this.saveData(this.data, true);
+    this.closeResetAllModal();
+    this.initViews();
+    this.showToast('ลบข้อมูลทั้งหมดเรียบร้อยแล้ว คืนค่าระบบกลับเป็นค่าเริ่มต้น', 'success');
   }
 
   initViews() {
@@ -1526,11 +1620,9 @@ class WaterFlowApp {
     if (cleanTabId === 'stock-low') {
       this.renderLowStockAlertView();
     } else if (cleanTabId === 'stock' || cleanTabId === 'stock-items') {
+      this.currentStockFilter = 'all';
       const radioAll = document.querySelector('input[name="stockSubFilter"][value="all"]');
-      if (radioAll) {
-        radioAll.checked = true;
-        radioAll.dispatchEvent(new Event('change'));
-      }
+      if (radioAll) radioAll.checked = true;
       this.renderStock();
     } else if (cleanTabId === 'stock-history') {
       this.renderStockHistory();
@@ -2795,6 +2887,7 @@ class WaterFlowApp {
     const totalAllExpenses = this.data.expenses.reduce((a, b) => a + (Number(b.amount) || 0), 0);
     const catIngredients = this.data.expenses.filter(e => e.category === 'INGREDIENT').reduce((a, b) => a + (Number(b.amount) || 0), 0);
     const catPackaging = this.data.expenses.filter(e => e.category === 'PACKAGING').reduce((a, b) => a + (Number(b.amount) || 0), 0);
+    const catFridgeDrink = this.data.expenses.filter(e => e.category === 'FRIDGE_DRINK').reduce((a, b) => a + (Number(b.amount) || 0), 0);
     const catStock = this.data.expenses.filter(e => e.category === 'STOCK').reduce((a, b) => a + (Number(b.amount) || 0), 0);
 
     const totalEl = document.getElementById('expCategoryTotal');
@@ -2802,9 +2895,10 @@ class WaterFlowApp {
     const countSubtextEl = document.getElementById('expTotalCountSubtext');
     if (countSubtextEl) countSubtextEl.textContent = `${this.data.expenses.length} รายการค่าใช้จ่าย`;
 
-    document.getElementById('expCategoryIngredients').textContent = this.formatCurrency(catIngredients);
-    document.getElementById('expCategoryPackaging').textContent = this.formatCurrency(catPackaging);
-    document.getElementById('expCategoryStock').textContent = this.formatCurrency(catStock);
+    const ingEl = document.getElementById('expCategoryIngredients'); if (ingEl) ingEl.textContent = this.formatCurrency(catIngredients);
+    const packEl = document.getElementById('expCategoryPackaging'); if (packEl) packEl.textContent = this.formatCurrency(catPackaging);
+    const stockEl = document.getElementById('expCategoryStock'); if (stockEl) stockEl.textContent = this.formatCurrency(catStock);
+    const fridgeEl = document.getElementById('expCategoryFridgeDrink'); if (fridgeEl) fridgeEl.textContent = this.formatCurrency(catFridgeDrink);
 
     const tbody = document.getElementById('expenseTableBody');
     const feedWrap = document.getElementById('expenseCardsFeed');
@@ -2862,6 +2956,11 @@ class WaterFlowApp {
           catName = 'บรรจุภัณฑ์/แก้ว';
           avatarClass = 'cat-packaging';
           iconName = 'box';
+        } else if (exp.category === 'FRIDGE_DRINK') {
+          badgeClass = 'fridge';
+          catName = 'น้ำขายในตู้';
+          avatarClass = 'cat-fridge';
+          iconName = 'snowflake';
         } else if (exp.category === 'STOCK') {
           badgeClass = 'stock';
           catName = 'ซื้อยกลัง/สำเร็จรูป';
@@ -2876,12 +2975,22 @@ class WaterFlowApp {
 
         const pSize = Number(exp.packSize) || 0;
         const pUnit = exp.packUnit || '';
+        const pricing = this.getExpenseUnitPricing(exp);
+        const isBulk = pricing ? pricing.isBulk : false;
+
         let unitPriceStr = '';
-        if (pSize > 0 && exp.amount > 0) {
+        if (pricing && isBulk && pricing.itemsPerBulk > 1) {
+          const crateCost = pSize > 0 ? (exp.amount / pSize) : exp.amount;
+          unitPriceStr = `(฿${pricing.costPerPiece.toFixed(2)}/${pricing.pieceName} | ${pUnit}ละ ฿${crateCost.toFixed(0)})`;
+        } else if (pSize > 0 && exp.amount > 0) {
           const uCost = exp.amount / pSize;
           unitPriceStr = uCost < 1 ? `(฿${uCost.toFixed(2)}/${pUnit})` : `(฿${uCost.toFixed(1)}/${pUnit})`;
         }
-        const qtyDisplay = exp.qtyDesc || (pSize > 0 ? `${pSize} ${pUnit}` : '');
+
+        let qtyDisplay = exp.qtyDesc || (pSize > 0 ? `${pSize} ${pUnit}` : '');
+        if (pricing && isBulk && pricing.itemsPerBulk > 1) {
+          qtyDisplay = `${pSize} ${pUnit} (รวม ${pricing.totalPieces} ${pricing.pieceName} @ ${pricing.itemsPerBulk} ${pricing.pieceName}/${pUnit})`;
+        }
 
         // ค้นหาข้อมูลสต๊อกคงเหลือปัจจุบันที่เชื่อมโยงกับรายการนี้
         const expTitleClean = String(exp.title || '').split('(')[0].trim().toLowerCase();
@@ -2898,14 +3007,21 @@ class WaterFlowApp {
         if (matchedStock) {
           const curQty = Number(matchedStock.qty) || 0;
           const minQ = Number(matchedStock.minQty) || 0;
-          const stockUnit = matchedStock.unit || pUnit || 'หน่วย';
+          const stockUnit = matchedStock.unit || (pricing ? pricing.pieceName : pUnit) || 'หน่วย';
           const isLow = minQ > 0 && curQty <= minQ;
           const badgeClass = isLow ? 'stock-badge-low' : 'stock-badge-normal';
           const badgeIcon = isLow ? '⚠️' : '📊';
           const badgeStyle = isLow
             ? 'background:#fef2f2; color:#dc2626; border:1px solid #fecaca; font-weight:700; border-radius:9999px; padding:0.15rem 0.5rem; font-size:0.75rem; display:inline-flex; align-items:center; gap:0.25rem;'
             : 'background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; font-weight:700; border-radius:9999px; padding:0.15rem 0.5rem; font-size:0.75rem; display:inline-flex; align-items:center; gap:0.25rem;';
-          stockBalanceBadge = `<span style="${badgeStyle}" title="ปริมาณคงเหลือในสต๊อกปัจจุบัน">${badgeIcon} คงเหลือในสต๊อก: <strong>${curQty} ${this.escapeHtml(stockUnit)}</strong></span>`;
+          
+          let crateEquivText = '';
+          const crateCap = Number(matchedStock.crateBottles) || (pricing && pricing.itemsPerBulk > 1 ? pricing.itemsPerBulk : 0);
+          if (crateCap > 1) {
+            const equiv = (curQty / crateCap).toFixed(2).replace(/\.?0+$/, '');
+            crateEquivText = ` (~${equiv} ${matchedStock.rawUnit || pUnit || 'ลัง'})`;
+          }
+          stockBalanceBadge = `<span style="${badgeStyle}" title="ปริมาณคงเหลือในสต๊อกปัจจุบัน">${badgeIcon} คงเหลือในสต๊อก: <strong>${curQty} ${this.escapeHtml(stockUnit)}</strong>${crateEquivText}</span>`;
         }
 
         return `
@@ -3926,6 +4042,86 @@ class WaterFlowApp {
   // -------------------------------------------------------------------------
   // TAB 6: RECIPES (สูตร 1 โหล)
   // -------------------------------------------------------------------------
+
+  // คำนวณต้นทุนต่อหน่วยบรรจุจริงของสินค้า/วัตถุดิบ (ขวด/กระป๋อง/ถุง/ชิ้น/kg/g/ml) ไม่ใช้ยอดเงินรวมทั้งบิล
+  getExpenseUnitPricing(exp) {
+    if (!exp) return null;
+    const amount = Number(exp.amount) || 0;
+    const rawPackSize = Number(exp.packSize) || 1;
+    const rawUnit = String(exp.packUnit || 'หน่วย').trim();
+    const isBulk = rawUnit.includes('ลัง') || rawUnit.includes('แพ็ค') || rawUnit.includes('กล่อง') || 
+                   rawUnit.toLowerCase() === 'crate' || rawUnit.toLowerCase() === 'pack' || rawUnit.toLowerCase() === 'box';
+
+    const crateBottles = Number(exp.crateBottles) || Number(exp.subUnitsPerPack) || 0;
+    const itemsPerBulk = (isBulk && crateBottles > 0) ? crateBottles : 1;
+    const totalPieces = (rawPackSize > 0 ? rawPackSize : 1) * itemsPerBulk;
+    const costPerPiece = totalPieces > 0 ? (amount / totalPieces) : amount;
+
+    // ชนิดหน่วยบรรจุย่อย (เช่น ขวด, กระป๋อง, ถุง, ชิ้น, ใบ)
+    let pieceName = rawUnit;
+    const lowerTitle = String(exp.title || '').toLowerCase();
+    if (isBulk) {
+      if (lowerTitle.includes('กระป๋อง') || lowerTitle.includes('กป')) {
+        pieceName = 'กระป๋อง';
+      } else if (lowerTitle.includes('แก้ว') || lowerTitle.includes('ฝา') || lowerTitle.includes('หลอด') || lowerTitle.includes('ถุงแก้ว')) {
+        pieceName = 'ใบ';
+      } else if (lowerTitle.includes('ถุง') || lowerTitle.includes('ห่อ')) {
+        pieceName = 'ถุง';
+      } else if (lowerTitle.includes('นม') || lowerTitle.includes('น้ำ') || lowerTitle.includes('ไซรัป') || lowerTitle.includes('ชา') || rawUnit.includes('ลัง')) {
+        pieceName = 'ขวด';
+      } else {
+        pieceName = 'ชิ้น';
+      }
+    }
+
+    const netWeight = Number(exp.netWeight) || 0;
+    const netUnit = String(exp.netUnit || 'g').trim();
+
+    let calcPrice = costPerPiece;
+    let calcSize = 1;
+    let calcUnit = pieceName;
+    let badgeSpec = '';
+
+    if (netWeight > 0) {
+      calcPrice = costPerPiece;
+      calcSize = netWeight;
+      calcUnit = netUnit;
+      badgeSpec = `${pieceName}ละ ฿${costPerPiece.toFixed(2)} (${netWeight} ${netUnit})`;
+    } else {
+      calcPrice = costPerPiece;
+      calcSize = 1;
+      calcUnit = pieceName;
+      badgeSpec = `${pieceName}ละ ฿${costPerPiece.toFixed(2)}`;
+    }
+
+    let costPerBaseUnit = 0; // per g or per ml
+    if (netWeight > 0) {
+      if (netUnit === 'kg' || netUnit === 'กก' || netUnit === 'ลิตร' || netUnit === 'l' || netUnit === 'liter') {
+        costPerBaseUnit = costPerPiece / (netWeight * 1000);
+      } else if (netUnit === 'g' || netUnit === 'กรัม' || netUnit === 'ml' || netUnit === 'มล') {
+        costPerBaseUnit = costPerPiece / netWeight;
+      }
+    }
+
+    return {
+      amount,
+      rawPackSize,
+      rawUnit,
+      isBulk,
+      itemsPerBulk,
+      totalPieces,
+      costPerPiece,
+      pieceName,
+      netWeight,
+      netUnit,
+      calcPrice,
+      calcSize,
+      calcUnit,
+      costPerBaseUnit,
+      badgeSpec
+    };
+  }
+
   syncRecipesWithExpenses() {
     if (!this.data.recipes || !this.data.expenses) return;
     let modified = false;
@@ -3946,33 +4142,39 @@ class WaterFlowApp {
         }
 
         if (matchedExp && matchedExp.amount !== undefined) {
-          const latestPrice = parseFloat(matchedExp.amount) || 0;
-          let latestSize = parseFloat(matchedExp.packSize) || (ing.calcData?.packSize || 1);
-          let latestUnit = matchedExp.packUnit || ing.calcData?.packUnit || 'กรัม';
-
-          // รองรับ netWeight เช่น ซื้อ 1 ถุง แต่น้ำหนักสุทธิ 400 g
-          if (matchedExp.netWeight && Number(matchedExp.netWeight) > 0) {
-            const packMulti = latestSize > 0 ? latestSize : 1;
-            latestSize = packMulti * Number(matchedExp.netWeight);
-            latestUnit = matchedExp.netUnit || 'g';
-          }
+          const pricing = this.getExpenseUnitPricing(matchedExp);
+          const latestPrice = pricing ? pricing.calcPrice : (parseFloat(matchedExp.amount) || 0);
+          const latestSize = pricing ? pricing.calcSize : (parseFloat(matchedExp.packSize) || 1);
+          const latestUnit = pricing ? pricing.calcUnit : (matchedExp.packUnit || 'กรัม');
 
           let useAmount = ing.calcData?.useAmount !== undefined ? parseFloat(ing.calcData.useAmount) : 0;
           const ingAmountStr = String(ing.amount || '');
           const parsedIngAmount = parseFloat(ingAmountStr) || 0;
+          const lowerName = (ing.name || '').toLowerCase();
 
-          // ตรวจสอบการแปลงหน่วย: ถ้าสูตรเดิมระบุเป็น g (เช่น 439.2 g) แต่ useAmount หรือ latestUnit มีขนาดเป็นถุง/ห่อ
-          if (ingAmountStr.includes('g') || ingAmountStr.includes('กรัม')) {
+          // ตรวจสอบการแปลงหน่วย: ถ้าสูตรเดิมระบุเป็น oz / g / ml / ช้อนโต๊ะ ให้แปลงเป็นหน่วยของวัตถุดิบ (latestUnit)
+          if (ingAmountStr.includes('oz')) {
+            const gPerOz = lowerName.includes('หวาน') ? 38.8 : (lowerName.includes('จืด') ? 31 : 30);
+            if (latestUnit === 'kg' || latestUnit === 'กก') {
+              useAmount = Math.round(((parsedIngAmount * gPerOz) / 1000) * 1000) / 1000;
+            } else if (latestUnit === 'g' || latestUnit === 'กรัม') {
+              useAmount = Math.round(parsedIngAmount * gPerOz * 10) / 10;
+            } else if (latestUnit === 'ml' || latestUnit === 'มล') {
+              useAmount = Math.round(parsedIngAmount * 29.57 * 10) / 10;
+            } else if (latestUnit === 'l' || latestUnit === 'ลิตร' || latestUnit === 'liter') {
+              useAmount = Math.round(((parsedIngAmount * 29.57) / 1000) * 1000) / 1000;
+            } else if (latestUnit.includes('กป') || latestUnit.includes('กระป๋อง')) {
+              useAmount = Math.round((parsedIngAmount / 13) * 100) / 100;
+            } else if (latestUnit.includes('ขวด')) {
+              useAmount = Math.round((parsedIngAmount / 33.8) * 100) / 100;
+            }
+          } else if (ingAmountStr.includes('g') || ingAmountStr.includes('กรัม')) {
             if (latestUnit === 'g' || latestUnit === 'กรัม') {
               useAmount = parsedIngAmount;
             } else if (latestUnit === 'kg' || latestUnit === 'กก') {
               useAmount = Math.round((parsedIngAmount / 1000) * 1000) / 1000;
             } else if (latestUnit.includes('ถุง') || latestUnit.includes('ห่อ') || latestUnit.includes('แพ็ค') || latestUnit === 'หน่วย') {
               const bagGrams = latestSize > 10 ? latestSize : 400;
-              useAmount = Math.round((parsedIngAmount / bagGrams) * 1000) / 1000;
-            } else if (useAmount > 10 && latestSize <= 5) {
-              // กรณีเดิมที่ useAmount บันทึกไว้ 439.2 โดยเข้าใจว่าเป็นถุง
-              const bagGrams = 400;
               useAmount = Math.round((parsedIngAmount / bagGrams) * 1000) / 1000;
             }
           } else if (ingAmountStr.includes('ml') || ingAmountStr.includes('มล')) {
@@ -3985,6 +4187,14 @@ class WaterFlowApp {
             } else if (latestUnit === 'g' || latestUnit === 'กรัม') {
               useAmount = parsedIngAmount;
             }
+          } else if (ingAmountStr.includes('ช้อนโต๊ะ') || ingAmountStr.includes('tbsp')) {
+            if (latestUnit === 'ml' || latestUnit === 'มล' || latestUnit === 'g' || latestUnit === 'กรัม') {
+              useAmount = Math.round(parsedIngAmount * 15 * 10) / 10;
+            } else if (latestUnit === 'l' || latestUnit === 'ลิตร' || latestUnit === 'liter' || latestUnit === 'kg' || latestUnit === 'กก') {
+              useAmount = Math.round(((parsedIngAmount * 15) / 1000) * 1000) / 1000;
+            }
+          } else if (ingAmountStr.includes('ชุด') || ingAmountStr.includes('ใบ') || ingAmountStr.includes('ชิ้น') || ingAmountStr.includes('กระป๋อง') || ingAmountStr.includes('ขวด')) {
+            useAmount = parsedIngAmount;
           }
 
           if (!ing.calcData) {
@@ -4004,11 +4214,7 @@ class WaterFlowApp {
           }
 
           if (latestPrice > 0 && latestSize > 0 && useAmount > 0) {
-            let updatedCost = Math.round(((latestPrice / latestSize) * useAmount) * 100) / 100;
-            // ป้องกันความผิดพลาดทางตัวเลข เช่น ค่าต้นทุนวัตถุดิบรายการเดียวในโหลเกิน 5,000 บาท
-            if (updatedCost > 5000 && parsedIngAmount > 0) {
-              updatedCost = Math.round(((latestPrice / 400) * parsedIngAmount) * 100) / 100;
-            }
+            const updatedCost = Math.round(((latestPrice / latestSize) * useAmount) * 100) / 100;
             if (ing.cost !== updatedCost) {
               ing.cost = updatedCost;
               modified = true;
@@ -4509,20 +4715,45 @@ class WaterFlowApp {
     const minQtyLabel = document.getElementById('expMinQtyLabel');
     const minQtyHint = document.getElementById('expMinQtyHint');
 
-    const isCrate = unit.includes('ลัง') || unit.toLowerCase() === 'crate';
+    const subUnitsLabel = document.getElementById('expSubUnitsLabel');
+    const subUnitsAffix = document.getElementById('expSubUnitsAffix');
+    const subUnitsHint = document.getElementById('expSubUnitsHint');
 
-    let bottlesPerCrate = 24;
-    if (isCrate) {
+    const isBulk = unit.includes('ลัง') || unit.includes('แพ็ค') || unit.includes('กล่อง') || 
+                   unit.toLowerCase() === 'crate' || unit.toLowerCase() === 'pack' || unit.toLowerCase() === 'box';
+
+    let pieceName = 'ขวด';
+    if (titleVal.includes('กระป๋อง') || titleVal.includes('กป')) pieceName = 'กระป๋อง';
+    else if (titleVal.includes('แก้ว') || titleVal.includes('ฝา') || titleVal.includes('หลอด')) pieceName = 'ใบ';
+    else if (titleVal.includes('ถุง') || titleVal.includes('ห่อ')) pieceName = 'ถุง';
+    else if (unit.includes('แพ็ค') || unit.includes('กล่อง')) pieceName = 'ชิ้น';
+    else if (unit.includes('ลัง')) pieceName = 'ขวด';
+
+    let bottlesPerCrate = 12;
+    if (isBulk) {
       if (crateContainer) crateContainer.style.display = 'block';
       const crateBottlesVal = parseFloat(document.getElementById('expCrateBottles')?.value);
-      bottlesPerCrate = !isNaN(crateBottlesVal) && crateBottlesVal > 0 ? crateBottlesVal : 24;
+      bottlesPerCrate = !isNaN(crateBottlesVal) && crateBottlesVal > 0 ? crateBottlesVal : (unit.includes('ลัง') ? 12 : 6);
+
+      if (subUnitsLabel) subUnitsLabel.innerHTML = `🍾 จำนวน${pieceName} ใน 1 ${unit} <span class="text-danger">*</span>`;
+      if (subUnitsAffix) subUnitsAffix.textContent = `${pieceName}/${unit}`;
+      if (subUnitsHint) subUnitsHint.textContent = `ระบุจำนวนชิ้น/ขวดต่อ ${unit} เพื่อคำนวณราคาต้นทุนต่อหน่วยบรรจุจริง`;
 
       // Summary inside crate container
       const totalBottles = packSize * bottlesPerCrate;
       const costPerBottle = totalBottles > 0 ? (amount / totalBottles) : 0;
+      const netWeightVal = parseFloat(document.getElementById('expNetWeight')?.value) || 0;
+      const netUnitVal = document.getElementById('expNetUnit')?.value || 'g';
+
       const summaryEl = document.getElementById('expCrateTotalBottlesSummary');
       if (summaryEl) {
-        summaryEl.textContent = `(ตกขวดละ ฿${costPerBottle.toFixed(2)})`;
+        if (netWeightVal > 0) {
+          const totalNet = totalBottles * netWeightVal;
+          const costPerNet = totalNet > 0 ? (amount / totalNet) : 0;
+          summaryEl.innerHTML = `<span style="color:#1d4ed8; font-weight:800;">ตก${pieceName}ละ ฿${costPerBottle.toFixed(2)}</span> <span style="font-size:0.8rem; color:#64748b; font-weight:600;">(${netWeightVal} ${netUnitVal})</span><br><span style="font-size:0.8rem; color:#059669; font-weight:700;">เฉลี่ย ฿${costPerNet.toFixed(2)} / ${netUnitVal} (รวม ${totalBottles} ${pieceName} = ${totalNet} ${netUnitVal})</span>`;
+        } else {
+          summaryEl.innerHTML = `<span style="color:#1d4ed8; font-weight:800;">ตก${pieceName}ละ ฿${costPerBottle.toFixed(2)}</span> <span style="font-size:0.8rem; color:#64748b;">(รวม ${totalBottles} ${pieceName})</span>`;
+        }
       }
     } else {
       if (crateContainer) crateContainer.style.display = 'none';
@@ -4550,18 +4781,23 @@ class WaterFlowApp {
     const netUnitVal = document.getElementById('expNetUnit')?.value || 'g';
 
     if (costPreviewEl) {
-      if (isCrate) {
+      if (isBulk) {
         const totalBottles = packSize * bottlesPerCrate;
         const bottleCost = totalBottles > 0 ? (amount / totalBottles) : 0;
         const crateCost = packSize > 0 ? (amount / packSize) : 0;
-        costPreviewEl.innerHTML = `฿${bottleCost.toFixed(2)} / ขวด <span style="font-size:0.8rem; font-weight:normal; color:var(--text-muted);">(ลังละ ฿${crateCost.toFixed(2)})</span>`;
+        let previewHtml = `฿${bottleCost.toFixed(2)} / ${pieceName} <span style="font-size:0.8rem; font-weight:normal; color:var(--text-muted);">(${unit}ละ ฿${crateCost.toFixed(2)})</span>`;
+        if (netWeightVal > 0 && bottleCost > 0) {
+          const costPerNet = bottleCost / netWeightVal;
+          previewHtml += ` <span style="font-size:0.8rem; font-weight:700; color:#059669; background:#ecfdf5; padding:0.15rem 0.45rem; border-radius:4px; margin-left:0.3rem;">(ตก ฿${costPerNet.toFixed(2)} / ${netUnitVal})</span>`;
+        }
+        costPreviewEl.innerHTML = previewHtml;
       } else {
         const unitCost = packSize > 0 ? (amount / packSize) : 0;
         let previewHtml = `฿${unitCost.toFixed(2)} / ${unit}`;
         if (netWeightVal > 0 && unitCost > 0) {
           const costPerNet = unitCost / netWeightVal;
           const displayCostPerNet = costPerNet < 0.01 ? costPerNet.toFixed(4) : costPerNet.toFixed(2);
-          previewHtml += ` <span style="font-size:0.8rem; font-weight:600; color:var(--primary); background:rgba(37,99,235,0.08); padding:0.15rem 0.45rem; border-radius:4px; margin-left:0.3rem;">(ตก ฿${displayCostPerNet} / ${netUnitVal})</span>`;
+          previewHtml += ` <span style="font-size:0.8rem; font-weight:700; color:#059669; background:#ecfdf5; padding:0.15rem 0.45rem; border-radius:4px; margin-left:0.3rem;">(ตก ฿${displayCostPerNet} / ${netUnitVal})</span>`;
         }
         costPreviewEl.innerHTML = previewHtml;
       }
@@ -4578,40 +4814,59 @@ class WaterFlowApp {
         return sNameLower === titleLower || sClean === titleClean || sClean.includes(titleClean) || titleClean.includes(sClean);
       });
 
+      const currentPricing = this.getExpenseUnitPricing({
+        amount,
+        packSize,
+        packUnit: unit,
+        crateBottles: bottlesPerCrate,
+        title: titleVal,
+        netWeight: netWeightVal,
+        netUnit: netUnitVal
+      });
+      const newPieces = currentPricing ? currentPricing.totalPieces : packSize;
+      const pieceUnit = currentPricing ? currentPricing.pieceName : (matched ? matched.unit : unit);
+      const costPerPiece = currentPricing ? currentPricing.costPerPiece : (packSize > 0 ? amount / packSize : 0);
+
       if (editId) {
         const oldExp = (this.data.expenses || []).find(e => e && String(e.id) === String(editId));
-        const oldPack = oldExp ? (Number(oldExp.packSize) || 1) : packSize;
-        const diff = packSize - oldPack;
-        const diffStr = diff > 0 ? `+${diff}` : `${diff}`;
+        const oldPricing = this.getExpenseUnitPricing(oldExp);
+        const oldPieces = oldPricing ? oldPricing.totalPieces : (Number(oldExp ? oldExp.packSize : 1) || 1);
+        const diffPieces = newPieces - oldPieces;
+        const diffStr = diffPieces > 0 ? `+${diffPieces}` : `${diffPieces}`;
+
         if (matched) {
           const currentQty = Number(matched.qty) || 0;
-          const newQty = Math.max(0, currentQty + diff);
-          syncStatusEl.textContent = `🔄 อัปเดตสต๊อกเดิม "${matched.name}" (คงเหลือ ${currentQty} -> เป็น ${newQty} ${matched.unit || unit} [${diffStr}])`;
+          const afterQty = Math.max(0, currentQty + diffPieces);
+          const crateSub = (isBulk && bottlesPerCrate > 1) ? ` (~${(afterQty / bottlesPerCrate).toFixed(2).replace(/\.?0+$/, '')} ${unit})` : '';
+          syncStatusEl.textContent = `🔄 อัปเดตสต๊อกเดิม "${matched.name}" (คงเหลือ ${currentQty} -> เป็น ${afterQty} ${matched.unit || pieceUnit}${crateSub} [${diffStr}])`;
           syncStatusEl.className = 'pill-tag blue-tag';
         } else {
-          syncStatusEl.textContent = `🔄 อัปเดตและสร้างสต๊อกใหม่ "${titleVal || 'สินค้านี้'}" (${packSize} ${unit})`;
+          syncStatusEl.textContent = `🔄 อัปเดตและสร้างสต๊อกใหม่ "${titleVal || 'สินค้านี้'}" (${newPieces} ${pieceUnit})`;
           syncStatusEl.className = 'pill-tag green-tag';
         }
       } else {
-        if (isCrate) {
+        if (isBulk) {
           if (matched) {
-            const newQty = matched.qty + packSize;
-            syncStatusEl.textContent = `📦 เติมสต๊อกเดิม (ปัจจุบันมี ${matched.qty} -> รับเพิ่ม +${packSize} ${matched.unit || 'ลัง'} เป็น ${newQty} ${matched.unit || 'ลัง'})`;
+            const currentQty = Number(matched.qty) || 0;
+            const newQty = currentQty + newPieces;
+            const crateSub = bottlesPerCrate > 1 ? ` (~${(newQty / bottlesPerCrate).toFixed(2).replace(/\.?0+$/, '')} ${unit})` : '';
+            syncStatusEl.textContent = `📦 เติมสต๊อกเดิม (ปัจจุบันมี ${currentQty} -> รับเพิ่ม +${newPieces} ${matched.unit || pieceUnit} [${packSize} ${unit}] เป็น ${newQty} ${matched.unit || pieceUnit}${crateSub})`;
             syncStatusEl.className = 'pill-tag blue-tag';
           } else if (titleVal) {
-            syncStatusEl.textContent = `✨ สร้างเป็นสต๊อกใหม่ (+${packSize} ลัง @ ฿${(amount / (packSize || 1)).toFixed(2)}/ลัง)`;
+            syncStatusEl.textContent = `✨ สร้างเป็นสต๊อกใหม่ (+${newPieces} ${pieceUnit} [${packSize} ${unit}] @ ฿${costPerPiece.toFixed(2)}/${pieceUnit})`;
             syncStatusEl.className = 'pill-tag green-tag';
           } else {
-            syncStatusEl.textContent = `พร้อมรับเข้าคลัง ${packSize} ลังอัตโนมัติ`;
+            syncStatusEl.textContent = `พร้อมรับเข้าคลัง ${newPieces} ${pieceUnit} (${packSize} ${unit}) อัตโนมัติ`;
             syncStatusEl.className = 'pill-tag green-tag';
           }
         } else {
           if (matched) {
-            const newQty = matched.qty + packSize;
-            syncStatusEl.textContent = `📦 เติมสต๊อกเดิม (ปัจจุบันมี ${matched.qty} -> เป็น ${newQty} ${matched.unit || unit})`;
+            const currentQty = Number(matched.qty) || 0;
+            const newQty = currentQty + newPieces;
+            syncStatusEl.textContent = `📦 เติมสต๊อกเดิม (ปัจจุบันมี ${currentQty} -> เป็น ${newQty} ${matched.unit || pieceUnit})`;
             syncStatusEl.className = 'pill-tag blue-tag';
           } else if (titleVal) {
-            syncStatusEl.textContent = `✨ สร้างเป็นสินค้าคงคลังใหม่ในสต๊อก (+${packSize} ${unit})`;
+            syncStatusEl.textContent = `✨ สร้างเป็นสินค้าคงคลังใหม่ในสต๊อก (+${newPieces} ${pieceUnit} @ ฿${costPerPiece.toFixed(2)}/${pieceUnit})`;
             syncStatusEl.className = 'pill-tag green-tag';
           } else {
             syncStatusEl.textContent = 'พร้อมซิงค์เข้าคลังอัตโนมัติ';
@@ -4779,7 +5034,11 @@ class WaterFlowApp {
         activeMode = rec.mode || (rec.yieldCups === 1 && (!rec.jarLiters || rec.jarLiters <= 0.5) ? 'cup' : 'jar');
         editIdInput.value = rec.id;
         document.getElementById('recName').value = rec.name;
-        document.getElementById('recJarLiters').value = rec.jarLiters || 6;
+        const litersElem = document.getElementById('recJarLiters');
+        if (litersElem) {
+          litersElem.value = rec.jarLiters || 6;
+          litersElem._lastLiters = rec.jarLiters || 6;
+        }
         document.getElementById('recCupSizeOz').value = rec.cupSizeOz || 16;
         document.getElementById('recInstructions').value = rec.instructions || '';
         const priceInput = document.getElementById('recSellingPrice');
@@ -4807,7 +5066,11 @@ class WaterFlowApp {
       if (nameInput) {
         nameInput.value = '';
       }
-      document.getElementById('recJarLiters').value = activeMode === 'cup' ? 0 : 6;
+      const litersElem = document.getElementById('recJarLiters');
+      if (litersElem) {
+        litersElem.value = activeMode === 'cup' ? 0 : 6;
+        litersElem._lastLiters = activeMode === 'cup' ? 0 : 6;
+      }
       document.getElementById('recCupSizeOz').value = 16;
       const yieldInput = document.getElementById('recYieldCups');
       if (yieldInput) yieldInput.value = activeMode === 'cup' ? 1 : 24;
@@ -4841,15 +5104,57 @@ class WaterFlowApp {
     const priceInput = document.getElementById('recSellingPrice');
 
     const updateYieldAndBatch = () => {
-      const cupOz = parseInt(document.getElementById('recCupSizeOz')?.value) || 22;
+      const cupOz = parseInt(document.getElementById('recCupSizeOz')?.value) || 16;
       document.querySelectorAll('#singleCupContainer .single-cup-row .cup-ing-name').forEach(inp => {
         if (inp.value && (inp.value.includes('แก้ว + ฝา + หลอด') || inp.value.includes('แก้ว+ฝา+หลอด') || (inp.value.includes('แก้ว') && inp.value.includes('oz')))) {
           inp.value = `แก้ว + ฝา + หลอด (${cupOz} oz)`;
         }
       });
-      this.calculateAutoYield();
+      const newYield = this.calculateAutoYield();
+      const currentLiters = parseFloat(document.getElementById('recJarLiters')?.value) || 0;
+
+      // ตรวจสอบว่ามีแถววัตถุดิบ 1 แก้วที่กรอกข้อมูลไว้หรือไม่
+      const cupRows = document.querySelectorAll('#singleCupContainer .single-cup-row');
+      let hasValidSingleCup = false;
+      cupRows.forEach(row => {
+        const n = (row.querySelector('.cup-ing-name')?.value || '').trim();
+        const a = parseFloat(row.querySelector('.cup-ing-amount')?.value) || 0;
+        if (n && a > 0) hasValidSingleCup = true;
+      });
+
+      // ตรวจสอบว่ามีแถวส่วนผสมของโหลอยู่หรือไม่
+      const batchRows = document.querySelectorAll('#recipeIngredientsContainer .ingredient-row');
+
+      if (hasValidSingleCup && batchRows.length > 0) {
+        // หากผู้ใช้เคยคำนวณจากสูตร 1 แก้ว ให้ขยายสัดส่วนลงถังใหม่ตามจำนวนแก้ว (newYield) และลิตร (currentLiters)
+        this.syncCupProportionsToBatch(false);
+      } else if (!hasValidSingleCup && batchRows.length > 0) {
+        // หากผู้ใช้ป้อนส่วนผสมต่อโหลโดยตรง ให้ปรับสเกลปริมาณและต้นทุนตามสัดส่วนลิตรที่เปลี่ยนไป
+        const prevLiters = litersInput?._lastLiters || currentLiters;
+        if (prevLiters > 0 && currentLiters > 0 && prevLiters !== currentLiters) {
+          const ratio = currentLiters / prevLiters;
+          this.scaleBatchIngredientsDirectly(ratio, newYield);
+        }
+      }
+
+      if (litersInput) litersInput._lastLiters = currentLiters;
       this.updateRecipeModalCalculations();
     };
+
+    // เชื่อมต่อปุ่มเลือกปริมาตรด่วน (5 ลิตร, 6 ลิตร, 8 ลิตร, 10 ลิตร)
+    document.querySelectorAll('.btn-liter-preset').forEach(btn => {
+      if (!btn._boundPreset) {
+        btn._boundPreset = true;
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const lit = parseFloat(btn.dataset.liters) || 6;
+          if (litersInput) {
+            litersInput.value = lit;
+            updateYieldAndBatch();
+          }
+        });
+      }
+    });
 
     if (litersInput && !litersInput._boundYield) {
       litersInput._boundYield = true;
@@ -5051,47 +5356,10 @@ class WaterFlowApp {
       let calcData = null;
 
       if (matchedExp) {
-        const packPrice = Number(matchedExp.amount) || 0;
-        let packSize = Number(matchedExp.packSize) || 0;
-        let packUnit = matchedExp.packUnit || '';
-
-        // Prioritize netWeight & netUnit if available (e.g. bought 1 ถุง but netWeight is 400 g)
-        if (matchedExp.netWeight && Number(matchedExp.netWeight) > 0) {
-          const totalNetWeight = (packSize > 0 ? packSize : 1) * Number(matchedExp.netWeight);
-          packSize = totalNetWeight;
-          packUnit = matchedExp.netUnit || 'g';
-        } else if (!packSize || packSize <= 0) {
-          const qty = `${matchedExp.qtyDesc || ''} ${matchedExp.title || ''}`;
-          const mlM = qty.match(/(\d+(\.\d+)?)\s*(ml|มล|มิลลิลิตร)/i);
-          const lM = qty.match(/(\d+(\.\d+)?)\s*(l|liter|ลิตร)/i);
-          const gM = qty.match(/(\d+(\.\d+)?)\s*(g|กรัม)/i);
-          const kgM = qty.match(/(\d+(\.\d+)?)\s*(kg|กก)/i);
-          const canM = qty.match(/(\d+(\.\d+)?)\s*(กป|กระป๋อง)/i);
-          const numM = qty.match(/(\d+(\.\d+)?)/);
-
-          if (mlM) {
-            packSize = parseFloat(mlM[1]);
-            packUnit = 'ml';
-          } else if (lM) {
-            packSize = parseFloat(lM[1]);
-            packUnit = 'ลิตร';
-          } else if (gM) {
-            packSize = parseFloat(gM[1]);
-            packUnit = 'g';
-          } else if (kgM) {
-            packSize = parseFloat(kgM[1]) * 1000;
-            packUnit = 'g';
-          } else if (canM) {
-            packSize = parseFloat(canM[1]);
-            packUnit = 'กระป๋อง';
-          } else if (numM) {
-            packSize = parseFloat(numM[1]);
-            packUnit = qty.replace(numM[1], '').trim() || unit;
-          } else {
-            packSize = 1;
-            packUnit = unit;
-          }
-        }
+        const pricing = this.getExpenseUnitPricing(matchedExp);
+        const packPrice = pricing ? pricing.calcPrice : (Number(matchedExp.amount) || 0);
+        let packSize = pricing ? pricing.calcSize : (Number(matchedExp.packSize) || 1);
+        let packUnit = pricing ? pricing.calcUnit : (matchedExp.packUnit || '');
 
         // คำนวณปริมาณใช้ในหน่วยแพ็กที่ซื้อมา (useInPackUnit) โดยรักษาหน่วยของสูตรเดิมไว้
         let useInPackUnit = recipeAmountVal;
@@ -5124,9 +5392,9 @@ class WaterFlowApp {
           useInPackUnit = Math.round(recipeAmountVal * gPerOz);
           displayAmount = `${recipeAmountVal} oz (~${useInPackUnit} กรัม)`;
         } else if (unit === 'oz' && (packUnit === 'kg' || packUnit === 'กก')) {
-          // แปลงจาก oz เป็น kg: 1 oz นมข้นหวาน ~38.8g = 0.0388 kg
-          const gPerOz = lowerName.includes('หวาน') ? 38.8 : 31;
-          useInPackUnit = Math.round(((recipeAmountVal * gPerOz) / 1000) * 100) / 100;
+          // แปลงจาก oz เป็น kg: 1 oz นมข้นหวาน ~38.8g, นมจืด/นมสด ~31g
+          const gPerOz = lowerName.includes('หวาน') ? 38.8 : (lowerName.includes('จืด') ? 31 : 30);
+          useInPackUnit = Math.round(((recipeAmountVal * gPerOz) / 1000) * 1000) / 1000;
           displayAmount = `${recipeAmountVal} oz (~${useInPackUnit} kg)`;
         } else if (unit === 'ml' && (packUnit === 'ml' || packUnit === 'มล')) {
           useInPackUnit = recipeAmountVal;
@@ -5352,28 +5620,64 @@ class WaterFlowApp {
     if (selectedExpId && this.data.expenses) {
       const latestExp = this.data.expenses.find(e => e.id === selectedExpId);
       if (latestExp && latestExp.amount !== undefined) {
-        pPrice = parseFloat(latestExp.amount) || 0;
-        if (latestExp.netWeight && Number(latestExp.netWeight) > 0) {
-          const packMulti = Number(latestExp.packSize) > 0 ? Number(latestExp.packSize) : 1;
-          pSize = packMulti * Number(latestExp.netWeight);
-          pUnit = latestExp.netUnit || 'g';
+        const pricing = this.getExpenseUnitPricing(latestExp);
+        if (pricing) {
+          pPrice = pricing.calcPrice;
+          pSize = pricing.calcSize;
+          pUnit = pricing.calcUnit;
         } else {
-          if (latestExp.packSize) pSize = parseFloat(latestExp.packSize) || pSize;
-          if (latestExp.packUnit) pUnit = latestExp.packUnit;
+          pPrice = parseFloat(latestExp.amount) || 0;
+          if (latestExp.netWeight && Number(latestExp.netWeight) > 0) {
+            const packMulti = Number(latestExp.packSize) > 0 ? Number(latestExp.packSize) : 1;
+            pSize = packMulti * Number(latestExp.netWeight);
+            pUnit = latestExp.netUnit || 'g';
+          } else {
+            if (latestExp.packSize) pSize = parseFloat(latestExp.packSize) || pSize;
+            if (latestExp.packUnit) pUnit = latestExp.packUnit;
+          }
         }
 
-        // หากหน่วยของสูตรเป็น g แต่วัตถุดิบเป็นถุง/ห่อ และ pUse บันทึกเป็นจำนวนกรัม (เช่น 439.2) แทนที่จะเป็นจำนวนถุง
-        if ((amountUnit === 'g' || amountUnit === 'กรัม') && (pUnit.includes('ถุง') || pUnit.includes('ห่อ') || pUnit.includes('แพ็ค') || pUnit === 'หน่วย')) {
-          if (pUse > 10 && pSize <= 5) {
-            pUse = Math.round((pUse / 400) * 1000) / 1000;
+        // หากมี amountVal และ amountUnit ในสูตร ให้ตรวจสอบและคำนวณ useAmount ให้ตรงกับหน่วยบรรจุภัณฑ์จริง (pUnit)
+        const parsedAmt = parseFloat(amountVal) || 0;
+        const lowerRowName = (name || '').toLowerCase();
+        if (parsedAmt > 0) {
+          if (amountUnit === 'oz') {
+            const gPerOz = lowerRowName.includes('หวาน') ? 38.8 : (lowerRowName.includes('จืด') ? 31 : 30);
+            if (pUnit === 'kg' || pUnit === 'กก') {
+              pUse = Math.round(((parsedAmt * gPerOz) / 1000) * 1000) / 1000;
+            } else if (pUnit === 'g' || pUnit === 'กรัม') {
+              pUse = Math.round(parsedAmt * gPerOz * 10) / 10;
+            } else if (pUnit === 'ml' || pUnit === 'มล') {
+              pUse = Math.round(parsedAmt * 29.57 * 10) / 10;
+            } else if (pUnit === 'l' || pUnit === 'ลิตร' || pUnit === 'liter') {
+              pUse = Math.round(((parsedAmt * 29.57) / 1000) * 1000) / 1000;
+            } else if (pUnit.includes('กป') || pUnit.includes('กระป๋อง')) {
+              pUse = Math.round((parsedAmt / 13) * 100) / 100;
+            } else if (pUnit.includes('ขวด')) {
+              pUse = Math.round((parsedAmt / 33.8) * 100) / 100;
+            }
+          } else if (amountUnit === 'g' || amountUnit === 'กรัม') {
+            if (pUnit === 'kg' || pUnit === 'กก') {
+              pUse = Math.round((parsedAmt / 1000) * 1000) / 1000;
+            } else if (pUnit === 'g' || pUnit === 'กรัม') {
+              pUse = parsedAmt;
+            } else if (pUnit.includes('ถุง') || pUnit.includes('ห่อ') || pUnit.includes('แพ็ค') || pUnit === 'หน่วย') {
+              const bagGrams = pSize > 10 ? pSize : 400;
+              pUse = Math.round((parsedAmt / bagGrams) * 1000) / 1000;
+            }
+          } else if (amountUnit === 'ml' || amountUnit === 'มล') {
+            if (pUnit === 'l' || pUnit === 'ลิตร' || pUnit === 'liter' || pUnit === 'kg' || pUnit === 'กก') {
+              pUse = Math.round((parsedAmt / 1000) * 1000) / 1000;
+            } else if (pUnit === 'ml' || pUnit === 'มล' || pUnit === 'g' || pUnit === 'กรัม') {
+              pUse = parsedAmt;
+            }
+          } else if (amountUnit === 'ลูก' || amountUnit === 'ชิ้น' || amountUnit === 'ชุด') {
+            pUse = parsedAmt;
           }
         }
 
         if (pUse > 0 && pPrice > 0 && pSize > 0) {
           cost = Math.round(((pPrice / pSize) * pUse) * 100) / 100;
-          if (cost > 5000 && parseFloat(amountVal) > 0) {
-            cost = Math.round(((pPrice / 400) * parseFloat(amountVal)) * 100) / 100;
-          }
         }
       }
     }
@@ -5421,29 +5725,30 @@ class WaterFlowApp {
             <select class="form-input calc-expense-select" style="font-size:0.85rem; height:38px; padding:0.35rem 0.6rem; background:#ffffff; width:100%; text-overflow:ellipsis;" title="เลือกวัตถุดิบที่บันทึกไว้">
               <option value="">-- เลือกวัตถุดิบที่บันทึกไว้ --</option>
               ${(this.data.expenses || []).map(exp => {
-      const s = exp.packSize || '';
-      const u = exp.packUnit || '';
-      const nw = exp.netWeight || '';
-      const nu = exp.netUnit || '';
+      const pricing = this.getExpenseUnitPricing(exp);
       const isSelected = selectedExpId && selectedExpId === exp.id ? 'selected' : '';
-      let displaySpec = '';
-      if (nw) {
-        displaySpec = s ? ` / ${s} ${u} (${nw} ${nu})` : ` / ${nw} ${nu}`;
-      } else if (s) {
-        displaySpec = ` / ${s} ${u}`;
-      } else if (exp.qtyDesc) {
-        displaySpec = ` / ${this.escapeHtml(exp.qtyDesc)}`;
-      }
+      const unitPrice = pricing ? pricing.calcPrice : (Number(exp.amount) || 0);
+      const unitSize = pricing ? pricing.calcSize : (Number(exp.packSize) || 1);
+      const unitUnit = pricing ? pricing.calcUnit : (exp.packUnit || 'หน่วย');
+      const badgeSpec = pricing ? pricing.badgeSpec : `฿${exp.amount}`;
+      const displayText = pricing && pricing.isBulk 
+        ? `${exp.title} (${badgeSpec} | บิล ฿${exp.amount})`
+        : `${exp.title} (${badgeSpec})`;
+
       return `<option value="${exp.id}" ${isSelected}
                   data-title="${this.escapeHtml(exp.title)}" 
                   data-amount="${exp.amount}" 
+                  data-unitprice="${unitPrice}" 
+                  data-unitsize="${unitSize}" 
+                  data-unitunit="${this.escapeHtml(unitUnit)}" 
+                  data-badgespec="${this.escapeHtml(badgeSpec)}" 
                   data-qty="${this.escapeHtml(exp.qtyDesc || '')}" 
-                  data-packsize="${s}" 
-                  data-packunit="${this.escapeHtml(u)}" 
-                  data-netweight="${nw}" 
-                  data-netunit="${this.escapeHtml(nu)}" 
+                  data-packsize="${exp.packSize || ''}" 
+                  data-packunit="${this.escapeHtml(exp.packUnit || '')}" 
+                  data-netweight="${exp.netWeight || ''}" 
+                  data-netunit="${this.escapeHtml(exp.netUnit || '')}" 
                   data-note="${this.escapeHtml(exp.note || '')}">
-                  ${this.escapeHtml(exp.title)} (฿${exp.amount}${displaySpec})
+                  ${this.escapeHtml(displayText)}
                 </option>`;
     }).join('')}
             </select>
@@ -5464,7 +5769,7 @@ class WaterFlowApp {
         <input type="hidden" class="calc-pack-unit" value="${this.escapeHtml(pUnit)}">
 
         <div class="calc-summary-badge calc-badge-text" style="margin-top:0.5rem; width:100%; box-sizing:border-box;">
-          ${hasCalc && pPrice > 0 ? `💡 ซื้อมา ฿${pPrice} (${pSize} ${pUnit}) | คำนวณตัดใช้ ${pUse} ${pUnit} = ต้นทุน ฿${cost !== '' ? Number(cost).toFixed(2) : '0.00'}` : (isCupMode ? '💡 เลือกวัตถุดิบ ระบบจะคำนวณต้นทุนจาก 1 แก้วให้อัตโนมัติ (แก้ไขตัวเลขได้ตามต้องการ)' : '💡 เลือกวัตถุดิบ ระบบจะคำนวณสัดส่วนจาก 1 แก้วขยายเป็นทั้งโหลให้อัตโนมัติ (แก้ไขตัวเลขได้ตามต้องการ)')}
+          ${hasCalc && pPrice > 0 ? `💡 ต้นทุน ฿${Number(pPrice).toFixed(2)} (${pSize} ${pUnit}) | ตัดใช้ ${pUse} ${pUnit} = ต้นทุน ฿${cost !== '' ? Number(cost).toFixed(2) : '0.00'}` : (isCupMode ? '💡 เลือกวัตถุดิบ ระบบจะคำนวณต้นทุนจาก 1 แก้วให้อัตโนมัติ (แก้ไขตัวเลขได้ตามต้องการ)' : '💡 เลือกวัตถุดิบ ระบบจะคำนวณสัดส่วนจาก 1 แก้วขยายเป็นทั้งโหลให้อัตโนมัติ (แก้ไขตัวเลขได้ตามต้องการ)')}
         </div>
       </div>
     `;
@@ -5483,6 +5788,13 @@ class WaterFlowApp {
     const unitLabel = row.querySelector('.calc-unit-label');
     const useAmountInput = row.querySelector('.calc-use-amount');
     const badgeText = row.querySelector('.calc-badge-text');
+
+    if (amountInput) {
+      amountInput.dataset.prevAmount = amountVal || '';
+      amountInput.addEventListener('input', () => {
+        amountInput.dataset.prevAmount = amountInput.value;
+      });
+    }
 
     toggleBtn.addEventListener('click', () => {
       calcPanel.classList.toggle('show');
@@ -5522,11 +5834,11 @@ class WaterFlowApp {
           setFixedUnit(unit);
         }
 
-        badgeText.textContent = `💡 ซื้อมา ฿${price} (${size} ${unit}) | ใช้ ${use} ${unit} = ต้นทุน ฿${calculatedCost.toFixed(2)}`;
+        badgeText.textContent = `💡 ต้นทุน ฿${price.toFixed(2)} (${size} ${unit}) | ใช้ ${use} ${unit} = ต้นทุน ฿${calculatedCost.toFixed(2)}`;
         badgeText.style.color = 'var(--primary)';
         toggleBtn.classList.add('active');
       } else if (price > 0) {
-        badgeText.textContent = `💡 บันทึกราคา ฿${price} (${size} ${unit}) ใส่จำนวนที่ใช้เพื่อคำนวณ`;
+        badgeText.textContent = `💡 บันทึกราคา ฿${price.toFixed(2)} (${size} ${unit}) ใส่จำนวนที่ใช้เพื่อคำนวณ`;
         badgeText.style.color = 'var(--text-muted)';
       }
       this.updateRecipeModalCalculations();
@@ -5539,76 +5851,25 @@ class WaterFlowApp {
         if (!opt || !opt.value) return;
 
         const title = opt.getAttribute('data-title') || '';
-        const amount = parseFloat(opt.getAttribute('data-amount')) || 0;
-        const qty = opt.getAttribute('data-qty') || '';
-        let explicitSize = parseFloat(opt.getAttribute('data-packsize'));
-        let explicitUnit = opt.getAttribute('data-packunit') || '';
-
-        const explicitNetWeight = parseFloat(opt.getAttribute('data-netweight'));
-        const explicitNetUnit = opt.getAttribute('data-netunit') || '';
+        const expObj = (this.data.expenses || []).find(x => x.id === opt.value);
+        const pricing = this.getExpenseUnitPricing(expObj);
 
         // ถ้าช่องชื่อว่าง ให้กรอกชื่อวัตถุดิบ (ตัดวงเล็บด้านหลังออก)
         if (!nameInput.value.trim()) {
           nameInput.value = title.split('(')[0].trim();
         }
 
-        // กรอกราคาแพ็ก
-        packPriceInput.value = amount;
+        // กรอกราคาและขนาดต่อหน่วยบรรจุจริง (เช่น ขวดละ 52.50 บาท, 1 kg)
+        const unitPrice = pricing ? pricing.calcPrice : (parseFloat(opt.getAttribute('data-unitprice')) || parseFloat(opt.getAttribute('data-amount')) || 0);
+        let parsedSize = pricing ? pricing.calcSize : (parseFloat(opt.getAttribute('data-unitsize')) || 1);
+        let parsedUnit = pricing ? pricing.calcUnit : (opt.getAttribute('data-unitunit') || 'หน่วย');
 
-        // แยกตัวเลขขนาดและหน่วยจากบันทึก เช่น 400g, 48 กป., 1000 ใบ
-        let parsedSize = 0;
-        let parsedUnit = '';
-
-        if (!isNaN(explicitNetWeight) && explicitNetWeight > 0) {
-          // หากผู้ใช้ระบุขนาด/น้ำหนักบรรจุ เช่น 400g, 388g, 1000ml ให้ใช้ขนาดนี้เป็นหลักในการคำนวณสูตร
-          const packMulti = explicitSize > 0 ? explicitSize : 1;
-          parsedSize = packMulti * explicitNetWeight;
-          parsedUnit = explicitNetUnit || 'g';
-        } else if (explicitSize > 0) {
-          parsedSize = explicitSize;
-          parsedUnit = explicitUnit || 'หน่วย';
-        }
-
-        if (!parsedSize || parsedSize <= 0) {
-          const textToParse = `${qty} ${title}`;
-          const mlM = textToParse.match(/(\d+(\.\d+)?)\s*(ml|มล|มิลลิลิตร)/i);
-          const lM = textToParse.match(/(\d+(\.\d+)?)\s*(l|liter|ลิตร)/i);
-          const gM = textToParse.match(/(\d+(\.\d+)?)\s*(g|กรัม)/i);
-          const kgM = textToParse.match(/(\d+(\.\d+)?)\s*(kg|กก)/i);
-          const canM = textToParse.match(/(\d+(\.\d+)?)\s*(กป|กระป๋อง)/i);
-          const cupM = textToParse.match(/(\d+(\.\d+)?)\s*(ชุด|ใบ|แก้ว)/i);
-          const anyNum = textToParse.match(/(\d+(\.\d+)?)/);
-
-          if (mlM) {
-            parsedSize = parseFloat(mlM[1]);
-            parsedUnit = 'ml';
-          } else if (lM) {
-            parsedSize = parseFloat(lM[1]);
-            parsedUnit = 'ลิตร';
-          } else if (gM) {
-            parsedSize = parseFloat(gM[1]);
-            parsedUnit = 'g';
-          } else if (kgM) {
-            parsedSize = parseFloat(kgM[1]) * 1000;
-            parsedUnit = 'g';
-          } else if (canM) {
-            parsedSize = parseFloat(canM[1]);
-            parsedUnit = 'กระป๋อง';
-          } else if (cupM) {
-            parsedSize = parseFloat(cupM[1]);
-            parsedUnit = 'ชุด';
-          } else if (anyNum) {
-            parsedSize = parseFloat(anyNum[1]);
-            parsedUnit = qty.replace(anyNum[1], '').trim() || 'หน่วย';
-          } else {
-            parsedSize = 1;
-            parsedUnit = 'หน่วย';
-          }
-        }
-
+        packPriceInput.value = unitPrice;
         packSizeInput.value = parsedSize;
         packUnitInput.value = parsedUnit;
         if (unitLabel) unitLabel.textContent = parsedUnit;
+
+        let autoUse = 0;
 
         const isCurrentlyCupMode = document.getElementById('recMode')?.value === 'cup';
 
@@ -5862,11 +6123,13 @@ class WaterFlowApp {
         } else if (packUnit.includes('กป') || packUnit.includes('กระป๋อง')) {
           calculatedUse = Math.round((numVal / 13) * 100) / 100;
         } else if (packUnit === 'g' || packUnit === 'กรัม') {
-          const gPerOz = lowerRowName.includes('หวาน') ? 38.8 : 31;
+          const gPerOz = lowerRowName.includes('หวาน') ? 38.8 : (lowerRowName.includes('จืด') ? 31 : 30);
           calculatedUse = Math.round(numVal * gPerOz * 10) / 10;
         } else if (packUnit === 'kg' || packUnit === 'กก') {
-          const gPerOz = lowerRowName.includes('หวาน') ? 38.8 : 31;
+          const gPerOz = lowerRowName.includes('หวาน') ? 38.8 : (lowerRowName.includes('จืด') ? 31 : 30);
           calculatedUse = Math.round(((numVal * gPerOz) / 1000) * 1000) / 1000;
+        } else if (packUnit.includes('ขวด')) {
+          calculatedUse = Math.round((numVal / 33.8) * 100) / 100;
         } else {
           calculatedUse = numVal;
         }
@@ -5948,7 +6211,7 @@ class WaterFlowApp {
         if (price > 0 && packSize > 0) {
           const calculatedCost = Math.round(((price / packSize) * calculatedUse) * 100) / 100;
           costInput.value = calculatedCost;
-          badgeText.textContent = `💡 ซื้อมา ฿${price} (${packSize} ${packUnit || 'หน่วย'}) | ใช้ ${calculatedUse} ${packUnit || 'หน่วย'} = ต้นทุน ฿${calculatedCost.toFixed(2)}`;
+          badgeText.textContent = `💡 ต้นทุน ฿${price.toFixed(2)} (${packSize} ${packUnit || 'หน่วย'}) | ใช้ ${calculatedUse} ${packUnit || 'หน่วย'} = ต้นทุน ฿${calculatedCost.toFixed(2)}`;
           badgeText.style.color = 'var(--primary)';
           toggleBtn.classList.add('active');
         }
@@ -6027,15 +6290,120 @@ class WaterFlowApp {
     ];
   }
 
+  // ปรับสเกลปริมาณและต้นทุนของรายการส่วนผสมต่อโหลโดยตรงตามสัดส่วนลิตรที่เปลี่ยนไป
+  scaleBatchIngredientsDirectly(ratio, newYield) {
+    if (!ratio || ratio <= 0 || isNaN(ratio)) return;
+    const batchRows = document.querySelectorAll('#recipeIngredientsContainer .ingredient-row');
+    batchRows.forEach(row => {
+      const name = (row.querySelector('.ing-name')?.value || '').trim().toLowerCase();
+      const unit = (row.querySelector('.ing-amount-unit')?.value || '').trim();
+      const amountInput = row.querySelector('.ing-amount');
+      const costInput = row.querySelector('.ing-cost');
+      const useAmountInput = row.querySelector('.calc-use-amount');
+      const packPriceInput = row.querySelector('.calc-pack-price');
+      const packSizeInput = row.querySelector('.calc-pack-size');
+      const packUnitInput = row.querySelector('.calc-pack-unit');
+      const badgeText = row.querySelector('.calc-badge-text');
+
+      const isPackaging = name.includes('แก้ว') || name.includes('ฝา') || name.includes('หลอด') || unit === 'ชุด' || unit === 'ใบ';
+
+      if (isPackaging && newYield > 0) {
+        const prevAmount = parseFloat(amountInput?.dataset?.prevAmount) || parseFloat(amountInput?.value) || newYield;
+        const currentCost = parseFloat(costInput?.value) || 0;
+        const costPerSet = prevAmount > 0 ? (currentCost / prevAmount) : 1.5;
+        const newCost = Math.round(costPerSet * newYield * 100) / 100;
+        if (amountInput) {
+          amountInput.value = newYield;
+          amountInput.dataset.prevAmount = newYield;
+        }
+        if (costInput) costInput.value = newCost;
+        if (useAmountInput) useAmountInput.value = newYield;
+      } else {
+        if (amountInput && amountInput.value) {
+          const curVal = parseFloat(amountInput.value) || 0;
+          if (curVal > 0) {
+            const scaledVal = Math.round((curVal * ratio) * 10) / 10;
+            amountInput.value = scaledVal;
+            amountInput.dataset.prevAmount = scaledVal;
+          }
+        }
+        if (useAmountInput && useAmountInput.value) {
+          const curUse = parseFloat(useAmountInput.value) || 0;
+          if (curUse > 0) {
+            const scaledUse = Math.round((curUse * ratio) * 1000) / 1000;
+            useAmountInput.value = scaledUse;
+          }
+        }
+        if (costInput && costInput.value) {
+          const packPrice = parseFloat(packPriceInput?.value) || 0;
+          const packSize = parseFloat(packSizeInput?.value) || 0;
+          const useAmount = parseFloat(useAmountInput?.value) || 0;
+          if (packPrice > 0 && packSize > 0 && useAmount > 0) {
+            const newCost = Math.round(((packPrice / packSize) * useAmount) * 100) / 100;
+            costInput.value = newCost;
+            if (badgeText) {
+              const packUnit = packUnitInput?.value || 'หน่วย';
+              badgeText.textContent = `💡 ต้นทุน ฿${Number(packPrice).toFixed(2)} (${packSize} ${packUnit}) | ใช้ ${useAmount} ${packUnit} = ต้นทุน ฿${newCost.toFixed(2)}`;
+            }
+          } else {
+            const curCost = parseFloat(costInput.value) || 0;
+            if (curCost > 0) {
+              costInput.value = Math.round((curCost * ratio) * 100) / 100;
+            }
+          }
+        }
+      }
+    });
+  }
+
   updateRecipeModalCalculations() {
     const isCup = document.getElementById('recMode')?.value === 'cup';
+    const litersInput = document.getElementById('recJarLiters');
+    const jarLiters = isCup ? 0 : (litersInput ? (parseFloat(litersInput.value) || 0) : 6);
+    const cupOz = parseInt(document.getElementById('recCupSizeOz')?.value) || 16;
+    const yieldCups = isCup ? 1 : (parseInt(document.getElementById('recYieldCups')?.value) || (jarLiters === 5 ? 20 : 24));
+
+    // อัปเดต Label แสดงตามปริมาตรชงต่อโหล/ถัง (ลิตร) ที่ผู้ใช้เลือกจริง
+    const jarCostLabel = document.getElementById('modalRecipeJarCostLabel');
+    const unitCostLabel = document.getElementById('modalRecipeUnitCostLabel');
+    if (jarCostLabel) {
+      if (isCup) {
+        jarCostLabel.textContent = 'ต้นทุนวัตถุดิบต่อ 1 แก้ว:';
+      } else {
+        const displayLiters = jarLiters > 0 ? `${jarLiters} ลิตร` : 'โหล/ถัง';
+        jarCostLabel.textContent = `ต้นทุนวัตถุดิบต่อ 1 โหล/ถัง (${displayLiters}):`;
+      }
+    }
+    if (unitCostLabel) {
+      if (isCup) {
+        unitCostLabel.textContent = `ต้นทุนเฉลี่ยต่อแก้ว (${cupOz} oz):`;
+      } else {
+        unitCostLabel.textContent = `ต้นทุนเฉลี่ยต่อแก้ว (${cupOz} oz, ~${yieldCups} แก้ว):`;
+      }
+    }
+
+    // ไฮไลต์ปุ่มเลือกปริมาตรด่วนที่ตรงกับค่าปัจจุบัน
+    document.querySelectorAll('.btn-liter-preset').forEach(btn => {
+      const lit = parseFloat(btn.dataset.liters) || 0;
+      if (!isCup && lit > 0 && lit === jarLiters) {
+        btn.style.background = 'var(--primary)';
+        btn.style.color = '#ffffff';
+        btn.style.borderColor = 'var(--primary)';
+        btn.style.fontWeight = '700';
+      } else {
+        btn.style.background = '#ffffff';
+        btn.style.color = 'var(--text-main)';
+        btn.style.borderColor = 'var(--border-color)';
+        btn.style.fontWeight = '500';
+      }
+    });
+
     const costInputs = document.querySelectorAll('#recipeIngredientsContainer .ing-cost');
     let totalJarCost = 0;
     costInputs.forEach(input => {
       totalJarCost += parseFloat(input.value) || 0;
     });
 
-    const yieldCups = isCup ? 1 : (parseInt(document.getElementById('recYieldCups')?.value) || 24);
     const unitCost = isCup ? totalJarCost : (yieldCups > 0 ? (totalJarCost / yieldCups) : 0);
 
     const totalJarCostElem = document.getElementById('modalRecipeTotalJarCost');
@@ -6087,7 +6455,7 @@ class WaterFlowApp {
     const priceInput = document.getElementById('recSellingPrice');
     const sellingPrice = priceInput ? (parseFloat(priceInput.value) || 0) : 25;
     const litersInput = document.getElementById('recJarLiters');
-    const jarLiters = litersInput ? (parseFloat(litersInput.value) || 0) : 5;
+    const jarLiters = isCup ? 0 : (litersInput ? (parseFloat(litersInput.value) || 0) : 5);
 
     // เพดานต้นทุนต่อแก้วเพื่อให้ได้กำไร targetProfit ที่ผู้ใช้กำหนด
     const safeTargetProfit = Math.max(0.1, parseFloat(targetProfit) || 5.0);
@@ -6095,7 +6463,25 @@ class WaterFlowApp {
     const targetTotalCost = targetUnitCost * yieldCups;
 
     const ingredientRows = document.querySelectorAll('#recipeIngredientsContainer .ingredient-row');
-    if (ingredientRows.length === 0) return null;
+    if (ingredientRows.length === 0) {
+      return {
+        targetProfit: safeTargetProfit,
+        sellingPrice,
+        yieldCups,
+        jarLiters,
+        isCup,
+        hasData: false,
+        items: [],
+        currentUnitCost: 0,
+        currentProfitPerCup: 0,
+        currentTotalCost: 0,
+        optimizedUnitCost: 0,
+        optimizedProfitPerCup: 0,
+        optimizedTotalCost: 0,
+        ratio: 1,
+        reductionPercent: 0
+      };
+    }
 
     const items = [];
     let currentTotalCost = 0;
@@ -6111,6 +6497,9 @@ class WaterFlowApp {
       const packUnit = (row.querySelector('.calc-unit-label')?.textContent || '').trim();
       const packPrice = parseFloat(row.querySelector('.calc-pack-price')?.value) || 0;
       const packSize = parseFloat(row.querySelector('.calc-pack-size')?.value) || 0;
+
+      // กรองเฉพาะแถวที่มีข้อมูลจริง (มีชื่อ หรือมีปริมาณ/ต้นทุน)
+      if (!name && amountVal <= 0 && cost <= 0) return;
 
       const lowerName = name.toLowerCase();
       const isPkg = lowerName.includes('แก้ว') || lowerName.includes('ฝา') || lowerName.includes('หลอด') ||
@@ -6139,6 +6528,26 @@ class WaterFlowApp {
         isZeroCost
       });
     });
+
+    if (items.length === 0) {
+      return {
+        targetProfit: safeTargetProfit,
+        sellingPrice,
+        yieldCups,
+        jarLiters,
+        isCup,
+        hasData: false,
+        items: [],
+        currentUnitCost: 0,
+        currentProfitPerCup: 0,
+        currentTotalCost: 0,
+        optimizedUnitCost: 0,
+        optimizedProfitPerCup: 0,
+        optimizedTotalCost: 0,
+        ratio: 1,
+        reductionPercent: 0
+      };
+    }
 
     const currentUnitCost = yieldCups > 0 ? (currentTotalCost / yieldCups) : 0;
     const currentProfitPerCup = sellingPrice - currentUnitCost;
@@ -6184,14 +6593,6 @@ class WaterFlowApp {
       const diffCost = Math.round((item.origCost - newCost) * 100) / 100;
       const diffPercent = item.origCost > 0 ? Math.round(((item.origCost - newCost) / item.origCost) * 100) : 0;
 
-      // สัดส่วนต่อ 1 แก้ว
-      const amountPerCup = isCup ? item.origAmountVal : (yieldCups > 0 ? (Math.round((item.origAmountVal / yieldCups) * 10) / 10) : item.origAmountVal);
-      const newAmountPerCup = isCup ? newAmountVal : (yieldCups > 0 ? (Math.round((newAmountVal / yieldCups) * 10) / 10) : newAmountVal);
-      const diffAmountPerCup = Math.round((amountPerCup - newAmountPerCup) * 10) / 10;
-      const costPerCup = yieldCups > 0 ? (item.origCost / yieldCups) : item.origCost;
-      const newCostPerCup = yieldCups > 0 ? (newCost / yieldCups) : newCost;
-      const diffCostPerCup = Math.round((costPerCup - newCostPerCup) * 100) / 100;
-
       return {
         ...item,
         newAmountVal,
@@ -6199,13 +6600,7 @@ class WaterFlowApp {
         newCost,
         diffAmount,
         diffCost,
-        diffPercent,
-        amountPerCup,
-        newAmountPerCup,
-        diffAmountPerCup,
-        costPerCup,
-        newCostPerCup,
-        diffCostPerCup
+        diffPercent
       };
     });
 
@@ -6218,6 +6613,7 @@ class WaterFlowApp {
       yieldCups,
       jarLiters,
       isCup,
+      hasData: true,
       currentUnitCost,
       currentProfitPerCup,
       currentTotalCost,
@@ -6255,7 +6651,7 @@ class WaterFlowApp {
       if (costInput) costInput.value = item.newCost.toFixed(2);
 
       if (badgeText && item.packPrice > 0 && item.packSize > 0) {
-        badgeText.textContent = `💡 ซื้อมา ฿${item.packPrice} (${item.packSize} ${item.packUnit || 'หน่วย'}) | ใช้ ${item.newUseAmount} ${item.packUnit || 'หน่วย'} = ต้นทุน ฿${item.newCost.toFixed(2)} (สูตรปรับกำไร ฿${opt.targetProfit.toFixed(2)})`;
+        badgeText.textContent = `💡 ต้นทุน ฿${Number(item.packPrice).toFixed(2)} (${item.packSize} ${item.packUnit || 'หน่วย'}) | ใช้ ${item.newUseAmount} ${item.packUnit || 'หน่วย'} = ต้นทุน ฿${item.newCost.toFixed(2)} (สูตรปรับกำไร ฿${opt.targetProfit.toFixed(2)})`;
         badgeText.style.color = 'var(--primary)';
       }
     });
@@ -6276,8 +6672,8 @@ class WaterFlowApp {
         return itName.includes(cName) || cName.includes(itName) || (cName.includes('ชา') && itName.includes('ชา'));
       });
 
-      if (matchedOpt && matchedOpt.newAmountPerCup > 0) {
-        cAmtInp.value = matchedOpt.newAmountPerCup;
+      if (matchedOpt && isCup) {
+        cAmtInp.value = matchedOpt.newAmountVal;
       } else {
         const origVal = parseFloat(cAmtInp.value) || 0;
         if (origVal > 0) {
@@ -6309,9 +6705,11 @@ class WaterFlowApp {
     // กรณีพิเศษสำคัญ: หากได้กำไรต่อแก้วน้อยกว่าเป้าหมายที่ผู้ใช้กำหนดเอง
     if (profitPerCup < targetProfit) {
       const opt = this.calculate5BahtOptimizedRecipe(targetProfit);
-      const profitDiff = (opt.optimizedProfitPerCup - profitPerCup);
-      const totalJarProfitDiff = (opt.optimizedProfitPerCup * yieldCups) - totalJarProfit;
-      const unitCostDiff = (unitCost - opt.optimizedUnitCost);
+      const profitDiff = opt ? (opt.optimizedProfitPerCup - profitPerCup) : 0;
+      const totalJarProfitDiff = opt ? ((opt.optimizedProfitPerCup * yieldCups) - totalJarProfit) : 0;
+      const unitCostDiff = opt ? (unitCost - opt.optimizedUnitCost) : 0;
+      const modeLabel = isCup ? 'ต่อ 1 แก้ว' : (opt && opt.jarLiters > 0 ? `ต่อโหล/ถัง ${opt.jarLiters}L` : 'ต่อ 1 โหล/ถัง');
+      const hasData = opt && opt.hasData && opt.items && opt.items.length > 0;
 
       adviceContainer.style.display = 'block';
       adviceContainer.innerHTML = `
@@ -6324,7 +6722,7 @@ class WaterFlowApp {
                 <span>กำไรต่อแก้วน้อยกว่าเป้าหมาย ฿${targetProfit.toFixed(2)}! <span style="white-space:nowrap;">(ปัจจุบัน ฿${profitPerCup.toFixed(2)}/แก้ว)</span></span>
               </div>
               <div style="font-size:0.8rem; color:#9a3412; margin-top:0.3rem; line-height:1.4;">
-                ระบบคำนวณปรับลดอัตราส่วนวัตถุดิบลง <strong>${opt.reductionPercent}%</strong> เพื่อให้ได้กำไรตามเป้าหมาย <strong>฿${targetProfit.toFixed(2)}/แก้ว</strong> ตามที่คุณกำหนด
+                ${hasData ? `ระบบคำนวณปรับลดอัตราส่วนวัตถุดิบลง <strong>${opt.reductionPercent}%</strong> เพื่อให้ได้กำไรตามเป้าหมาย <strong>฿${targetProfit.toFixed(2)}/แก้ว</strong> ตามที่คุณกำหนด (${modeLabel})` : `ระบบรอข้อมูลวัตถุดิบของ <strong>${modeLabel}</strong> เพื่อคำนวณปรับลดอัตราส่วนตามเป้าหมายกำไร ฿${targetProfit.toFixed(2)}/แก้ว`}
               </div>
             </div>
             <div style="display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap;">
@@ -6360,17 +6758,17 @@ class WaterFlowApp {
             <div class="opt-stat-card card-old">
               <div class="stat-label" style="font-size:0.72rem; color:#78350f; font-weight:600;">สูตรเดิม</div>
               <div class="stat-val" style="font-size:1rem; font-weight:800; color:#dc2626; margin:2px 0;">฿${profitPerCup.toFixed(2)}</div>
-              <div class="stat-sub" style="font-size:0.7rem; color:#9ca3af;">ต้นทุน ฿${unitCost.toFixed(2)}</div>
+              <div class="stat-sub" style="font-size:0.7rem; color:#9ca3af;">${isCup ? `ต้นทุน ฿${unitCost.toFixed(2)}/แก้ว` : `ต้นทุนรวม ฿${totalJarCost.toFixed(2)}`}</div>
             </div>
             <div class="opt-stat-card card-new">
               <div class="stat-label" style="font-size:0.72rem; color:#065f46; font-weight:700;">ปรับกำไร ฿${targetProfit.toFixed(2)}</div>
-              <div class="stat-val" style="font-size:1rem; font-weight:800; color:#059669; margin:2px 0;">+฿${opt.optimizedProfitPerCup.toFixed(2)}</div>
-              <div class="stat-sub" style="font-size:0.7rem; color:#047857;">ต้นทุน ฿${opt.optimizedUnitCost.toFixed(2)}</div>
+              <div class="stat-val" style="font-size:1rem; font-weight:800; color:#059669; margin:2px 0;">+฿${(opt ? opt.optimizedProfitPerCup : targetProfit).toFixed(2)}</div>
+              <div class="stat-sub" style="font-size:0.7rem; color:#047857;">${isCup ? `ต้นทุน ฿${(opt ? opt.optimizedUnitCost : unitCost).toFixed(2)}/แก้ว` : `ต้นทุนรวม ฿${(opt ? opt.optimizedTotalCost : totalJarCost).toFixed(2)}`}</div>
             </div>
             <div class="opt-stat-card card-diff">
               <div class="stat-label" style="font-size:0.72rem; color:#1e40af; font-weight:600;">กำไรเพิ่ม</div>
               <div class="stat-val" style="font-size:1rem; font-weight:800; color:#2563eb; margin:2px 0;">+฿${profitDiff.toFixed(2)}</div>
-              <div class="stat-sub" style="font-size:0.7rem; color:#1d4ed8;">${!isCup ? `(+฿${Math.round(totalJarProfitDiff).toLocaleString()}/โหล)` : 'ประหยัดขึ้น'}</div>
+              <div class="stat-sub" style="font-size:0.7rem; color:#1d4ed8;">${!isCup ? `(+฿${Math.round(totalJarProfitDiff).toLocaleString()}/ถัง)` : 'ประหยัดขึ้น'}</div>
             </div>
           </div>
 
@@ -6378,11 +6776,12 @@ class WaterFlowApp {
           <div style="font-size:0.8rem; font-weight:700; color:#7c2d12; margin-bottom:0.45rem; display:flex; justify-content:space-between; align-items:center;">
             <div style="display:flex; align-items:center; gap:0.35rem;">
               <span>📊</span>
-              <span>ตารางเปรียบเทียบสัดส่วนปรับลด:</span>
+              <span>ตารางเปรียบเทียบสัดส่วนปรับลด (${modeLabel}):</span>
             </div>
             <span style="font-size:0.7rem; color:#b45309; font-weight:600;">เป้าหมาย ฿${targetProfit.toFixed(2)}/แก้ว</span>
           </div>
 
+          ${hasData ? `
           <!-- Desktop Table View -->
           <div class="opt-desktop-table opt-table-wrap" style="background:#ffffff; border:1.5px solid #fed7aa; border-radius:var(--radius-sm); overflow-x:auto; margin-bottom:0.85rem; box-shadow:0 1px 4px rgba(0,0,0,0.04);">
             <table style="width:100%; border-collapse:collapse; font-size:0.8rem; text-align:left;">
@@ -6390,177 +6789,184 @@ class WaterFlowApp {
                 <tr style="background:#ffedd5; color:#9a3412; border-bottom:1.5px solid #fed7aa; white-space:nowrap;">
                   <th style="padding:0.5rem 0.65rem; font-weight:700;">วัตถุดิบ</th>
                   <th style="padding:0.5rem 0.65rem; font-weight:700; text-align:center;">
-                    สูตรเดิม ${!isCup ? `<span style="font-size:0.7rem; font-weight:600; color:#c2410c;">(ต่อแก้ว / ถัง ${opt.jarLiters}L)</span>` : '(ต่อ 1 แก้ว)'}
+                    สูตรเดิม (${modeLabel})
                   </th>
                   <th style="padding:0.5rem 0.65rem; font-weight:700; text-align:center; color:#065f46;">
-                    สูตรกำไร ฿${targetProfit.toFixed(2)} ${!isCup ? `<span style="font-size:0.7rem; font-weight:600; color:#047857;">(ต่อแก้ว / ถัง ${opt.jarLiters}L)</span>` : '(ต่อ 1 แก้ว)'}
+                    สูตรกำไร ฿${targetProfit.toFixed(2)} (${modeLabel})
                   </th>
                   <th style="padding:0.5rem 0.65rem; font-weight:700; text-align:right;">ส่วนต่างลดลง</th>
                 </tr>
               </thead>
               <tbody>
                 ${opt.items.map((item, idx) => {
-        const isBgEven = idx % 2 === 0 ? '#ffffff' : '#fffbeb';
-        if (item.isZeroCost) {
-          return `
+                  const isBgEven = idx % 2 === 0 ? '#ffffff' : '#fffbeb';
+                  if (item.isZeroCost) {
+                    return `
                       <tr style="background:${isBgEven}; border-bottom:1px solid #fef3c7;">
                         <td style="padding:0.5rem 0.65rem; font-weight:600; color:#374151;">
                           ${this.escapeHtml(item.name)} <span style="font-size:0.7rem; color:#10b981; font-weight:700;">(ฟรี)</span>
                         </td>
                         <td style="padding:0.5rem 0.65rem; text-align:center; color:#4b5563;">
-                          ${item.amountPerCup} ${item.unit}/แก้ว
-                          ${!isCup ? `<div style="font-size:0.7rem; color:#9ca3af;">(รวมถัง ${item.origAmountVal} ${item.unit})</div>` : ''}
+                          ${item.origAmountVal} ${item.unit}
                         </td>
                         <td style="padding:0.5rem 0.65rem; text-align:center; color:#4b5563;">
-                          ${item.newAmountPerCup} ${item.unit}/แก้ว
-                          ${!isCup ? `<div style="font-size:0.7rem; color:#9ca3af;">(รวมถัง ${item.newAmountVal} ${item.unit})</div>` : ''}
+                          ${item.newAmountVal} ${item.unit}
                         </td>
                         <td style="padding:0.5rem 0.65rem; text-align:right; color:#10b981; font-size:0.75rem; font-weight:600;">คงเดิม</td>
                       </tr>
                     `;
-        }
-        if (item.isPkg) {
-          return `
+                  }
+                  if (item.isPkg) {
+                    return `
                       <tr style="background:${isBgEven}; border-bottom:1px solid #fef3c7;">
                         <td style="padding:0.5rem 0.65rem; font-weight:600; color:#374151;">
                           ${this.escapeHtml(item.name)} <span style="font-size:0.7rem; color:#9ca3af;">(บรรจุภัณฑ์)</span>
                         </td>
                         <td style="padding:0.5rem 0.65rem; text-align:center; color:#4b5563;">
-                          1 ${item.unit}/แก้ว
-                          ${!isCup ? `<div style="font-size:0.7rem; color:#6b7280;">(รวมถัง ${item.origAmountVal} ${item.unit} · ฿${item.origCost.toFixed(2)})</div>` : `<div style="font-size:0.7rem; color:#6b7280;">(฿${item.origCost.toFixed(2)})</div>`}
+                          ${item.origAmountVal} ${item.unit} <span style="font-size:0.7rem; color:#6b7280;">(฿${item.origCost.toFixed(2)})</span>
                         </td>
                         <td style="padding:0.5rem 0.65rem; text-align:center; color:#4b5563;">
-                          1 ${item.unit}/แก้ว
-                          ${!isCup ? `<div style="font-size:0.7rem; color:#6b7280;">(รวมถัง ${item.newAmountVal} ${item.unit} · ฿${item.newCost.toFixed(2)})</div>` : `<div style="font-size:0.7rem; color:#6b7280;">(฿${item.newCost.toFixed(2)})</div>`}
+                          ${item.newAmountVal} ${item.unit} <span style="font-size:0.7rem; color:#6b7280;">(฿${item.newCost.toFixed(2)})</span>
                         </td>
-                        <td style="padding:0.5rem 0.65rem; text-align:right; color:#9ca3af; font-size:0.75rem;">คงที่ (1:1)</td>
+                        <td style="padding:0.5rem 0.65rem; text-align:right; color:#9ca3af; font-size:0.75rem;">คงที่</td>
                       </tr>
                     `;
-        }
-        return `
+                  }
+                  return `
                     <tr style="background:${isBgEven}; border-bottom:1px solid #fef3c7;">
                       <td style="padding:0.5rem 0.65rem; font-weight:700; color:#1f2937;">
                         ${this.escapeHtml(item.name)}
                       </td>
                       <td style="padding:0.5rem 0.65rem; text-align:center; color:#4b5563;">
-                        <div style="font-weight:700; font-size:0.85rem;">${item.amountPerCup} ${item.unit}<span style="font-size:0.7rem; font-weight:normal; color:#6b7280;">/แก้ว</span></div>
-                        ${!isCup ? `<div style="font-size:0.7rem; color:#6b7280; margin-top:1px;">(ถัง ${item.origAmountVal} ${item.unit} · ฿${item.origCost.toFixed(2)})</div>` : `<div style="font-size:0.7rem; color:#6b7280;">(฿${item.origCost.toFixed(2)})</div>`}
+                        <div style="font-weight:700; font-size:0.85rem;">${item.origAmountVal} ${item.unit}</div>
+                        <div style="font-size:0.7rem; color:#6b7280; margin-top:1px;">(฿${item.origCost.toFixed(2)})</div>
                       </td>
                       <td style="padding:0.5rem 0.65rem; text-align:center; font-weight:700; color:#059669;">
-                        <div style="font-weight:800; font-size:0.85rem; color:#059669;">${item.newAmountPerCup} ${item.unit}<span style="font-size:0.7rem; font-weight:normal; color:#047857;">/แก้ว</span></div>
-                        ${!isCup ? `<div style="font-size:0.7rem; color:#047857; margin-top:1px;">(ถัง ${item.newAmountVal} ${item.unit} · ฿${item.newCost.toFixed(2)})</div>` : `<div style="font-size:0.7rem; color:#047857;">(฿${item.newCost.toFixed(2)})</div>`}
+                        <div style="font-weight:800; font-size:0.85rem; color:#059669;">${item.newAmountVal} ${item.unit}</div>
+                        <div style="font-size:0.7rem; color:#047857; margin-top:1px;">(฿${item.newCost.toFixed(2)})</div>
                       </td>
                       <td style="padding:0.5rem 0.65rem; text-align:right; font-weight:700; color:#dc2626;">
-                        <div>-${item.diffAmountPerCup} ${item.unit}<span style="font-size:0.7rem; font-weight:normal;">/แก้ว</span></div>
-                        ${!isCup ? `<div style="font-size:0.7rem; color:#b91c1c; margin-top:1px;">(-ถัง ${item.diffAmount} ${item.unit} · -฿${item.diffCost.toFixed(2)})</div>` : `<div style="font-size:0.7rem; color:#b91c1c;">(-฿${item.diffCost.toFixed(2)})</div>`}
+                        <div>-${item.diffAmount} ${item.unit}</div>
+                        <div style="font-size:0.7rem; color:#b91c1c; margin-top:1px;">(-฿${item.diffCost.toFixed(2)})</div>
                       </td>
                     </tr>
                   `;
-      }).join('')}
+                }).join('')}
               </tbody>
               <tfoot>
                 <tr style="background:#fef3c7; font-weight:800; border-top:2px solid #fed7aa; color:#78350f; white-space:nowrap;">
-                  <td style="padding:0.55rem 0.65rem;">ต้นทุนรวม:</td>
+                  <td style="padding:0.55rem 0.65rem;">ต้นทุนรวม (${modeLabel}):</td>
                   <td style="padding:0.55rem 0.65rem; text-align:center; color:#dc2626;">
-                    <div>฿${unitCost.toFixed(2)}/แก้ว</div>
-                    ${!isCup ? `<div style="font-size:0.7rem; color:#78350f; font-weight:600;">(รวมถัง ฿${totalJarCost.toFixed(2)})</div>` : ''}
+                    <div>฿${(isCup ? unitCost : totalJarCost).toFixed(2)}</div>
                   </td>
                   <td style="padding:0.55rem 0.65rem; text-align:center; color:#059669;">
-                    <div>฿${opt.optimizedUnitCost.toFixed(2)}/แก้ว</div>
-                    ${!isCup ? `<div style="font-size:0.7rem; color:#047857; font-weight:700;">(รวมถัง ฿${opt.optimizedTotalCost.toFixed(2)})</div>` : ''}
+                    <div>฿${(isCup ? opt.optimizedUnitCost : opt.optimizedTotalCost).toFixed(2)}</div>
                   </td>
                   <td style="padding:0.55rem 0.65rem; text-align:right; color:#059669;">
-                    <div>ลดลง ฿${unitCostDiff.toFixed(2)}/แก้ว</div>
-                    ${!isCup ? `<div style="font-size:0.7rem; color:#047857; font-weight:700;">(ประหยัด ฿${(totalJarCost - opt.optimizedTotalCost).toFixed(2)}/ถัง)</div>` : ''}
+                    <div>ลดลง ฿${(isCup ? unitCostDiff : (totalJarCost - opt.optimizedTotalCost)).toFixed(2)}</div>
                   </td>
                 </tr>
               </tfoot>
             </table>
           </div>
+
           <!-- Mobile Cards View -->
           <div class="opt-mobile-list">
             ${opt.items.map((item) => {
-        if (item.isZeroCost) {
-          return `
+              if (item.isZeroCost) {
+                return `
+                  <div class="opt-mobile-item">
+                    <div class="opt-mobile-item-header">
+                      <span class="opt-mobile-item-name">${this.escapeHtml(item.name)}</span>
+                      <span class="opt-mobile-item-diff diff-fixed">ฟรี (คงเดิม)</span>
+                    </div>
+                    <div class="opt-mobile-item-body">
+                      <div class="opt-mobile-col">
+                        <span class="opt-mobile-col-label">สูตรเดิม (${modeLabel})</span>
+                        <span class="opt-mobile-col-val">${item.origAmountVal} ${item.unit} (฿0)</span>
+                      </div>
+                      <div class="opt-mobile-col">
+                        <span class="opt-mobile-col-label">สูตรกำไร ฿${targetProfit.toFixed(2)} (${modeLabel})</span>
+                        <span class="opt-mobile-col-val val-new">${item.newAmountVal} ${item.unit} (฿0)</span>
+                      </div>
+                    </div>
+                  </div>
+                `;
+              }
+              if (item.isPkg) {
+                return `
+                  <div class="opt-mobile-item">
+                    <div class="opt-mobile-item-header">
+                      <span class="opt-mobile-item-name">${this.escapeHtml(item.name)} <span style="font-size:0.7rem; color:#9ca3af; font-weight:normal;">(บรรจุภัณฑ์)</span></span>
+                      <span class="opt-mobile-item-diff diff-fixed">คงที่</span>
+                    </div>
+                    <div class="opt-mobile-item-body">
+                      <div class="opt-mobile-col">
+                        <span class="opt-mobile-col-label">สูตรเดิม (${modeLabel})</span>
+                        <span class="opt-mobile-col-val">${item.origAmountVal} ${item.unit} (฿${item.origCost.toFixed(2)})</span>
+                      </div>
+                      <div class="opt-mobile-col">
+                        <span class="opt-mobile-col-label">สูตรกำไร ฿${targetProfit.toFixed(2)} (${modeLabel})</span>
+                        <span class="opt-mobile-col-val val-new">${item.newAmountVal} ${item.unit} (฿${item.newCost.toFixed(2)})</span>
+                      </div>
+                    </div>
+                  </div>
+                `;
+              }
+              return `
                 <div class="opt-mobile-item">
                   <div class="opt-mobile-item-header">
                     <span class="opt-mobile-item-name">${this.escapeHtml(item.name)}</span>
-                    <span class="opt-mobile-item-diff diff-fixed">ฟรี (คงเดิม)</span>
+                    <span class="opt-mobile-item-diff diff-reduced">ลด -${item.diffAmount} ${item.unit} (-฿${item.diffCost.toFixed(2)})</span>
                   </div>
                   <div class="opt-mobile-item-body">
                     <div class="opt-mobile-col">
-                      <span class="opt-mobile-col-label">สูตรเดิม</span>
-                      <span class="opt-mobile-col-val">${item.origAmountVal} ${item.unit} (฿0)</span>
+                      <span class="opt-mobile-col-label">สูตรเดิม (${modeLabel})</span>
+                      <span class="opt-mobile-col-val" style="color:#6b7280;">${item.origAmountVal} ${item.unit} <span style="font-size:0.72rem;">(฿${item.origCost.toFixed(2)})</span></span>
                     </div>
                     <div class="opt-mobile-col">
-                      <span class="opt-mobile-col-label">สูตรกำไร ฿${targetProfit.toFixed(2)}</span>
-                      <span class="opt-mobile-col-val val-new">${item.newAmountVal} ${item.unit} (฿0)</span>
+                      <span class="opt-mobile-col-label" style="color:#047857;">สูตรใหม่ (${modeLabel})</span>
+                      <span class="opt-mobile-col-val val-new">${item.newAmountVal} ${item.unit} <span style="font-size:0.72rem; color:#047857;">(฿${item.newCost.toFixed(2)})</span></span>
                     </div>
                   </div>
                 </div>
               `;
-        }
-        if (item.isPkg) {
-          return `
-                <div class="opt-mobile-item">
-                  <div class="opt-mobile-item-header">
-                    <span class="opt-mobile-item-name">${this.escapeHtml(item.name)} <span style="font-size:0.7rem; color:#9ca3af; font-weight:normal;">(แก้ว/ฝา)</span></span>
-                    <span class="opt-mobile-item-diff diff-fixed">คงที่</span>
-                  </div>
-                  <div class="opt-mobile-item-body">
-                    <div class="opt-mobile-col">
-                      <span class="opt-mobile-col-label">สูตรเดิม</span>
-                      <span class="opt-mobile-col-val">${item.origAmountVal} ${item.unit} (฿${item.origCost.toFixed(2)})</span>
-                    </div>
-                    <div class="opt-mobile-col">
-                      <span class="opt-mobile-col-label">สูตรกำไร ฿${targetProfit.toFixed(2)}</span>
-                      <span class="opt-mobile-col-val val-new">${item.newAmountVal} ${item.unit} (฿${item.newCost.toFixed(2)})</span>
-                    </div>
-                  </div>
-                </div>
-              `;
-        }
-        return `
-              <div class="opt-mobile-item">
-                <div class="opt-mobile-item-header">
-                  <span class="opt-mobile-item-name">${this.escapeHtml(item.name)}</span>
-                  <span class="opt-mobile-item-diff diff-reduced">ลด -${item.diffAmount} ${item.unit} (-฿${item.diffCost.toFixed(2)})</span>
-                </div>
-                <div class="opt-mobile-item-body">
-                  <div class="opt-mobile-col">
-                    <span class="opt-mobile-col-label">สูตรเดิม</span>
-                    <span class="opt-mobile-col-val" style="color:#6b7280;">${item.origAmountVal} ${item.unit} <span style="font-size:0.72rem;">(฿${item.origCost.toFixed(2)})</span></span>
-                  </div>
-                  <div class="opt-mobile-col">
-                    <span class="opt-mobile-col-label" style="color:#047857;">สูตรใหม่ (กำไร ฿${targetProfit.toFixed(2)})</span>
-                    <span class="opt-mobile-col-val val-new">${item.newAmountVal} ${item.unit} <span style="font-size:0.72rem; color:#047857;">(฿${item.newCost.toFixed(2)})</span></span>
-                  </div>
-                </div>
-              </div>
-            `;
-      }).join('')}
+            }).join('')}
 
             <!-- Mobile Summary Card -->
             <div class="opt-mobile-summary-card">
               <div>
-                <div style="font-weight:700; color:#78350f;">ต้นทุนรวมต่อแก้ว</div>
-                <div style="font-size:0.72rem; color:#b45309;">เดิม ฿${unitCost.toFixed(2)} ➔ ใหม่ ฿${opt.optimizedUnitCost.toFixed(2)}</div>
+                <div style="font-weight:700; color:#78350f;">ต้นทุนรวม (${modeLabel})</div>
+                <div style="font-size:0.72rem; color:#b45309;">เดิม ฿${(isCup ? unitCost : totalJarCost).toFixed(2)} ➔ ใหม่ ฿${(isCup ? opt.optimizedUnitCost : opt.optimizedTotalCost).toFixed(2)}</div>
               </div>
               <div style="text-align:right;">
                 <span class="badge-pill-item green-tag" style="font-size:0.8rem; font-weight:800; padding:0.25rem 0.55rem;">
-                  ลดลง ฿${unitCostDiff.toFixed(2)}/แก้ว
+                  ลดลง ฿${(isCup ? unitCostDiff : (totalJarCost - opt.optimizedTotalCost)).toFixed(2)}
                 </span>
               </div>
             </div>
           </div>
+          ` : `
+          <!-- Empty State Notice when no ingredients found in the selected mode -->
+          <div style="background:#f8fafc; border:1.5px dashed #cbd5e1; border-radius:var(--radius-sm); padding:1.75rem 1rem; text-align:center; margin-bottom:0.85rem;">
+            <div style="font-size:1.8rem; margin-bottom:0.35rem;">📋</div>
+            <div style="font-weight:700; color:#475569; font-size:0.9rem;">
+              ไม่มีข้อมูลสูตรในรูปแบบที่เลือก (${modeLabel})
+            </div>
+            <div style="font-size:0.78rem; color:#94a3b8; margin-top:0.3rem;">
+              ไม่พบรายการส่วนผสมของ${modeLabel} กรุณากรอกรายการวัตถุดิบและปริมาณในสูตรเพื่อคำนวณสัดส่วนปรับลด
+            </div>
+          </div>
+          `}
 
           <!-- Action Buttons -->
           <div class="opt-footer-actions" style="display:flex; justify-content:space-between; gap:0.5rem; align-items:center;">
             <span style="font-size:0.75rem; color:#9a3412;">
-              💡 กดปุ่มเพื่ออัปเดตสัดส่วนลงในสูตรทันที
+              ${hasData ? '💡 กดปุ่มเพื่ออัปเดตสัดส่วนลงในสูตรทันที' : '💡 กรอกส่วนผสมเพื่อคำนวณและปรับใช้สูตร'}
             </span>
             <button type="button" id="btnApplyOptimizedTargetProfit" class="btn-fastwork-sm opt-btn-apply"
-              style="background:#059669; border-color:#047857; color:#ffffff; font-weight:700; padding:0.48rem 0.95rem; box-shadow:0 2px 6px rgba(5,150,105,0.25); display:inline-flex; align-items:center; gap:0.35rem;">
+              ${hasData ? '' : 'disabled'}
+              style="background:${hasData ? '#059669' : '#9ca3af'}; border-color:${hasData ? '#047857' : '#9ca3af'}; color:#ffffff; font-weight:700; padding:0.48rem 0.95rem; box-shadow:${hasData ? '0 2px 6px rgba(5,150,105,0.25)' : 'none'}; display:inline-flex; align-items:center; gap:0.35rem; cursor:${hasData ? 'pointer' : 'not-allowed'}; opacity:${hasData ? '1' : '0.6'};">
               <span>⚡ ปรับใช้สูตรกำไร ฿${targetProfit.toFixed(2)} ทันที</span>
             </button>
           </div>
@@ -6755,8 +7161,9 @@ class WaterFlowApp {
 
       const expMinQtyVal = parseFloat(document.getElementById('expMinQty')?.value);
       const crateBottlesVal = parseFloat(document.getElementById('expCrateBottles')?.value);
-      const isCrate = packUnit.includes('ลัง') || packUnit.toLowerCase() === 'crate';
-      const crateBottles = isCrate ? (!isNaN(crateBottlesVal) && crateBottlesVal > 0 ? crateBottlesVal : 24) : null;
+      const isCrate = packUnit.includes('ลัง') || packUnit.includes('แพ็ค') || packUnit.includes('กล่อง') || 
+                      packUnit.toLowerCase() === 'crate' || packUnit.toLowerCase() === 'pack' || packUnit.toLowerCase() === 'box';
+      const crateBottles = isCrate ? (!isNaN(crateBottlesVal) && crateBottlesVal > 0 ? crateBottlesVal : 12) : null;
       const supplier = document.getElementById('expSupplier')?.value.trim() || '';
       const note = document.getElementById('expNote')?.value.trim() || '';
 
@@ -6811,7 +7218,10 @@ class WaterFlowApp {
         const newExp = { ...expRecord, id: 'e_' + Date.now() };
         this.addExpenseToStock(newExp);
         this.data.expenses.unshift(newExp);
-        const syncDesc = `+${newExp.packSize} ${newExp.packUnit}`;
+        const pricing = this.getExpenseUnitPricing(newExp);
+        const syncDesc = (pricing && pricing.isBulk && pricing.itemsPerBulk > 1)
+          ? `+${pricing.totalPieces} ${pricing.pieceName} (${newExp.packSize} ${newExp.packUnit})`
+          : `+${newExp.packSize} ${newExp.packUnit}`;
         this.showToast(`บันทึกรายจ่าย & เติมเข้าสต๊อก "${title}" (${syncDesc}) เรียบร้อย!`, 'success');
       }
 
@@ -6866,7 +7276,7 @@ class WaterFlowApp {
         const mode = document.getElementById('recMode')?.value || 'jar';
         const isCup = mode === 'cup';
         const jarLiters = isCup ? 0 : (parseFloat(document.getElementById('recJarLiters')?.value) || 6);
-        const cupSizeOz = parseInt(document.getElementById('recCupSizeOz')?.value) || 22;
+        const cupSizeOz = parseInt(document.getElementById('recCupSizeOz')?.value) || 16;
         const yieldCups = isCup ? 1 : (parseInt(document.getElementById('recYieldCups')?.value) || 24);
         const jarCapacity = isCup ? `แก้ว ${cupSizeOz} oz (1 แก้ว)` : (document.getElementById('recJarCapacity')?.value.trim() || `โหล/ถัง ${jarLiters} ลิตร (${yieldCups} แก้ว)`);
         const instructions = document.getElementById('recInstructions')?.value.trim() || '';
@@ -7161,13 +7571,22 @@ const quickRestockForm = document.getElementById('quickRestockForm');
       const unitCost = Number(item.unitCost) || 0;
       const itemTotalVal = currentQty * unitCost;
 
+      const crateBottles = Number(item.crateBottles) || 0;
+      const isBulk = crateBottles > 1;
+      const rawUnit = item.rawUnit || 'ลัง';
+
       const catLabel = item.category === 'INGREDIENT' ? 'วัตถุดิบชง'
         : item.category === 'PACKAGING' ? 'บรรจุภัณฑ์'
-          : item.category === 'STOCK' ? 'สำเร็จรูป/ลัง' : 'อื่นๆ';
+        : item.category === 'FRIDGE_DRINK' ? 'น้ำขายในตู้'
+        : item.category === 'STOCK' ? 'สำเร็จรูป/ลัง' : 'อื่นๆ';
       const catClass = item.category === 'INGREDIENT' ? 'blue-tag'
-        : item.category === 'PACKAGING' ? 'orange-tag' : 'purple-tag';
+        : item.category === 'PACKAGING' ? 'orange-tag'
+        : item.category === 'FRIDGE_DRINK' ? 'cyan-tag'
+        : item.category === 'STOCK' ? 'purple-tag' : 'gray-tag';
       const catIcon = item.category === 'INGREDIENT' ? 'coffee'
-        : item.category === 'PACKAGING' ? 'cup-soda' : 'package';
+        : item.category === 'PACKAGING' ? 'cup-soda'
+        : item.category === 'FRIDGE_DRINK' ? 'snowflake'
+        : item.category === 'STOCK' ? 'package' : 'archive';
 
       const ratioPct = isNoAlert ? 100 : Math.min(100, Math.round((currentQty / Math.max(1, minQty * 2)) * 100));
 
@@ -7194,6 +7613,8 @@ const quickRestockForm = document.getElementById('quickRestockForm');
               <div>
                 <div class="font-bold text-main" style="font-size:0.95rem;">${this.escapeHtml(item.name)}</div>
                 <div style="display:flex; align-items:center; gap:0.35rem; flex-wrap:wrap; margin-top:2px;">
+                  ${isBulk ? `<span class="pill-tag blue-tag" style="font-size:0.7rem; padding:0.1rem 0.45rem; font-weight:700;">📦 บรรจุ ${crateBottles} ${this.escapeHtml(unit)}/${this.escapeHtml(rawUnit)}</span>` : ''}
+                  ${item.netWeight ? `<span class="pill-tag" style="font-size:0.7rem; padding:0.1rem 0.45rem; background:#f1f5f9; color:#475569;">⚖️ ${item.netWeight} ${this.escapeHtml(item.netUnit || 'g')}</span>` : ''}
                   ${(() => {
           if (!item.supplier) return '';
           const supInfo = this.parseSupplier(item.supplier);
@@ -7244,18 +7665,6 @@ const quickRestockForm = document.getElementById('quickRestockForm');
           </td>
           <td>
             <div class="font-bold text-main" style="font-size:0.9rem;">${this.formatCurrency(unitCost)}</div>
-            <div class="text-xs text-muted">ต่อ${this.escapeHtml(unit)}</div>
-            ${(() => {
-              if (item.category === 'STOCK') {
-                const sPrice = Number(item.sellingPrice) || 0;
-                if (sPrice > 0) {
-                  const uProfit = sPrice - unitCost;
-                  const profitSign = uProfit >= 0 ? '+' : '';
-                  return `<div style="margin-top:3px;"><span class="pill-tag green-tag" style="font-size:0.68rem; padding:0.12rem 0.4rem; white-space:nowrap; display:inline-block;" title="ราคาขาย ฿${this.formatCurrency(sPrice)} / ${this.escapeHtml(unit)}">🏷️ ขาย ฿${sPrice} (กำไร ${profitSign}฿${this.formatCurrency(uProfit)})</span></div>`;
-                }
-              }
-              return '';
-            })()}
           </td>
           <td>
             <div class="font-bold ${isLow ? 'text-danger' : 'text-primary'}" style="font-size:1rem;">${this.formatCurrency(itemTotalVal)}</div>
@@ -7272,25 +7681,79 @@ const quickRestockForm = document.getElementById('quickRestockForm');
       `;
     }).join('');
 
+    this.applyStockFilter();
     this.refreshLucide();
   }
 
   setStockFilter(type) {
-    if (type === 'low') {
-      this.switchTab('stock-low');
-      return;
-    }
-    const radio = document.querySelector(`input[name="stockSubFilter"][value="${type}"]`);
-    if (radio) {
-      radio.checked = true;
-      radio.dispatchEvent(new Event('change'));
-    } else if (type === 'normal') {
-      // Filter items where isLow is false
-      const rows = document.querySelectorAll('#stockTableBody tr');
-      rows.forEach(tr => {
-        tr.style.display = (tr.dataset.isLow === 'false') ? '' : 'none';
-      });
-      document.querySelectorAll('input[name="stockSubFilter"]').forEach(r => r.checked = false);
+    this.currentStockFilter = type || 'all';
+
+    // Synchronize radio tabs
+    document.querySelectorAll('input[name="stockSubFilter"]').forEach(radio => {
+      radio.checked = (radio.value === this.currentStockFilter);
+    });
+
+    this.applyStockFilter();
+  }
+
+  applyStockFilter() {
+    const filterVal = this.currentStockFilter || 'all';
+    const searchInput = document.getElementById('stockSearchInput');
+    const query = (searchInput?.value || '').toLowerCase().trim();
+    const rows = document.querySelectorAll('#stockTableBody tr:not(.stock-empty-row)');
+    let visibleCount = 0;
+
+    rows.forEach(tr => {
+      const cat = tr.dataset.category;
+      const isLow = tr.dataset.isLow === 'true';
+      const text = tr.innerText.toLowerCase();
+
+      let matchFilter = true;
+      if (filterVal === 'low') {
+        matchFilter = isLow;
+      } else if (filterVal === 'normal') {
+        matchFilter = !isLow;
+      } else if (filterVal !== 'all') {
+        matchFilter = (cat === filterVal);
+      }
+
+      let matchSearch = true;
+      if (query) {
+        matchSearch = text.includes(query);
+      }
+
+      if (matchFilter && matchSearch) {
+        tr.style.display = '';
+        visibleCount++;
+      } else {
+        tr.style.display = 'none';
+      }
+    });
+
+    const tbody = document.getElementById('stockTableBody');
+    if (!tbody) return;
+
+    let emptyRow = document.getElementById('stockFilterEmptyRow');
+    if (visibleCount === 0 && rows.length > 0) {
+      if (!emptyRow) {
+        emptyRow = document.createElement('tr');
+        emptyRow.id = 'stockFilterEmptyRow';
+        emptyRow.className = 'stock-empty-row';
+        tbody.appendChild(emptyRow);
+      }
+      emptyRow.innerHTML = `
+        <td colspan="8" class="text-center py-4 text-muted" style="padding:2.5rem 1rem !important;">
+          <div style="display:inline-flex; align-items:center; justify-content:center; width:44px; height:44px; border-radius:50%; background:#f1f5f9; color:#94a3b8; margin-bottom:0.5rem;">
+            <i data-lucide="package-search" style="width:24px;height:24px;"></i>
+          </div>
+          <div class="font-bold text-main" style="font-size:0.95rem;">ไม่พบรายการสินค้าที่ตรงกับเงื่อนไข</div>
+          <div class="text-xs text-muted" style="margin-top:0.25rem;">ลองเปลี่ยนตัวกรอง หรือค้นหาด้วยชื่ออื่น</div>
+        </td>
+      `;
+      emptyRow.style.display = '';
+      this.refreshLucide();
+    } else if (emptyRow) {
+      emptyRow.style.display = 'none';
     }
   }
 
@@ -7344,7 +7807,7 @@ const quickRestockForm = document.getElementById('quickRestockForm');
     item.qty = parsed;
 
     const actionType = diff > 0 ? 'RESTOCK' : 'USE';
-    const isSellable = item.category === 'STOCK' || (Number(item.sellingPrice) || 0) > 0 || (item.unit || '').includes('ลัง');
+    const isSellable = item.category === 'STOCK' || item.category === 'FRIDGE_DRINK' || (Number(item.sellingPrice) || 0) > 0 || (item.unit || '').includes('ลัง');
     const useQty = Math.abs(diff);
     const unitCost = Number(item.unitCost) || 0;
     let sellPrice = Number(item.sellingPrice) || 0;
@@ -7357,12 +7820,17 @@ const quickRestockForm = document.getElementById('quickRestockForm');
         item.sellingPrice = sellPrice;
       }
 
+      const isBulk = (Number(item.crateBottles) > 1);
+      const crateBottles = Number(item.crateBottles) || 1;
+      const rawUnit = item.rawUnit || 'ลัง';
+      const crateSub = isBulk ? ` (~${(useQty / crateBottles).toFixed(2).replace(/\.?0+$/, '')} ${rawUnit})` : '';
+
       if (sellPrice > 0) {
         const totalRevenue = parseFloat((useQty * sellPrice).toFixed(2));
         const totalCost = parseFloat((useQty * unitCost).toFixed(2));
         const totalProfit = parseFloat((totalRevenue - totalCost).toFixed(2));
         const profitStr = totalProfit >= 0 ? `+฿${totalProfit.toFixed(2)}` : `-฿${Math.abs(totalProfit).toFixed(2)}`;
-        const logNote = `เบิกขาย ${useQty} ${item.unit || 'หน่วย'} (@฿${sellPrice.toFixed(2)} ทุน ฿${unitCost.toFixed(2)}) กำไร ${profitStr} [ปรับสต๊อกเป็น ${parsed}]`;
+        const logNote = `เบิกขาย ${useQty} ${item.unit || 'หน่วย'}${crateSub} (@฿${sellPrice.toFixed(2)} ทุน ฿${unitCost.toFixed(2)}) กำไร ${profitStr} [ปรับสต๊อกเป็น ${parsed}]`;
 
         this.logStockAction(item.name, 'USE', diff, parsed, item.unit || '', logNote, {
           itemId: item.id,
@@ -7405,10 +7873,14 @@ const quickRestockForm = document.getElementById('quickRestockForm');
 
         saleProfitRecorded = totalProfit;
       } else {
-        this.logStockAction(item.name, 'USE', diff, parsed, item.unit || '', `พิมพ์ปรับจำนวนจาก ${oldQty} เป็น ${parsed}`);
+        this.logStockAction(item.name, 'USE', diff, parsed, item.unit || '', `พิมพ์ปรับจำนวนจาก ${oldQty} เป็น ${parsed}${crateSub}`);
       }
     } else {
-      this.logStockAction(item.name, actionType, diff, parsed, item.unit || '', `พิมพ์ปรับจำนวนจาก ${oldQty} เป็น ${parsed}`);
+      const isBulk = (Number(item.crateBottles) > 1);
+      const crateBottles = Number(item.crateBottles) || 1;
+      const rawUnit = item.rawUnit || 'ลัง';
+      const crateSub = isBulk ? ` (~${(parsed / crateBottles).toFixed(2).replace(/\.?0+$/, '')} ${rawUnit})` : '';
+      this.logStockAction(item.name, actionType, diff, parsed, item.unit || '', `พิมพ์ปรับจำนวนจาก ${oldQty} เป็น ${parsed} ${item.unit || ''}${crateSub}`);
     }
 
     // ถ้าพิมพ์เพิ่มจำนวน (diff > 0) ให้สร้างบิลรายจ่ายของเดือนปัจจุบันอัตโนมัติ (จำนวนที่เพิ่ม × ต้นทุนต่อหน่วย)
@@ -7416,19 +7888,24 @@ const quickRestockForm = document.getElementById('quickRestockForm');
       if (!Array.isArray(this.data.expenses)) this.data.expenses = [];
       const expenseAmount = parseFloat((diff * item.unitCost).toFixed(2));
       const todayStr = this.formatDate(new Date());
+      const isBulk = (Number(item.crateBottles) > 1);
+      const crateBottles = Number(item.crateBottles) || 1;
+      const rawUnit = item.rawUnit || 'ลัง';
       const newExp = {
         id: 'e_' + Date.now() + Math.random().toString(36).substring(2, 5),
         date: todayStr,
         title: item.name,
         category: item.category || 'INGREDIENT',
         amount: expenseAmount,
-        qtyDesc: `${diff} ${item.unit || 'หน่วย'} (ราคา ฿${item.unitCost}/${item.unit || 'หน่วย'})`,
-        packSize: diff,
-        packUnit: item.unit || 'หน่วย',
-        crateBottles: (item.unit || '').includes('ลัง') ? 24 : null,
+        qtyDesc: isBulk
+          ? `${diff} ${item.unit || 'หน่วย'} (~${(diff / crateBottles).toFixed(2).replace(/\.?0+$/, '')} ${rawUnit}) @ ฿${item.unitCost}/${item.unit || 'หน่วย'}`
+          : `${diff} ${item.unit || 'หน่วย'} (ราคา ฿${item.unitCost}/${item.unit || 'หน่วย'})`,
+        packSize: isBulk ? parseFloat((diff / crateBottles).toFixed(2)) : diff,
+        packUnit: isBulk ? rawUnit : (item.unit || 'หน่วย'),
+        crateBottles: isBulk ? crateBottles : null,
         minQty: item.minQty,
         supplier: item.supplier || '',
-        note: `พิมพ์เติมสต๊อก (+${diff}): ลงรายจ่ายอัตโนมัติ`,
+        note: `พิมพ์เติมสต๊อก (+${diff} ${item.unit || ''}): ลงรายจ่ายอัตโนมัติ`,
         stockItemId: item.id
       };
       this.data.expenses.unshift(newExp);
@@ -7484,16 +7961,23 @@ const quickRestockForm = document.getElementById('quickRestockForm');
     const form = document.getElementById('quickRestockForm');
     if (!modal || !form) return;
 
-    form.reset();
-    document.getElementById('quickRestockItemId').value = item.id;
-    document.getElementById('quickRestockModalTitle').textContent = `เติมสต๊อก: ${item.name}`;
-    document.getElementById('quickRestockItemSub').textContent = `หมวด: ${item.category || 'ทั่วไป'} | คำนวณต้นทุนเฉลี่ยถ่วงน้ำหนัก & ลงรายจ่ายอัตโนมัติ`;
-
     const currentQty = Number(item.qty) || 0;
     const currentUnitCost = Number(item.unitCost) || 0;
     const unit = item.unit || 'หน่วย';
+    const isBulk = (Number(item.crateBottles) > 1);
+    const crateBottles = Number(item.crateBottles) || 1;
+    const rawUnit = item.rawUnit || 'ลัง';
 
-    document.getElementById('quickRestockCurrentQtyLabel').textContent = `${currentQty} ${unit}`;
+    form.reset();
+    document.getElementById('quickRestockItemId').value = item.id;
+    document.getElementById('quickRestockModalTitle').textContent = `เติมสต๊อก: ${item.name}`;
+    document.getElementById('quickRestockItemSub').textContent = isBulk
+      ? `หมวด: ${item.category || 'ทั่วไป'} | บรรจุ ${crateBottles} ${unit}/${rawUnit} | คำนวณต้นทุนเฉลี่ย & ลงรายจ่ายอัตโนมัติ`
+      : `หมวด: ${item.category || 'ทั่วไป'} | คำนวณต้นทุนเฉลี่ยถ่วงน้ำหนัก & ลงรายจ่ายอัตโนมัติ`;
+
+    document.getElementById('quickRestockCurrentQtyLabel').textContent = isBulk
+      ? `${currentQty} ${unit} (~${(currentQty / crateBottles).toFixed(2).replace(/\.?0+$/, '')} ${rawUnit})`
+      : `${currentQty} ${unit}`;
     document.getElementById('quickRestockCurrentCostLabel').textContent = this.formatCurrency(currentUnitCost);
     document.getElementById('quickRestockUnitLabel').textContent = unit;
 
@@ -7529,7 +8013,14 @@ const quickRestockForm = document.getElementById('quickRestockForm');
       const diffEl = document.getElementById('quickRestockDiffLabel');
 
       if (expEl) expEl.textContent = this.formatCurrency(expenseAmount);
-      if (qtyEl) qtyEl.textContent = `${totalQty} ${unit}`;
+      if (qtyEl) {
+        if (isBulk) {
+          const equiv = (totalQty / crateBottles).toFixed(2).replace(/\.?0+$/, '');
+          qtyEl.textContent = `${totalQty} ${unit} (~${equiv} ${rawUnit})`;
+        } else {
+          qtyEl.textContent = `${totalQty} ${unit}`;
+        }
+      }
 
       const diffVal = parseFloat((weightedAvgCost - currentUnitCost).toFixed(2));
 
@@ -7610,16 +8101,22 @@ const quickRestockForm = document.getElementById('quickRestockForm');
       this.data.expenses = [];
     }
 
+    const isBulk = (Number(item.crateBottles) > 1);
+    const crateBottles = Number(item.crateBottles) || 1;
+    const rawUnit = item.rawUnit || 'ลัง';
+
     const newExpense = {
       id: 'e_' + Date.now() + Math.random().toString(36).substring(2, 5),
       date: purchaseDate,
       title: item.name,
       category: item.category || 'INGREDIENT',
       amount: totalExpense,
-      qtyDesc: `${addQty} ${item.unit || 'หน่วย'} (ราคา ฿${newPrice}/${item.unit || 'หน่วย'})`,
-      packSize: addQty,
-      packUnit: item.unit || 'หน่วย',
-      crateBottles: (item.unit || '').includes('ลัง') ? 24 : null,
+      qtyDesc: isBulk
+        ? `${addQty} ${item.unit || 'หน่วย'} (~${(addQty / crateBottles).toFixed(2).replace(/\.?0+$/, '')} ${rawUnit}) @ ฿${newPrice}/${item.unit || 'หน่วย'}`
+        : `${addQty} ${item.unit || 'หน่วย'} (ราคา ฿${newPrice}/${item.unit || 'หน่วย'})`,
+      packSize: isBulk ? parseFloat((addQty / crateBottles).toFixed(2)) : addQty,
+      packUnit: isBulk ? rawUnit : (item.unit || 'หน่วย'),
+      crateBottles: isBulk ? crateBottles : null,
       minQty: item.minQty,
       supplier: supplier,
       note: `เติมสต๊อกด่วน: ทุนเดิม ฿${currentUnitCost} → ทุนเฉลี่ยใหม่ ฿${newAvgCost}/${item.unit || 'หน่วย'}`,
@@ -7628,7 +8125,8 @@ const quickRestockForm = document.getElementById('quickRestockForm');
     this.data.expenses.unshift(newExpense);
 
     // 3. บันทึก Stock Log
-    const logNote = `ซื้อเพิ่ม +${addQty} ${item.unit || ''} (ราคา ฿${newPrice}) บันทึกรายจ่าย ฿${totalExpense} ทุนเฉลี่ยปรับเป็น ฿${newAvgCost}`;
+    const crateSub = isBulk ? ` (~${(addQty / crateBottles).toFixed(2).replace(/\.?0+$/, '')} ${rawUnit})` : '';
+    const logNote = `ซื้อเพิ่ม +${addQty} ${item.unit || ''}${crateSub} (ราคา ฿${newPrice}) บันทึกรายจ่าย ฿${totalExpense} ทุนเฉลี่ยปรับเป็น ฿${newAvgCost}`;
     this.logStockAction(item.name, 'RESTOCK', addQty, totalQty, item.unit || '', logNote);
 
     // 4. บันทึกและรีเฟรชทุกหน้าจอ
@@ -7658,11 +8156,18 @@ const quickRestockForm = document.getElementById('quickRestockForm');
     form.reset();
     document.getElementById('stockUseProfitItemId').value = item.id;
     document.getElementById('stockUseProfitModalTitle').textContent = `เบิกขาย: ${item.name} & คิดกำไร`;
-    document.getElementById('stockUseProfitItemSub').textContent = `หมวด: สำเร็จรูป/ลัง | คำนวณกำไรสุทธิและบันทึกประวัติการเบิกขาย`;
 
     const currentQty = Number(item.qty) || 0;
     const currentUnitCost = Number(item.unitCost) || 0;
     const unit = item.unit || 'หน่วย';
+    const isBulk = (Number(item.crateBottles) > 1);
+    const crateBottles = Number(item.crateBottles) || 1;
+    const rawUnit = item.rawUnit || 'ลัง';
+
+    const catName = item.category === 'FRIDGE_DRINK' ? 'น้ำขายในตู้' : (item.category === 'STOCK' ? 'สำเร็จรูป/ลัง' : (item.category || 'สินค้า'));
+    document.getElementById('stockUseProfitItemSub').textContent = isBulk
+      ? `หมวด: ${catName} | บรรจุ ${crateBottles} ${unit}/${rawUnit} | คำนวณกำไรสุทธิและบันทึกประวัติการเบิกขาย`
+      : `หมวด: ${catName} | คำนวณกำไรสุทธิและบันทึกประวัติการเบิกขาย`;
 
     // หาราคาขายเริ่มต้น: ถ้ามี sellingPrice ใช้ค่านั้น หรือหาจาก savedProducts หรือตั้งต้นทุน * 1.3
     let initialSellingPrice = Number(item.sellingPrice) || 0;
@@ -7677,7 +8182,9 @@ const quickRestockForm = document.getElementById('quickRestockForm');
       initialSellingPrice = Math.ceil(currentUnitCost * 1.3);
     }
 
-    document.getElementById('stockUseProfitCurrentQtyLabel').textContent = `${currentQty} ${unit}`;
+    document.getElementById('stockUseProfitCurrentQtyLabel').textContent = isBulk
+      ? `${currentQty} ${unit} (~${(currentQty / crateBottles).toFixed(2).replace(/\.?0+$/, '')} ${rawUnit})`
+      : `${currentQty} ${unit}`;
     document.getElementById('stockUseProfitCurrentCostLabel').textContent = `฿${this.formatCurrency(currentUnitCost)}`;
     document.getElementById('stockUseProfitUnitLabel').textContent = unit;
 
@@ -7758,7 +8265,12 @@ const quickRestockForm = document.getElementById('quickRestockForm');
       }
 
       if (remEl) {
-        remEl.textContent = `คงเหลือหลังเบิก: ${remaining} ${unit}`;
+        if (isBulk) {
+          const equiv = (remaining / crateBottles).toFixed(2).replace(/\.?0+$/, '');
+          remEl.textContent = `คงเหลือหลังเบิก: ${remaining} ${unit} (~${equiv} ${rawUnit})`;
+        } else {
+          remEl.textContent = `คงเหลือหลังเบิก: ${remaining} ${unit}`;
+        }
         if (remaining < 0) {
           remEl.style.color = '#dc2626';
           remEl.textContent += ' ⚠️ (เกินสต๊อกที่มี)';
@@ -7820,8 +8332,13 @@ const quickRestockForm = document.getElementById('quickRestockForm');
     }
 
     // 2. บันทึก Stock Log พร้อมกำไรที่ได้
+    const isBulk = (Number(item.crateBottles) > 1);
+    const crateBottles = Number(item.crateBottles) || 1;
+    const rawUnit = item.rawUnit || 'ลัง';
+    const crateSub = isBulk ? ` (~${(useQty / crateBottles).toFixed(2).replace(/\.?0+$/, '')} ${rawUnit})` : '';
+
     const profitStr = totalProfit >= 0 ? `+฿${totalProfit.toFixed(2)}` : `-฿${Math.abs(totalProfit).toFixed(2)}`;
-    const logNote = `เบิกขาย ${useQty} ${unit} (@฿${sellPrice.toFixed(2)} ทุน ฿${currentUnitCost.toFixed(2)}) กำไร ${profitStr}${addToDailySales ? ' [ลงยอดขายวันนี้แล้ว]' : ''}${userNote ? ' • ' + userNote : ''}`;
+    const logNote = `เบิกขาย ${useQty} ${unit}${crateSub} (@฿${sellPrice.toFixed(2)} ทุน ฿${currentUnitCost.toFixed(2)}) กำไร ${profitStr}${addToDailySales ? ' [ลงยอดขายวันนี้แล้ว]' : ''}${userNote ? ' • ' + userNote : ''}`;
     this.logStockAction(item.name, 'USE', -useQty, newQty, unit, logNote, {
       itemId: item.id,
       profit: totalProfit,
@@ -8555,7 +9072,10 @@ const quickRestockForm = document.getElementById('quickRestockForm');
       const idx = this.data.stockItems.findIndex(x => x.id === id);
       if (idx !== -1) {
         const oldItem = { ...this.data.stockItems[idx] };
-        savedItem = { id, name, category, unit, qty, minQty, unitCost, sellingPrice, supplier, note };
+        savedItem = { 
+          ...oldItem, 
+          id, name, category, unit, qty, minQty, unitCost, sellingPrice, supplier, note 
+        };
         this.data.stockItems[idx] = savedItem;
         this.syncStockToExpenses(savedItem, oldItem);
         this.showToast(`แก้ไขสต๊อก "${name}" และอัปเดตบันทึกต้นทุนเรียบร้อย`, 'success');
@@ -8622,7 +9142,10 @@ const quickRestockForm = document.getElementById('quickRestockForm');
         exp.stockItemId = stockItem.id;
         exp.title = stockItem.name;
         exp.category = stockItem.category || exp.category;
-        exp.packUnit = stockItem.unit || exp.packUnit;
+        const isExpBulk = (Number(exp.crateBottles) > 1) || (exp.packUnit && exp.packUnit.includes('ลัง'));
+        if (!isExpBulk) {
+          exp.packUnit = stockItem.unit || exp.packUnit;
+        }
         if (stockItem.supplier !== undefined) exp.supplier = stockItem.supplier;
         if (stockItem.minQty !== undefined) exp.minQty = stockItem.minQty;
 
@@ -8630,15 +9153,27 @@ const quickRestockForm = document.getElementById('quickRestockForm');
         if (isQtyChanged && stockItem.qty >= 0) {
           // หากมีบิลเดียว หรือจำนวนเดิมตรงกัน ให้ปรับจำนวนรับเข้า/ขนาดแพ็คตามสต๊อก
           if (matchedExpenses.length === 1 || Number(exp.packSize) === Number(oldItem.qty)) {
-            exp.packSize = stockItem.qty;
-            exp.qtyDesc = `${stockItem.qty} ${stockItem.unit}`;
+            if (isExpBulk) {
+              const crateCap = Number(exp.crateBottles) || 12;
+              exp.packSize = parseFloat((stockItem.qty / crateCap).toFixed(2));
+              exp.qtyDesc = `${exp.packSize} ${exp.packUnit} (${stockItem.qty} ${stockItem.unit})`;
+            } else {
+              exp.packSize = stockItem.qty;
+              exp.packUnit = stockItem.unit;
+              exp.qtyDesc = `${stockItem.qty} ${stockItem.unit}`;
+            }
           }
         }
 
-        // ปรับยอดเงินรวม amount ตามราคาต่อหน่วยใหม่ (amount = unitCost * packSize)
+        // ปรับยอดเงินรวม amount ตามราคาต่อหน่วยใหม่
         const packSize = Number(exp.packSize) || 1;
         if (stockItem.unitCost > 0) {
-          exp.amount = parseFloat((stockItem.unitCost * packSize).toFixed(2));
+          if (isExpBulk) {
+            const crateCap = Number(exp.crateBottles) || 12;
+            exp.amount = parseFloat((stockItem.unitCost * (packSize * crateCap)).toFixed(2));
+          } else {
+            exp.amount = parseFloat((stockItem.unitCost * packSize).toFixed(2));
+          }
         }
       });
     } else if (isNew && stockItem.qty > 0 && stockItem.unitCost > 0) {
@@ -8707,34 +9242,46 @@ const quickRestockForm = document.getElementById('quickRestockForm');
       return sNameLower === expTitleLower || sNameClean === expTitleClean || sNameClean.includes(expTitleClean) || expTitleClean.includes(sNameClean);
     });
 
-    const rawPackSize = Number(exp.packSize) || 1;
-    const isCrate = (exp.packUnit || '').includes('ลัง') || (exp.packUnit || '').toLowerCase() === 'crate';
-    const crateBottles = isCrate ? (Number(exp.crateBottles) > 0 ? Number(exp.crateBottles) : 24) : 1;
+    const pricing = this.getExpenseUnitPricing(exp);
+    const isBulk = pricing ? pricing.isBulk : false;
+    const rawPackSize = pricing ? pricing.rawPackSize : (Number(exp.packSize) || 1);
+    const crateBottles = pricing ? pricing.itemsPerBulk : 1;
+    const stockQty = pricing ? pricing.totalPieces : rawPackSize;
+    const stockUnit = pricing ? pricing.pieceName : (exp.packUnit || 'หน่วย');
+    const unitCost = pricing ? pricing.costPerPiece : (stockQty > 0 ? (Number(exp.amount) / stockQty) : Number(exp.amount));
 
-    // Effective inventory stock quantity & unit (บันทึกหน่วยตามที่ผู้ใช้เลือกรับเข้า เช่น ลัง ก็คงเป็น ลัง)
-    const stockQty = rawPackSize;
-    const stockUnit = exp.packUnit || 'หน่วย';
-    const unitCost = stockQty > 0 ? (Number(exp.amount) / stockQty) : Number(exp.amount);
     const minThreshold = (exp.minQty !== undefined && exp.minQty !== null && exp.minQty !== '')
       ? Number(exp.minQty)
-      : Math.max(1, Math.round(stockQty * 0.25));
+      : (isBulk ? Math.max(1, Math.round(stockQty * 0.25)) : Math.max(1, Math.round(rawPackSize * 0.25)));
 
     if (match) {
       // มีสินค้าอยู่แล้ว -> เติมจำนวนคงเหลือเพิ่มขึ้น และอัปเดตราคาต้นทุนเฉลี่ย
       const oldQty = Number(match.qty) || 0;
       const newQty = oldQty + stockQty;
       match.qty = newQty;
-      match.unitCost = parseFloat(unitCost.toFixed(2));
+      // คำนวณต้นทุนเฉลี่ยถ่วงน้ำหนักหากมีของเดิมอยู่
+      if (oldQty > 0 && match.unitCost > 0) {
+        const totalCostSum = (oldQty * Number(match.unitCost)) + (stockQty * unitCost);
+        match.unitCost = parseFloat((totalCostSum / newQty).toFixed(2));
+      } else {
+        match.unitCost = parseFloat(unitCost.toFixed(2));
+      }
       match.unit = stockUnit;
+      if (isBulk && crateBottles > 1) {
+        match.crateBottles = crateBottles;
+        match.rawUnit = exp.packUnit || 'ลัง';
+      }
+      if (exp.netWeight) match.netWeight = exp.netWeight;
+      if (exp.netUnit) match.netUnit = exp.netUnit;
       match.minQty = minThreshold;
       if (exp.supplier) {
         match.supplier = exp.supplier;
       }
 
       const supText = exp.supplier ? ` [ซื้อจาก: ${exp.supplier}]` : '';
-      const logNote = isCrate
-        ? `รับเข้าของ ${rawPackSize} ลัง (บรรจุ ${crateBottles} ขวด/ลัง) จากบิลซื้อ (${this.formatThaiDate(exp.date)})${supText}`
-        : `รับเข้าของจากบิลซื้อ (${this.formatThaiDate(exp.date)})${supText}`;
+      const logNote = (isBulk && crateBottles > 1)
+        ? `รับเข้าของ ${rawPackSize} ${exp.packUnit || 'ลัง'} (บรรจุ ${crateBottles} ${stockUnit}/${exp.packUnit || 'ลัง'} = +${stockQty} ${stockUnit}) จากบิลซื้อ (${this.formatThaiDate(exp.date)})${supText}`
+        : `รับเข้าของ +${stockQty} ${stockUnit} จากบิลซื้อ (${this.formatThaiDate(exp.date)})${supText}`;
       this.logStockAction(match.name, 'RESTOCK', stockQty, newQty, match.unit || '', logNote);
       exp.stockItemId = match.id;
     } else {
@@ -8742,17 +9289,24 @@ const quickRestockForm = document.getElementById('quickRestockForm');
       const newItem = {
         id: 'stk_' + Date.now() + Math.random().toString(36).substring(2, 5),
         name: exp.title || 'สินค้าใหม่',
-        category: exp.category || (isCrate ? 'STOCK' : 'INGREDIENT'),
+        category: exp.category || (isBulk ? 'STOCK' : 'INGREDIENT'),
         unit: stockUnit,
         qty: stockQty,
         minQty: minThreshold,
         unitCost: parseFloat(unitCost.toFixed(2)),
         supplier: exp.supplier || '',
-        note: isCrate ? `รับเข้า ${rawPackSize} ลัง (${crateBottles} ขวด/ลัง) จากบิลซื้อ (${this.formatThaiDate(exp.date)})` : `รับเข้าจากบิลซื้อ (${this.formatThaiDate(exp.date)})`
+        crateBottles: (isBulk && crateBottles > 1) ? crateBottles : 1,
+        rawUnit: exp.packUnit || '',
+        rawPackSize: rawPackSize,
+        netWeight: exp.netWeight || null,
+        netUnit: exp.netUnit || null,
+        note: (isBulk && crateBottles > 1)
+          ? `รับเข้า ${rawPackSize} ${exp.packUnit || 'ลัง'} (บรรจุ ${crateBottles} ${stockUnit}/${exp.packUnit || 'ลัง'} = ${stockQty} ${stockUnit}) จากบิลซื้อ (${this.formatThaiDate(exp.date)})`
+          : `รับเข้าจากบิลซื้อ (${this.formatThaiDate(exp.date)})`
       };
       this.data.stockItems.unshift(newItem);
       const supText = exp.supplier ? ` [ซื้อจาก: ${exp.supplier}]` : '';
-      this.logStockAction(newItem.name, 'RESTOCK', stockQty, stockQty, newItem.unit, `เพิ่มรายการใหม่จากบิลซื้อ (${this.formatThaiDate(exp.date)})${supText}`);
+      this.logStockAction(newItem.name, 'RESTOCK', stockQty, stockQty, newItem.unit, `เพิ่มรายการใหม่ +${stockQty} ${stockUnit} จากบิลซื้อ (${this.formatThaiDate(exp.date)})${supText}`);
       exp.stockItemId = newItem.id;
     }
   }
@@ -8795,15 +9349,19 @@ const quickRestockForm = document.getElementById('quickRestockForm');
       return;
     }
 
-    const oldPackSize = Number(oldExp ? oldExp.packSize : 1) || 1;
-    const newPackSize = Number(updatedExp ? updatedExp.packSize : 1) || 1;
-    const diffQty = newPackSize - oldPackSize;
-    const isCrate = (updatedExp.packUnit || '').includes('ลัง') || (updatedExp.packUnit || '').toLowerCase() === 'crate';
+    const oldPricing = this.getExpenseUnitPricing(oldExp);
+    const newPricing = this.getExpenseUnitPricing(updatedExp);
 
-    const unitCost = newPackSize > 0 ? (Number(updatedExp.amount) / newPackSize) : Number(updatedExp.amount);
+    const oldTotalPieces = oldPricing ? oldPricing.totalPieces : (Number(oldExp ? oldExp.packSize : 1) || 1);
+    const newTotalPieces = newPricing ? newPricing.totalPieces : (Number(updatedExp ? updatedExp.packSize : 1) || 1);
+    const diffQty = newTotalPieces - oldTotalPieces;
+
+    const isBulk = newPricing ? newPricing.isBulk : false;
+    const stockUnit = newPricing ? newPricing.pieceName : (updatedExp.packUnit || match.unit || 'หน่วย');
+    const unitCost = newPricing ? newPricing.costPerPiece : (newTotalPieces > 0 ? (Number(updatedExp.amount) / newTotalPieces) : Number(updatedExp.amount));
     const minThreshold = (updatedExp.minQty !== undefined && updatedExp.minQty !== null && updatedExp.minQty !== '')
       ? Number(updatedExp.minQty)
-      : Math.max(1, Math.round(newPackSize * 0.25));
+      : (isBulk ? Math.max(1, Math.round(newTotalPieces * 0.25)) : Math.max(1, Math.round((Number(updatedExp.packSize) || 1) * 0.25)));
 
     // ตรวจสอบว่ามีการเปลี่ยนชื่อไปตรงกับสต๊อกรายการอื่นหรือไม่
     const newTitleClean = String(updatedExp.title || '').split('(')[0].trim().toLowerCase();
@@ -8818,19 +9376,23 @@ const quickRestockForm = document.getElementById('quickRestockForm');
     if (anotherMatch) {
       // ผู้ใช้เปลี่ยนชื่อบิลไปตรงกับสินค้าตัวอื่นที่มีอยู่แล้ว -> ตัดยอดออกจากตัวเดิม แล้วย้ายไปบวกที่ตัวใหม่
       const prevQty = Number(match.qty) || 0;
-      match.qty = Math.max(0, prevQty - oldPackSize);
-      this.logStockAction(match.name, 'ADJUST', -oldPackSize, match.qty, match.unit || '', `ปรับแก้บิลซื้อ ย้ายรายการไปที่ "${anotherMatch.name}"`);
+      match.qty = Math.max(0, prevQty - oldTotalPieces);
+      this.logStockAction(match.name, 'ADJUST', -oldTotalPieces, match.qty, match.unit || '', `ปรับแก้บิลซื้อ ย้ายรายการไปที่ "${anotherMatch.name}"`);
 
       const anotherPrevQty = Number(anotherMatch.qty) || 0;
-      const anotherNewQty = anotherPrevQty + newPackSize;
+      const anotherNewQty = anotherPrevQty + newTotalPieces;
       anotherMatch.qty = anotherNewQty;
       anotherMatch.unitCost = parseFloat(unitCost.toFixed(2));
       anotherMatch.minQty = minThreshold;
+      anotherMatch.unit = stockUnit;
+      if (isBulk && newPricing.itemsPerBulk > 1) {
+        anotherMatch.crateBottles = newPricing.itemsPerBulk;
+        anotherMatch.rawUnit = updatedExp.packUnit;
+      }
       if (updatedExp.supplier) anotherMatch.supplier = updatedExp.supplier;
-      if (updatedExp.packUnit) anotherMatch.unit = updatedExp.packUnit;
       if (updatedExp.category) anotherMatch.category = updatedExp.category;
 
-      this.logStockAction(anotherMatch.name, 'RESTOCK', newPackSize, anotherNewQty, anotherMatch.unit || '', `รับเข้าจากการแก้ไขบิลซื้อ (${this.formatThaiDate(updatedExp.date)})`);
+      this.logStockAction(anotherMatch.name, 'RESTOCK', newTotalPieces, anotherNewQty, anotherMatch.unit || '', `รับเข้าจากการแก้ไขบิลซื้อ (${this.formatThaiDate(updatedExp.date)})`);
       updatedExp.stockItemId = anotherMatch.id;
     } else {
       // รายการเดิม -> อัปเดตข้อมูลทั้งหมดตามที่แก้ไข
@@ -8839,8 +9401,14 @@ const quickRestockForm = document.getElementById('quickRestockForm');
       match.name = updatedExp.title || match.name;
       match.qty = newQty;
       match.unitCost = parseFloat(unitCost.toFixed(2));
-      match.unit = updatedExp.packUnit || match.unit || 'หน่วย';
-      match.category = updatedExp.category || match.category || (isCrate ? 'STOCK' : 'INGREDIENT');
+      match.unit = stockUnit;
+      if (isBulk && newPricing.itemsPerBulk > 1) {
+        match.crateBottles = newPricing.itemsPerBulk;
+        match.rawUnit = updatedExp.packUnit;
+      }
+      if (updatedExp.netWeight) match.netWeight = updatedExp.netWeight;
+      if (updatedExp.netUnit) match.netUnit = updatedExp.netUnit;
+      match.category = updatedExp.category || match.category || (isBulk ? 'STOCK' : 'INGREDIENT');
       match.minQty = minThreshold;
       if (updatedExp.supplier !== undefined) {
         match.supplier = updatedExp.supplier;
@@ -8848,7 +9416,8 @@ const quickRestockForm = document.getElementById('quickRestockForm');
 
       const supText = updatedExp.supplier ? ` [ร้าน: ${updatedExp.supplier}]` : '';
       const diffText = diffQty !== 0 ? ` (ปรับจำนวน ${diffQty >= 0 ? '+' : ''}${diffQty} ${match.unit} คงเหลือ ${newQty})` : '';
-      const logNote = `แก้ไขบิลซื้อ & สต๊อก${diffText} ทุน ฿${match.unitCost}/${match.unit} เกณฑ์เตือน ${match.minQty}${supText}`;
+      const crateSub = (isBulk && newPricing.itemsPerBulk > 1) ? ` [${updatedExp.packSize} ${updatedExp.packUnit} @ ${newPricing.itemsPerBulk} ${match.unit}/${updatedExp.packUnit}]` : '';
+      const logNote = `แก้ไขบิลซื้อ & สต๊อก${diffText}${crateSub} ทุน ฿${match.unitCost}/${match.unit} เกณฑ์เตือน ${match.minQty}${supText}`;
       this.logStockAction(match.name, 'ADJUST', diffQty, newQty, match.unit || '', logNote);
       updatedExp.stockItemId = match.id;
     }
@@ -8857,7 +9426,8 @@ const quickRestockForm = document.getElementById('quickRestockForm');
   // หักสต๊อกเมื่อมีการลบรายการค่าใช้จ่าย
   removeExpenseFromStock(exp) {
     if (!Array.isArray(this.data.stockItems) || !exp) return;
-    const packSize = Number(exp.packSize) || 1;
+    const pricing = this.getExpenseUnitPricing(exp);
+    const piecesToRemove = pricing ? pricing.totalPieces : (Number(exp.packSize) || 1);
     let match = null;
     if (exp.stockItemId) {
       match = this.data.stockItems.find(s => s && String(s.id) === String(exp.stockItemId));
@@ -8875,9 +9445,9 @@ const quickRestockForm = document.getElementById('quickRestockForm');
 
     if (match) {
       const oldQty = Number(match.qty) || 0;
-      const newQty = Math.max(0, oldQty - packSize);
+      const newQty = Math.max(0, oldQty - piecesToRemove);
       match.qty = newQty;
-      this.logStockAction(match.name, 'ADJUST', -packSize, newQty, match.unit || '', `หักสต๊อกจากลบบิลซื้อ (${this.formatThaiDate(exp.date)})`);
+      this.logStockAction(match.name, 'ADJUST', -piecesToRemove, newQty, match.unit || '', `หักสต๊อกจากลบบิลซื้อ -${piecesToRemove} ${match.unit} (${this.formatThaiDate(exp.date)})`);
     }
   }
 
@@ -8902,31 +9472,48 @@ const quickRestockForm = document.getElementById('quickRestockForm');
         return sNameLower === expTitleLower || sNameClean === expTitleClean || sNameClean.includes(expTitleClean) || expTitleClean.includes(sNameClean);
       });
 
-      const packSize = Number(exp.packSize) || 1;
-      const unitCost = packSize > 0 ? (Number(exp.amount) / packSize) : Number(exp.amount);
+      const pricing = this.getExpenseUnitPricing(exp);
+      const isBulk = pricing ? pricing.isBulk : false;
+      const stockQty = pricing ? pricing.totalPieces : (Number(exp.packSize) || 1);
+      const stockUnit = pricing ? pricing.pieceName : (exp.packUnit || 'หน่วย');
+      const unitCost = pricing ? pricing.costPerPiece : (stockQty > 0 ? (Number(exp.amount) / stockQty) : Number(exp.amount));
+      const crateBottles = pricing ? pricing.itemsPerBulk : 1;
 
       const effectiveMin = (exp.minQty !== undefined && exp.minQty !== null && exp.minQty !== '')
         ? Number(exp.minQty)
-        : Math.max(1, Math.round(packSize * 0.25));
+        : (isBulk ? Math.max(1, Math.round(stockQty * 0.25)) : Math.max(1, Math.round((Number(exp.packSize) || 1) * 0.25)));
 
       if (match) {
         match.unitCost = parseFloat(unitCost.toFixed(2));
+        match.unit = stockUnit;
+        if (isBulk && crateBottles > 1) {
+          match.crateBottles = crateBottles;
+          match.rawUnit = exp.packUnit || 'ลัง';
+        }
+        if (exp.netWeight) match.netWeight = exp.netWeight;
+        if (exp.netUnit) match.netUnit = exp.netUnit;
         if (exp.supplier && !match.supplier) match.supplier = exp.supplier;
         if (exp.minQty !== undefined && exp.minQty !== null && exp.minQty !== '') match.minQty = Number(exp.minQty);
-        if (exp.packUnit && (!match.unit || match.unit === 'หน่วย')) match.unit = exp.packUnit;
         if (!exp.stockItemId) exp.stockItemId = match.id;
         syncedCount++;
       } else {
         const newItem = {
           id: 'stk_' + Date.now() + Math.random().toString(36).substring(2, 5),
           name: exp.title,
-          category: exp.category || 'INGREDIENT',
-          unit: exp.packUnit || 'หน่วย',
-          qty: packSize,
+          category: exp.category || (isBulk ? 'STOCK' : 'INGREDIENT'),
+          unit: stockUnit,
+          qty: stockQty,
           minQty: effectiveMin,
           unitCost: parseFloat(unitCost.toFixed(2)),
           supplier: exp.supplier || '',
-          note: `ซิงค์อัตโนมัติจากบิลซื้อ (${this.formatThaiDate(exp.date)})`
+          crateBottles: (isBulk && crateBottles > 1) ? crateBottles : 1,
+          rawUnit: exp.packUnit || '',
+          rawPackSize: Number(exp.packSize) || 1,
+          netWeight: exp.netWeight || null,
+          netUnit: exp.netUnit || null,
+          note: (isBulk && crateBottles > 1) 
+            ? `ซิงค์อัตโนมัติจากบิลซื้อ ${exp.packSize} ${exp.packUnit} (บรรจุ ${crateBottles} ${stockUnit}/${exp.packUnit} = ${stockQty} ${stockUnit})` 
+            : `ซิงค์อัตโนมัติจากบิลซื้อ (${this.formatThaiDate(exp.date)})`
         };
         this.data.stockItems.push(newItem);
         exp.stockItemId = newItem.id;
@@ -9192,7 +9779,8 @@ const quickRestockForm = document.getElementById('quickRestockForm');
 
       const catLabel = item.category === 'INGREDIENT' ? 'วัตถุดิบชงน้ำ'
         : item.category === 'PACKAGING' ? 'บรรจุภัณฑ์'
-          : item.category === 'STOCK' ? 'สำเร็จรูป/ลัง' : 'อื่นๆ';
+        : item.category === 'FRIDGE_DRINK' ? 'น้ำขายในตู้'
+        : item.category === 'STOCK' ? 'สำเร็จรูป/ลัง' : 'อื่นๆ';
 
       const supParsed = this.parseSupplier(item.supplier);
 
@@ -9241,6 +9829,7 @@ const quickRestockForm = document.getElementById('quickRestockForm');
               <div>
                 <div style="display:flex; align-items:center; gap:0.35rem; margin-bottom:0.3rem; flex-wrap:wrap;">
                   <span class="pill-tag blue-tag" style="font-size:0.7rem;">${catLabel}</span>
+                  ${item.crateBottles > 1 ? `<span class="pill-tag blue-tag" style="font-size:0.7rem; font-weight:700;">📦 บรรจุ ${item.crateBottles} ${this.escapeHtml(unit)}/${this.escapeHtml(item.rawUnit || 'ลัง')}</span>` : ''}
                   ${supplierBadgeHtml}
                 </div>
                 <div class="low-stock-item-name">${this.escapeHtml(item.name)}</div>
