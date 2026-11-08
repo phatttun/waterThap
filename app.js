@@ -1107,10 +1107,12 @@ class WaterFlowApp {
     }
 
     // Figma Expense Pill Filter Buttons
-    document.querySelectorAll('.figma-pill-filter').forEach(btn => {
+    document.querySelectorAll('#expensePillFilterGroup .figma-pill-filter').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const cat = e.currentTarget.dataset.cat;
-        this.setExpenseCategory(cat);
+        if (cat) {
+          this.setExpenseCategory(cat);
+        }
       });
     });
 
@@ -1222,13 +1224,14 @@ class WaterFlowApp {
     document.querySelectorAll('input[name="stockSubFilter"]').forEach(radio => {
       radio.addEventListener('change', (e) => {
         const filterVal = e.target.value;
+        if (filterVal === 'low') {
+          this.switchTab('stock-low');
+          return;
+        }
         const rows = document.querySelectorAll('#stockTableBody tr');
         rows.forEach(tr => {
           if (filterVal === 'all') {
             tr.style.display = '';
-          } else if (filterVal === 'low') {
-            const isLow = tr.dataset.isLow === 'true';
-            tr.style.display = isLow ? '' : 'none';
           } else {
             const cat = tr.dataset.category;
             tr.style.display = (cat === filterVal) ? '' : 'none';
@@ -2965,7 +2968,7 @@ class WaterFlowApp {
     const filterInput = document.getElementById('expenseCategoryFilter');
     if (filterInput) filterInput.value = cat;
 
-    document.querySelectorAll('.figma-pill-filter').forEach(btn => {
+    document.querySelectorAll('#expensePillFilterGroup .figma-pill-filter').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.cat === cat);
     });
 
@@ -4036,7 +4039,7 @@ class WaterFlowApp {
 
   calculateRecipeUnitCost(recipe) {
     const jarCost = this.calculateRecipeJarCost(recipe);
-    const cups = parseInt(recipe.yieldCups) || 12;
+    const cups = parseInt(recipe.yieldCups) || 24;
     return cups > 0 ? (jarCost / cups) : 0;
   }
 
@@ -4139,7 +4142,7 @@ class WaterFlowApp {
       const isCup = mode === 'cup';
       const jarCost = this.calculateRecipeJarCost(recipe);
       const unitCost = isCup ? jarCost : this.calculateRecipeUnitCost(recipe);
-      const yieldCups = isCup ? 1 : (recipe.yieldCups || 12);
+      const yieldCups = isCup ? 1 : (recipe.yieldCups || 24);
       const sellingPrice = recipe.sellingPrice !== undefined ? Number(recipe.sellingPrice) : (recipe.suggestedPrice || 25);
       const profitPerCup = sellingPrice - unitCost;
       const marginPercent = sellingPrice > 0 ? Math.round(((profitPerCup / sellingPrice) * 100)) : 0;
@@ -4707,8 +4710,8 @@ class WaterFlowApp {
         inp.setAttribute('required', 'required');
       });
 
-      if (batchTitle) batchTitle.textContent = 'รายการส่วนผสมต่อ 1 โหล/ถัง (คำนวณจากสูตร 1 แก้ว):';
-      if (batchHint) batchHint.textContent = 'ดึงและคูณขยายจากสูตร 1 แก้วด้านบนให้อัตโนมัติ (สามารถกด 🧮 เพื่อผูกกับค่าใช้จ่ายที่ซื้อจริง หรือปรับแก้ได้อิสระ)';
+      if (batchTitle) batchTitle.textContent = 'รายการส่วนผสมต่อ 1 โหล/ถัง:';
+      if (batchHint) batchHint.textContent = 'ระบุวัตถุดิบที่ใช้ผสมใน 1 โหล/ถัง (หรือกำหนดสัดส่วน 1 แก้วด้านบน แล้วกด "⚡ คำนวณขยายสูตรลง 1 โหล" เพื่อคำนวณลงมาอัตโนมัติ)';
       if (addIngText) addIngText.textContent = 'เพิ่มส่วนผสมในโหล';
 
       if (jarCostRow) jarCostRow.style.display = 'flex';
@@ -4722,9 +4725,37 @@ class WaterFlowApp {
         const useLabel = row.querySelector('.calc-use-label');
         if (useLabel) useLabel.textContent = 'ปริมาณที่ตัดใช้ต่อโหล:';
       });
+
+      if (litersInput && (!litersInput.value || parseFloat(litersInput.value) <= 0)) {
+        litersInput.value = 6;
+      }
+      this.calculateAutoYield();
     }
 
     this.updateRecipeModalCalculations();
+  }
+
+  checkSingleCupEmptyState() {
+    const container = document.getElementById('singleCupContainer');
+    if (!container) return;
+    const rows = container.querySelectorAll('.single-cup-row');
+    const existingNotice = document.getElementById('singleCupEmptyNotice');
+    if (rows.length === 0) {
+      if (!existingNotice) {
+        const notice = document.createElement('div');
+        notice.id = 'singleCupEmptyNotice';
+        notice.style.cssText = 'text-align:center; padding:1.15rem 1rem; background:#f8fafc; border:1px dashed #cbd5e1; border-radius:var(--radius-sm); color:var(--text-muted); font-size:0.83rem; line-height:1.5;';
+        notice.innerHTML = `
+          💡 <b>ยังไม่มีการระบุสัดส่วน 1 แก้ว</b><br>
+          <span style="font-size:0.78rem; color:#64748b;">(หากชงเป็นถังโดยตรง สามารถกรอกที่ <b>รายการส่วนผสมต่อ 1 โหล/ถัง</b> ด้านล่างได้เลย หรือกดปุ่ม <b>"+ เพิ่มวัตถุดิบแก้ว"</b> ด้านบนหากต้องการให้ระบบคำนวณสเกลขยายสูตรลงโหลอัตโนมัติ)</span>
+        `;
+        container.appendChild(notice);
+      }
+    } else {
+      if (existingNotice) {
+        existingNotice.remove();
+      }
+    }
   }
 
   openRecipeModal(recipeId = null, initialMode = 'jar') {
@@ -4754,21 +4785,17 @@ class WaterFlowApp {
         const priceInput = document.getElementById('recSellingPrice');
         if (priceInput) {
           priceInput.value = rec.sellingPrice !== undefined ? rec.sellingPrice : (rec.suggestedPrice || 25);
+          const tpInput = document.getElementById('recTargetProfit');
+          if (tpInput) tpInput.value = rec.targetProfit !== undefined ? rec.targetProfit : 5;
         }
 
-        // ดึงสัดส่วน 1 แก้ว (ถ้ามี) หรือใส่เริ่มต้นเมื่ออยู่ในโหมดโหล
+        // ดึงสัดส่วน 1 แก้ว (ถ้ามีบันทึกไว้) ไม่ใส่สูตรชาเริ่มต้นหากไม่มี
         if (rec.singleCupProportions && rec.singleCupProportions.length > 0) {
           rec.singleCupProportions.forEach(cupItem => {
             this.addSingleCupRow(cupItem.name, cupItem.amount, cupItem.unit);
           });
-        } else if (activeMode !== 'cup') {
-          this.addSingleCupRow('น้ำชาสกัดเข้มข้น', 60, 'ml');
-          this.addSingleCupRow('ผงชาไทยตรามือ', 18, 'g');
-          this.addSingleCupRow('นมข้นหวาน', 1, 'oz');
-          this.addSingleCupRow('นมข้นจืด', 1.5, 'oz');
-          this.addSingleCupRow('นมจืด / นมสด', 1.5, 'oz');
-          this.addSingleCupRow('แก้ว + ฝา + หลอด (16 oz)', 1, 'ชุด');
         }
+        this.checkSingleCupEmptyState();
 
         (rec.ingredients || []).forEach(ing => {
           this.addIngredientRowToModal(ing);
@@ -4783,13 +4810,14 @@ class WaterFlowApp {
       document.getElementById('recJarLiters').value = activeMode === 'cup' ? 0 : 6;
       document.getElementById('recCupSizeOz').value = 16;
       const yieldInput = document.getElementById('recYieldCups');
-      if (yieldInput) yieldInput.value = activeMode === 'cup' ? 1 : 33;
+      if (yieldInput) yieldInput.value = activeMode === 'cup' ? 1 : 24;
       const priceInput = document.getElementById('recSellingPrice');
       if (priceInput) priceInput.value = '';
+      const tpInput = document.getElementById('recTargetProfit');
+      if (tpInput) tpInput.value = 5;
 
-      if (activeMode !== 'cup') {
-        // ในโหมด 1 โหล หากต้องการ ให้ผู้ใช้มีปุ่มกดขยายสูตร
-      }
+      // สูตรใหม่: ปล่อยให้ singleCupContainer ว่างไว้ก่อน ไม่ต้องใส่สูตรชาเริ่มต้น
+      this.checkSingleCupEmptyState();
     }
 
     this.setRecipeMode(activeMode);
@@ -4811,24 +4839,36 @@ class WaterFlowApp {
     const litersInput = document.getElementById('recJarLiters');
     const cupSizeSelect = document.getElementById('recCupSizeOz');
     const priceInput = document.getElementById('recSellingPrice');
-    if (litersInput && !litersInput._boundYield) {
-      litersInput._boundYield = true;
-      litersInput.addEventListener('input', () => {
-        this.calculateAutoYield();
-        if (document.getElementById('recMode')?.value !== 'cup') {
-          this.syncCupProportionsToBatch(false);
+
+    const updateYieldAndBatch = () => {
+      const cupOz = parseInt(document.getElementById('recCupSizeOz')?.value) || 22;
+      document.querySelectorAll('#singleCupContainer .single-cup-row .cup-ing-name').forEach(inp => {
+        if (inp.value && (inp.value.includes('แก้ว + ฝา + หลอด') || inp.value.includes('แก้ว+ฝา+หลอด') || (inp.value.includes('แก้ว') && inp.value.includes('oz')))) {
+          inp.value = `แก้ว + ฝา + หลอด (${cupOz} oz)`;
         }
       });
+      this.calculateAutoYield();
+      this.updateRecipeModalCalculations();
+    };
+
+    if (litersInput && !litersInput._boundYield) {
+      litersInput._boundYield = true;
+      litersInput.addEventListener('input', updateYieldAndBatch);
+      litersInput.addEventListener('change', updateYieldAndBatch);
+      litersInput.addEventListener('keyup', updateYieldAndBatch);
     }
     if (cupSizeSelect && !cupSizeSelect._boundYield) {
       cupSizeSelect._boundYield = true;
-      cupSizeSelect.addEventListener('change', () => {
-        this.calculateAutoYield();
-        this.updateRecipeModalCalculations();
-      });
+      cupSizeSelect.addEventListener('change', updateYieldAndBatch);
+      cupSizeSelect.addEventListener('input', updateYieldAndBatch);
     }
     if (priceInput && !priceInput._boundPrice) {
       priceInput._boundPrice = true;
+      const targetProfitInput = document.getElementById('recTargetProfit');
+      if (targetProfitInput && !targetProfitInput._boundTargetProfit) {
+        targetProfitInput._boundTargetProfit = true;
+        targetProfitInput.addEventListener('input', () => this.updateRecipeModalCalculations());
+      }
       priceInput.addEventListener('input', () => {
         this.updateRecipeModalCalculations();
       });
@@ -4840,6 +4880,10 @@ class WaterFlowApp {
   addSingleCupRow(name = '', amount = 1, unit = 'oz') {
     const container = document.getElementById('singleCupContainer');
     if (!container) return;
+
+    // ลบข้อความแจ้งเตือนสถานะว่างออกเมื่อเริ่มเพิ่มแถว
+    const emptyNotice = document.getElementById('singleCupEmptyNotice');
+    if (emptyNotice) emptyNotice.remove();
 
     const row = document.createElement('div');
     row.className = 'single-cup-row';
@@ -4862,12 +4906,7 @@ class WaterFlowApp {
 
     row.querySelector('.btn-icon-danger').addEventListener('click', () => {
       row.remove();
-    });
-
-    row.querySelectorAll('input, select').forEach(input => {
-      input.addEventListener('change', () => {
-        this.syncCupProportionsToBatch(false);
-      });
+      this.checkSingleCupEmptyState();
     });
 
     container.appendChild(row);
@@ -4875,7 +4914,25 @@ class WaterFlowApp {
 
   syncCupProportionsToBatch(showNotification = true) {
     const cupRows = document.querySelectorAll('#singleCupContainer .single-cup-row');
-    if (cupRows.length === 0) return;
+    if (cupRows.length === 0) {
+      if (showNotification) {
+        this.showToast('⚠️ กรุณากด "+ เพิ่มวัตถุดิบแก้ว" และกำหนดส่วนผสม 1 แก้วก่อนคำนวณขยายสูตร', 'info');
+      }
+      return;
+    }
+
+    const hasValidItem = Array.from(cupRows).some(r => {
+      const name = (r.querySelector('.cup-ing-name')?.value || '').trim();
+      const amount = parseFloat(r.querySelector('.cup-ing-amount')?.value) || 0;
+      return name && amount > 0;
+    });
+
+    if (!hasValidItem) {
+      if (showNotification) {
+        this.showToast('⚠️ กรุณาระบุชื่อและปริมาณวัตถุดิบ 1 แก้วอย่างน้อย 1 รายการก่อนคำนวณขยายสูตร', 'info');
+      }
+      return;
+    }
 
     const jarLiters = parseFloat(document.getElementById('recJarLiters')?.value) || 6;
     const batchContainer = document.getElementById('recipeIngredientsContainer');
@@ -4942,17 +4999,17 @@ class WaterFlowApp {
 
     // หากในสูตรมีผงชาแต่ไม่มีแถวน้ำชาสกัด (ml) ให้เพิ่มน้ำชาสกัดมาตรฐาน 60 ml อัตโนมัติ เพื่อให้ของเหลวสมบูรณ์
     if (hasTeaPowderItem && !hasTeaShotItem) {
-      singleCupLiquidMl += 60;
+      singleCupLiquidMl += 100;
     }
 
-    // หากรวมของเหลวแล้วยังน้อยเกินไป ให้ใช้ค่ามาตรฐานแก้ว 16 oz = 180 ml
+    // เกณฑ์มาตรฐานร้าน: 1 แก้วใช้น้ำชง 250 ml รวมน้ำแข็งแล้ว
     if (singleCupLiquidMl < 50) {
-      singleCupLiquidMl = 180;
+      singleCupLiquidMl = 250;
     }
 
-    // 2. ตัวคูณขยายสูตรลงถัง (Batch Multiplier) ยึดตามปริมาตรโหลจริงเสมอ (เช่น ถัง 6L = 6,000 ml / 180 ml ≈ 33.33 แก้ว)
-    const batchScaleMultiplier = Math.round(((jarLiters * 1000) / singleCupLiquidMl) * 10) / 10;
+    // 2. ตัวคูณขยายสูตรลงถัง (Batch Multiplier) ยึดตามจำนวนแก้วที่ชงเสิร์ฟได้จริง (yieldCups เช่น ถัง 5L = 20 แก้ว, ถัง 6L = 24 แก้ว)
     const yieldCups = this.calculateAutoYield();
+    const batchScaleMultiplier = yieldCups;
 
     // 3. วนลูปสร้างแถวส่วนผสมของโหลจากสัดส่วน 1 แก้ว
     cupRows.forEach(row => {
@@ -5182,39 +5239,47 @@ class WaterFlowApp {
   }
 
   calculateAutoYield() {
-    const liters = parseFloat(document.getElementById('recJarLiters')?.value) || 6;
+    const litersInput = document.getElementById('recJarLiters');
+    const liters = litersInput ? (parseFloat(litersInput.value) || 0) : 6;
     const cupOz = parseInt(document.getElementById('recCupSizeOz')?.value) || 16;
 
-    // คำนวณปริมาณของเหลวรวมต่อแก้วเมื่อใส่น้ำแข็งเต็มแก้ว (แก้ว 16 oz: น้ำชาสกัด 60 ml + นม/น้ำเชื่อม 120 ml = 180 ml)
+    // เกณฑ์มาตรฐานร้าน: แก้ว 16 oz ใช้น้ำชง 250 ml (รวมน้ำแข็งเต็มแก้ว)
+    // สัดส่วนขนาดแก้วอื่นคำนวณตามขนาด oz (oz * (250 / 16)):
+    // - 16 oz: 250 ml (ถัง 5L ได้ 20 แก้ว | ถัง 6L ได้ 24 แก้ว)
+    // - 20 oz: ~312.5 ml (ถัง 5L ได้ ~16 แก้ว | ถัง 6L ได้ ~19 แก้ว)
+    // - 22 oz: ~343.8 ml (ถัง 5L ได้ ~15 แก้ว | ถัง 6L ได้ ~17 แก้ว)
+    // - 28 oz: ~437.5 ml (ถัง 5L ได้ ~11 แก้ว | ถัง 6L ได้ ~14 แก้ว)
+    // - 32 oz: 500 ml (ถัง 5L ได้ 10 แก้ว | ถัง 6L ได้ 12 แก้ว)
     const liquidPerCupMap = {
-      10: 110, // ชา ~38 ml + นม ~72 ml
-      12: 135, // ชา ~45 ml + นม ~90 ml
-      16: 180, // ชา 60 ml + นม 4 oz (120 ml)
-      20: 210, // ชา ~70 ml + นม ~140 ml
-      22: 240, // ชา ~80 ml + นม ~160 ml
-      32: 350  // ชา ~120 ml + นม ~230 ml
+      10: 156.25,
+      12: 187.5,
+      16: 250,
+      20: 312.5,
+      22: 343.75,
+      28: 437.5,
+      32: 500
     };
 
-    const mlPerCup = liquidPerCupMap[cupOz] || (cupOz * 11.25);
-    const totalMl = liters * 1000;
-    const calculatedCups = Math.max(1, Math.round(totalMl / mlPerCup));
+    const mlPerCup = liquidPerCupMap[cupOz] || (cupOz * (250 / 16));
+    const totalMl = liters > 0 ? (liters * 1000) : 0;
+    const calculatedCups = liters > 0 ? Math.max(1, Math.round(totalMl / mlPerCup)) : 0;
 
     const yieldInput = document.getElementById('recYieldCups');
     const jarCapacityInput = document.getElementById('recJarCapacity');
     const hintText = document.getElementById('recYieldHintText');
     const scaleBadge = document.getElementById('cupScaleCountBadge');
 
-    if (yieldInput) yieldInput.value = calculatedCups;
-    if (scaleBadge) scaleBadge.textContent = calculatedCups;
-    if (jarCapacityInput) {
+    if (yieldInput && liters > 0) yieldInput.value = calculatedCups;
+    if (scaleBadge && liters > 0) scaleBadge.textContent = calculatedCups;
+    if (jarCapacityInput && liters > 0) {
       jarCapacityInput.value = `โหล/ถัง ${liters} ลิตร (แก้ว ${cupOz} oz ได้ ~${calculatedCups} แก้ว)`;
     }
-    if (hintText) {
-      const teaShotPerCup = Math.round(60 * (cupOz / 16));
-      hintText.textContent = `น้ำชาปรุงสำเร็จ ${liters} ลิตร (${totalMl.toLocaleString()} ml) เสิร์ฟแก้ว ${cupOz} oz + น้ำแข็งเต็มแก้ว (น้ำชาช็อต ~${teaShotPerCup} ml, ของเหลวรวม ${mlPerCup} ml) ได้ ~${calculatedCups} แก้ว`;
+    if (hintText && liters > 0) {
+      const displayMl = Math.round(mlPerCup);
+      hintText.textContent = `น้ำชง ${liters} ลิตร (${totalMl.toLocaleString()} ml) เสิร์ฟแก้ว ${cupOz} oz รวมน้ำแข็งเต็มแก้ว (ใช้น้ำชง ${displayMl === 250 ? '250' : '~' + displayMl} ml/แก้ว) ชงเสิร์ฟได้ ~${calculatedCups} แก้ว`;
     }
 
-    return calculatedCups;
+    return calculatedCups || (liters === 5 ? 20 : 24);
   }
 
   addIngredientRowToModal(ingData = {}) {
@@ -5549,7 +5614,7 @@ class WaterFlowApp {
 
         // ดึงข้อมูลการชงของ 1 แก้วเพื่อนำมาคำนวณสัดส่วนขยาย
         const jarLiters = parseFloat(document.getElementById('recJarLiters')?.value) || 6;
-        const totalYieldCups = parseInt(document.getElementById('recYieldCups')?.value) || 33;
+        const totalYieldCups = parseInt(document.getElementById('recYieldCups')?.value) || 24;
         const lowerTitle = title.toLowerCase();
         const rowName = nameInput.value.toLowerCase();
 
@@ -5591,10 +5656,10 @@ class WaterFlowApp {
         });
         // ถ้ามีผงชา (เช่น 18g) แต่ยังไม่ได้ระบุน้ำชาสกัดแยกแถว ให้นับน้ำชาสกัดมาตรฐาน 60 ml
         if (hasTeaPowderInCup && !hasTeaShotInCup) {
-          singleCupLiquidMl += 60;
+          singleCupLiquidMl += 100;
         }
-        if (singleCupLiquidMl < 50) singleCupLiquidMl = 180;
-        const batchScale = isCurrentlyCupMode ? 1 : Math.round(((jarLiters * 1000) / singleCupLiquidMl) * 10) / 10;
+        if (singleCupLiquidMl < 50) singleCupLiquidMl = 250;
+        const batchScale = isCurrentlyCupMode ? 1 : totalYieldCups;
 
         const currentVal = parseFloat(amountInput.value) || 0;
         const currentInputUnit = amountUnitInput?.value || amountUnit || '';
@@ -5970,7 +6035,7 @@ class WaterFlowApp {
       totalJarCost += parseFloat(input.value) || 0;
     });
 
-    const yieldCups = isCup ? 1 : (parseInt(document.getElementById('recYieldCups')?.value) || 12);
+    const yieldCups = isCup ? 1 : (parseInt(document.getElementById('recYieldCups')?.value) || 24);
     const unitCost = isCup ? totalJarCost : (yieldCups > 0 ? (totalJarCost / yieldCups) : 0);
 
     const totalJarCostElem = document.getElementById('modalRecipeTotalJarCost');
@@ -6015,15 +6080,18 @@ class WaterFlowApp {
     });
   }
 
-  // คำนวณสูตรปรับลดสัดส่วนเพื่อให้ได้กำไรต่อแก้วไม่น้อยกว่า 5 บาท
+  // คำนวณสูตรปรับลดสัดส่วนเพื่อให้ได้กำไรต่อแก้วตามเป้าหมาย (กำหนดเองได้)
   calculate5BahtOptimizedRecipe(targetProfit = 5.0) {
     const isCup = document.getElementById('recMode')?.value === 'cup';
-    const yieldCups = isCup ? 1 : (parseInt(document.getElementById('recYieldCups')?.value) || 12);
+    const yieldCups = isCup ? 1 : (parseInt(document.getElementById('recYieldCups')?.value) || 20);
     const priceInput = document.getElementById('recSellingPrice');
     const sellingPrice = priceInput ? (parseFloat(priceInput.value) || 0) : 25;
+    const litersInput = document.getElementById('recJarLiters');
+    const jarLiters = litersInput ? (parseFloat(litersInput.value) || 0) : 5;
 
-    // เพดานต้นทุนต่อแก้วเพื่อให้ได้กำไร targetProfit (เช่น 5 บาท)
-    const targetUnitCost = Math.max(0, sellingPrice - targetProfit);
+    // เพดานต้นทุนต่อแก้วเพื่อให้ได้กำไร targetProfit ที่ผู้ใช้กำหนด
+    const safeTargetProfit = Math.max(0.1, parseFloat(targetProfit) || 5.0);
+    const targetUnitCost = Math.max(0, sellingPrice - safeTargetProfit);
     const targetTotalCost = targetUnitCost * yieldCups;
 
     const ingredientRows = document.querySelectorAll('#recipeIngredientsContainer .ingredient-row');
@@ -6075,16 +6143,15 @@ class WaterFlowApp {
     const currentUnitCost = yieldCups > 0 ? (currentTotalCost / yieldCups) : 0;
     const currentProfitPerCup = sellingPrice - currentUnitCost;
 
-    // คำนวณอัตราส่วนการปรับลด (Reduction Ratio)
+    // คำนวณอัตราส่วนการปรับลด (Reduction Ratio) เฉพาะในส่วนของวัตถุดิบเครื่องดื่ม (ไม่ลดบรรจุภัณฑ์)
     let ratio = 1;
     if (targetTotalCost <= packagingCost) {
-      // หากราคาขายต่ำมากจนหักบรรจุภัณฑ์และของฟรีแล้วแทบไม่เหลือ ให้ลดส่วนผสมที่มีต้นทุนลง 50%
       ratio = 0.5;
     } else if (beverageCost > 0) {
       const targetBeverageCost = targetTotalCost - packagingCost;
-      ratio = Math.max(0.2, Math.min(1.0, targetBeverageCost / beverageCost));
+      ratio = Math.max(0.1, Math.min(1.0, targetBeverageCost / beverageCost));
     } else if (currentTotalCost > 0) {
-      ratio = Math.max(0.2, Math.min(1.0, targetTotalCost / currentTotalCost));
+      ratio = Math.max(0.1, Math.min(1.0, targetTotalCost / currentTotalCost));
     }
 
     let optimizedTotalCost = 0;
@@ -6093,15 +6160,14 @@ class WaterFlowApp {
       let newUseAmount = item.origUseAmount;
       let newCost = item.origCost;
 
-      // ถ้าเป็นบรรจุภัณฑ์ หรือ รายการราคา 0 บาท (เช่น น้ำร้อน, น้ำเปล่า, วัตถุดิบฟรี) ไม่ต้องปรับสูตร
+      // ถ้าเป็นบรรจุภัณฑ์ หรือ รายการราคา 0 บาท ไม่ต้องปรับสูตร
       if (!item.isPkg && !item.isZeroCost) {
-        // ปรับลดเฉพาะส่วนผสมเครื่องดื่มที่มีต้นทุน (> 0 บาท)
         newAmountVal = Math.round((item.origAmountVal * ratio) * 10) / 10;
         if (item.origAmountVal > 0 && newAmountVal <= 0) newAmountVal = 0.1;
 
         if (item.origUseAmount > 0) {
-          newUseAmount = Math.round((item.origUseAmount * ratio) * 100) / 100;
-          if (newUseAmount <= 0) newUseAmount = 0.01;
+          newUseAmount = Math.round((item.origUseAmount * ratio) * 1000) / 1000;
+          if (newUseAmount <= 0) newUseAmount = 0.001;
         }
 
         // คำนวณต้นทุนใหม่
@@ -6118,6 +6184,14 @@ class WaterFlowApp {
       const diffCost = Math.round((item.origCost - newCost) * 100) / 100;
       const diffPercent = item.origCost > 0 ? Math.round(((item.origCost - newCost) / item.origCost) * 100) : 0;
 
+      // สัดส่วนต่อ 1 แก้ว
+      const amountPerCup = isCup ? item.origAmountVal : (yieldCups > 0 ? (Math.round((item.origAmountVal / yieldCups) * 10) / 10) : item.origAmountVal);
+      const newAmountPerCup = isCup ? newAmountVal : (yieldCups > 0 ? (Math.round((newAmountVal / yieldCups) * 10) / 10) : newAmountVal);
+      const diffAmountPerCup = Math.round((amountPerCup - newAmountPerCup) * 10) / 10;
+      const costPerCup = yieldCups > 0 ? (item.origCost / yieldCups) : item.origCost;
+      const newCostPerCup = yieldCups > 0 ? (newCost / yieldCups) : newCost;
+      const diffCostPerCup = Math.round((costPerCup - newCostPerCup) * 100) / 100;
+
       return {
         ...item,
         newAmountVal,
@@ -6125,7 +6199,13 @@ class WaterFlowApp {
         newCost,
         diffAmount,
         diffCost,
-        diffPercent
+        diffPercent,
+        amountPerCup,
+        newAmountPerCup,
+        diffAmountPerCup,
+        costPerCup,
+        newCostPerCup,
+        diffCostPerCup
       };
     });
 
@@ -6133,8 +6213,10 @@ class WaterFlowApp {
     const optimizedProfitPerCup = sellingPrice - optimizedUnitCost;
 
     return {
+      targetProfit: safeTargetProfit,
       sellingPrice,
       yieldCups,
+      jarLiters,
       isCup,
       currentUnitCost,
       currentProfitPerCup,
@@ -6148,11 +6230,17 @@ class WaterFlowApp {
     };
   }
 
-  // ฟังก์ชันแทนที่ค่าในตารางสูตรโหลด้วยสูตรปรับกำไร 5 บาททันที
-  apply5BahtOptimizedRecipe() {
-    const opt = this.calculate5BahtOptimizedRecipe(5.0);
+  // ฟังก์ชันแทนที่ค่าในตารางสูตรด้วยสูตรปรับกำไรตามเป้าหมาย (กำหนดเองได้)
+  apply5BahtOptimizedRecipe(customTargetProfit = null) {
+    let target = customTargetProfit;
+    if (target === null || isNaN(target)) {
+      const tpInput = document.getElementById('recTargetProfit');
+      target = tpInput ? (parseFloat(tpInput.value) || 5.0) : 5.0;
+    }
+    const opt = this.calculate5BahtOptimizedRecipe(target);
     if (!opt || !opt.items) return;
 
+    // 1. อัปเดตแถวส่วนผสมของโหล (#recipeIngredientsContainer)
     opt.items.forEach(item => {
       const row = item.rowElem;
       if (!row) return;
@@ -6167,13 +6255,39 @@ class WaterFlowApp {
       if (costInput) costInput.value = item.newCost.toFixed(2);
 
       if (badgeText && item.packPrice > 0 && item.packSize > 0) {
-        badgeText.textContent = `💡 ซื้อมา ฿${item.packPrice} (${item.packSize} ${item.packUnit || 'หน่วย'}) | ใช้ ${item.newUseAmount} ${item.packUnit || 'หน่วย'} = ต้นทุน ฿${item.newCost.toFixed(2)} (สูตรปรับกำไร ฿5)`;
+        badgeText.textContent = `💡 ซื้อมา ฿${item.packPrice} (${item.packSize} ${item.packUnit || 'หน่วย'}) | ใช้ ${item.newUseAmount} ${item.packUnit || 'หน่วย'} = ต้นทุน ฿${item.newCost.toFixed(2)} (สูตรปรับกำไร ฿${opt.targetProfit.toFixed(2)})`;
         badgeText.style.color = 'var(--primary)';
       }
     });
 
+    // 2. อัปเดตแถวสัดส่วนต่อ 1 แก้ว (#singleCupContainer) ให้ตรงกันด้วย
+    const singleCupRows = document.querySelectorAll('#singleCupContainer .single-cup-row');
+    singleCupRows.forEach(cRow => {
+      const cName = (cRow.querySelector('.cup-ing-name')?.value || '').toLowerCase().trim();
+      const cAmtInp = cRow.querySelector('.cup-ing-amount');
+      const cUnit = cRow.querySelector('.cup-ing-unit')?.value || '';
+      if (!cAmtInp) return;
+
+      const isPkg = cName.includes('แก้ว') || cName.includes('ฝา') || cName.includes('หลอด') || cUnit === 'ชุด' || cUnit === 'ใบ';
+      if (isPkg) return;
+
+      const matchedOpt = opt.items.find(it => {
+        const itName = it.name.toLowerCase().trim();
+        return itName.includes(cName) || cName.includes(itName) || (cName.includes('ชา') && itName.includes('ชา'));
+      });
+
+      if (matchedOpt && matchedOpt.newAmountPerCup > 0) {
+        cAmtInp.value = matchedOpt.newAmountPerCup;
+      } else {
+        const origVal = parseFloat(cAmtInp.value) || 0;
+        if (origVal > 0) {
+          cAmtInp.value = Math.round((origVal * opt.ratio) * 10) / 10;
+        }
+      }
+    });
+
     this.updateRecipeModalCalculations();
-    this.showToast(`ปรับลดอัตราส่วนเป็นสูตรกำไร ฿${opt.optimizedProfitPerCup.toFixed(2)}/แก้ว เรียบร้อยแล้ว!`, 'success');
+    this.showToast(`⚡ ปรับใช้สูตรกำไร ฿${opt.targetProfit.toFixed(2)}/แก้ว (ลดวัตถุดิบ ${opt.reductionPercent}%) เรียบร้อยแล้ว`, 'success');
   }
 
   renderRecipeCostOptimizationAdvice({ isCup, unitCost, sellingPrice, profitPerCup, marginPercent, totalJarProfit, yieldCups, totalJarCost }) {
@@ -6187,9 +6301,14 @@ class WaterFlowApp {
       return;
     }
 
-    // กรณีพิเศษสำคัญ: หากได้กำไรต่อแก้วน้อยกว่า 5 บาท (< 5 บาท)
-    if (profitPerCup < 5.0) {
-      const opt = this.calculate5BahtOptimizedRecipe(5.0);
+    // ดึงเป้าหมายกำไรต่อแก้วที่ผู้ใช้กำหนดเอง (หากไม่ได้กรอกให้ใช้ค่าเริ่มต้น 5 บาท)
+    const targetProfitInput = document.getElementById('recTargetProfit');
+    let targetProfit = targetProfitInput ? (parseFloat(targetProfitInput.value) || 5.0) : 5.0;
+    if (targetProfit <= 0) targetProfit = 5.0;
+
+    // กรณีพิเศษสำคัญ: หากได้กำไรต่อแก้วน้อยกว่าเป้าหมายที่ผู้ใช้กำหนดเอง
+    if (profitPerCup < targetProfit) {
+      const opt = this.calculate5BahtOptimizedRecipe(targetProfit);
       const profitDiff = (opt.optimizedProfitPerCup - profitPerCup);
       const totalJarProfitDiff = (opt.optimizedProfitPerCup * yieldCups) - totalJarProfit;
       const unitCostDiff = (unitCost - opt.optimizedUnitCost);
@@ -6199,18 +6318,41 @@ class WaterFlowApp {
         <div class="recipe-5baht-card">
           <!-- Header Badge -->
           <div class="opt-header">
-            <div>
+            <div style="flex:1;">
               <div style="display:flex; align-items:center; gap:0.4rem; font-weight:800; color:#c2410c; font-size:0.95rem; line-height:1.35;">
                 <span style="font-size:1.15rem; flex-shrink:0;">⚠️</span>
-                <span>กำไรต่อแก้วน้อยกว่า 5 บาท! <span style="white-space:nowrap;">(ปัจจุบัน ฿${profitPerCup.toFixed(2)}/แก้ว)</span></span>
+                <span>กำไรต่อแก้วน้อยกว่าเป้าหมาย ฿${targetProfit.toFixed(2)}! <span style="white-space:nowrap;">(ปัจจุบัน ฿${profitPerCup.toFixed(2)}/แก้ว)</span></span>
               </div>
               <div style="font-size:0.8rem; color:#9a3412; margin-top:0.3rem; line-height:1.4;">
-                ระบบคำนวณปรับลดอัตราส่วนวัตถุดิบลง <strong>${opt.reductionPercent}%</strong> เพื่อให้ได้กำไรไม่น้อยกว่า <strong>฿5.00/แก้ว</strong> ตามมาตรฐาน
+                ระบบคำนวณปรับลดอัตราส่วนวัตถุดิบลง <strong>${opt.reductionPercent}%</strong> เพื่อให้ได้กำไรตามเป้าหมาย <strong>฿${targetProfit.toFixed(2)}/แก้ว</strong> ตามที่คุณกำหนด
               </div>
             </div>
-            <span class="pill-tag" style="background:#ffedd5; color:#c2410c; font-size:0.75rem; font-weight:800; border:1px solid #fdba74; white-space:nowrap;">
-              🎯 เป้าหมายกำไร ฿5.00+
-            </span>
+            <div style="display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap;">
+              <span class="pill-tag" style="background:#ffedd5; color:#c2410c; font-size:0.75rem; font-weight:800; border:1px solid #fdba74; white-space:nowrap;">
+                🎯 เป้าหมายกำไร ฿${targetProfit.toFixed(2)}+
+              </span>
+            </div>
+          </div>
+
+          <!-- Custom Target Profit Input Bar in the Card -->
+          <div style="background:#fff7ed; border:1.5px solid #fed7aa; border-radius:var(--radius-sm); padding:0.6rem 0.85rem; margin-bottom:0.75rem; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.5rem;">
+            <div style="display:flex; align-items:center; gap:0.35rem;">
+              <span style="font-size:0.85rem; font-weight:700; color:#9a3412;">💰 กำหนดกำไรที่ต้องการต่อแก้ว:</span>
+              <span style="font-size:0.75rem; color:#c2410c;">(กรอกตัวเลขกำไรที่ต้องการได้เอง)</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap;">
+              <div class="input-with-affix" style="width:110px;">
+                <span class="affix-left" style="font-weight:800; color:#ea580c; font-size:0.85rem;">฿</span>
+                <input type="number" id="cardTargetProfitInput" class="form-input font-bold" value="${targetProfit}" min="0.5" step="0.5"
+                  style="height:34px; padding-left:1.8rem; font-weight:800; color:#c2410c; font-size:0.95rem; background:#ffffff; border-color:#fb923c;">
+              </div>
+              <span style="font-size:0.8rem; font-weight:700; color:#9a3412;">บาท/แก้ว</span>
+              <div style="display:flex; gap:0.25rem;">
+                <button type="button" class="btn-preset-profit" data-val="5" style="border:1px solid #fdba74; background:#ffffff; color:#c2410c; font-size:0.75rem; font-weight:700; padding:0.2rem 0.45rem; border-radius:4px; cursor:pointer;">฿5</button>
+                <button type="button" class="btn-preset-profit" data-val="7" style="border:1px solid #fdba74; background:#ffffff; color:#c2410c; font-size:0.75rem; font-weight:700; padding:0.2rem 0.45rem; border-radius:4px; cursor:pointer;">฿7</button>
+                <button type="button" class="btn-preset-profit" data-val="10" style="border:1px solid #fdba74; background:#ffffff; color:#c2410c; font-size:0.75rem; font-weight:700; padding:0.2rem 0.45rem; border-radius:4px; cursor:pointer;">฿10</button>
+              </div>
+            </div>
           </div>
 
           <!-- Overall Comparison Cards -->
@@ -6221,7 +6363,7 @@ class WaterFlowApp {
               <div class="stat-sub" style="font-size:0.7rem; color:#9ca3af;">ต้นทุน ฿${unitCost.toFixed(2)}</div>
             </div>
             <div class="opt-stat-card card-new">
-              <div class="stat-label" style="font-size:0.72rem; color:#065f46; font-weight:700;">ปรับกำไร 5บ.</div>
+              <div class="stat-label" style="font-size:0.72rem; color:#065f46; font-weight:700;">ปรับกำไร ฿${targetProfit.toFixed(2)}</div>
               <div class="stat-val" style="font-size:1rem; font-weight:800; color:#059669; margin:2px 0;">+฿${opt.optimizedProfitPerCup.toFixed(2)}</div>
               <div class="stat-sub" style="font-size:0.7rem; color:#047857;">ต้นทุน ฿${opt.optimizedUnitCost.toFixed(2)}</div>
             </div>
@@ -6238,18 +6380,22 @@ class WaterFlowApp {
               <span>📊</span>
               <span>ตารางเปรียบเทียบสัดส่วนปรับลด:</span>
             </div>
-            <span style="font-size:0.7rem; color:#b45309; font-weight:600;">เป้าหมาย ฿5.00/แก้ว</span>
+            <span style="font-size:0.7rem; color:#b45309; font-weight:600;">เป้าหมาย ฿${targetProfit.toFixed(2)}/แก้ว</span>
           </div>
 
           <!-- Desktop Table View -->
-          <div class="opt-desktop-table opt-table-wrap" style="background:#ffffff; border:1px solid #fed7aa; border-radius:var(--radius-sm); overflow-x:auto; margin-bottom:0.85rem;">
-            <table style="width:100%; border-collapse:collapse; font-size:0.775rem; text-align:left;">
+          <div class="opt-desktop-table opt-table-wrap" style="background:#ffffff; border:1.5px solid #fed7aa; border-radius:var(--radius-sm); overflow-x:auto; margin-bottom:0.85rem; box-shadow:0 1px 4px rgba(0,0,0,0.04);">
+            <table style="width:100%; border-collapse:collapse; font-size:0.8rem; text-align:left;">
               <thead>
-                <tr style="background:#ffedd5; color:#9a3412; border-bottom:1px solid #fed7aa; white-space:nowrap;">
-                  <th style="padding:0.45rem 0.6rem; font-weight:700;">วัตถุดิบ</th>
-                  <th style="padding:0.45rem 0.6rem; font-weight:700; text-align:center;">สูตรเดิม</th>
-                  <th style="padding:0.45rem 0.6rem; font-weight:700; text-align:center; color:#065f46;">สูตรกำไร 5 บ.</th>
-                  <th style="padding:0.45rem 0.6rem; font-weight:700; text-align:right;">ส่วนต่างลดลง</th>
+                <tr style="background:#ffedd5; color:#9a3412; border-bottom:1.5px solid #fed7aa; white-space:nowrap;">
+                  <th style="padding:0.5rem 0.65rem; font-weight:700;">วัตถุดิบ</th>
+                  <th style="padding:0.5rem 0.65rem; font-weight:700; text-align:center;">
+                    สูตรเดิม ${!isCup ? `<span style="font-size:0.7rem; font-weight:600; color:#c2410c;">(ต่อแก้ว / ถัง ${opt.jarLiters}L)</span>` : '(ต่อ 1 แก้ว)'}
+                  </th>
+                  <th style="padding:0.5rem 0.65rem; font-weight:700; text-align:center; color:#065f46;">
+                    สูตรกำไร ฿${targetProfit.toFixed(2)} ${!isCup ? `<span style="font-size:0.7rem; font-weight:600; color:#047857;">(ต่อแก้ว / ถัง ${opt.jarLiters}L)</span>` : '(ต่อ 1 แก้ว)'}
+                  </th>
+                  <th style="padding:0.5rem 0.65rem; font-weight:700; text-align:right;">ส่วนต่างลดลง</th>
                 </tr>
               </thead>
               <tbody>
@@ -6258,57 +6404,80 @@ class WaterFlowApp {
         if (item.isZeroCost) {
           return `
                       <tr style="background:${isBgEven}; border-bottom:1px solid #fef3c7;">
-                        <td style="padding:0.45rem 0.6rem; font-weight:600; color:#374151;">
-                          ${this.escapeHtml(item.name)} <span style="font-size:0.68rem; color:#10b981; font-weight:700;">(ฟรี)</span>
+                        <td style="padding:0.5rem 0.65rem; font-weight:600; color:#374151;">
+                          ${this.escapeHtml(item.name)} <span style="font-size:0.7rem; color:#10b981; font-weight:700;">(ฟรี)</span>
                         </td>
-                        <td style="padding:0.45rem 0.6rem; text-align:center; color:#4b5563;">${item.origAmountVal} ${item.unit}</td>
-                        <td style="padding:0.45rem 0.6rem; text-align:center; color:#4b5563;">${item.newAmountVal} ${item.unit}</td>
-                        <td style="padding:0.45rem 0.6rem; text-align:right; color:#10b981; font-size:0.72rem; font-weight:600;">คงเดิม</td>
+                        <td style="padding:0.5rem 0.65rem; text-align:center; color:#4b5563;">
+                          ${item.amountPerCup} ${item.unit}/แก้ว
+                          ${!isCup ? `<div style="font-size:0.7rem; color:#9ca3af;">(รวมถัง ${item.origAmountVal} ${item.unit})</div>` : ''}
+                        </td>
+                        <td style="padding:0.5rem 0.65rem; text-align:center; color:#4b5563;">
+                          ${item.newAmountPerCup} ${item.unit}/แก้ว
+                          ${!isCup ? `<div style="font-size:0.7rem; color:#9ca3af;">(รวมถัง ${item.newAmountVal} ${item.unit})</div>` : ''}
+                        </td>
+                        <td style="padding:0.5rem 0.65rem; text-align:right; color:#10b981; font-size:0.75rem; font-weight:600;">คงเดิม</td>
                       </tr>
                     `;
         }
         if (item.isPkg) {
           return `
                       <tr style="background:${isBgEven}; border-bottom:1px solid #fef3c7;">
-                        <td style="padding:0.45rem 0.6rem; font-weight:600; color:#374151;">
-                          ${this.escapeHtml(item.name)} <span style="font-size:0.68rem; color:#9ca3af;">(แก้ว/ฝา)</span>
+                        <td style="padding:0.5rem 0.65rem; font-weight:600; color:#374151;">
+                          ${this.escapeHtml(item.name)} <span style="font-size:0.7rem; color:#9ca3af;">(บรรจุภัณฑ์)</span>
                         </td>
-                        <td style="padding:0.45rem 0.6rem; text-align:center; color:#4b5563;">${item.origAmountVal} ${item.unit}</td>
-                        <td style="padding:0.45rem 0.6rem; text-align:center; color:#4b5563;">${item.newAmountVal} ${item.unit}</td>
-                        <td style="padding:0.45rem 0.6rem; text-align:right; color:#9ca3af; font-size:0.72rem;">คงที่</td>
+                        <td style="padding:0.5rem 0.65rem; text-align:center; color:#4b5563;">
+                          1 ${item.unit}/แก้ว
+                          ${!isCup ? `<div style="font-size:0.7rem; color:#6b7280;">(รวมถัง ${item.origAmountVal} ${item.unit} · ฿${item.origCost.toFixed(2)})</div>` : `<div style="font-size:0.7rem; color:#6b7280;">(฿${item.origCost.toFixed(2)})</div>`}
+                        </td>
+                        <td style="padding:0.5rem 0.65rem; text-align:center; color:#4b5563;">
+                          1 ${item.unit}/แก้ว
+                          ${!isCup ? `<div style="font-size:0.7rem; color:#6b7280;">(รวมถัง ${item.newAmountVal} ${item.unit} · ฿${item.newCost.toFixed(2)})</div>` : `<div style="font-size:0.7rem; color:#6b7280;">(฿${item.newCost.toFixed(2)})</div>`}
+                        </td>
+                        <td style="padding:0.5rem 0.65rem; text-align:right; color:#9ca3af; font-size:0.75rem;">คงที่ (1:1)</td>
                       </tr>
                     `;
         }
         return `
                     <tr style="background:${isBgEven}; border-bottom:1px solid #fef3c7;">
-                      <td style="padding:0.45rem 0.6rem; font-weight:700; color:#1f2937;">
+                      <td style="padding:0.5rem 0.65rem; font-weight:700; color:#1f2937;">
                         ${this.escapeHtml(item.name)}
                       </td>
-                      <td style="padding:0.45rem 0.6rem; text-align:center; color:#4b5563; white-space:nowrap;">
-                        ${item.origAmountVal} ${item.unit} <span style="font-size:0.68rem; color:#9ca3af;">(฿${item.origCost.toFixed(2)})</span>
+                      <td style="padding:0.5rem 0.65rem; text-align:center; color:#4b5563;">
+                        <div style="font-weight:700; font-size:0.85rem;">${item.amountPerCup} ${item.unit}<span style="font-size:0.7rem; font-weight:normal; color:#6b7280;">/แก้ว</span></div>
+                        ${!isCup ? `<div style="font-size:0.7rem; color:#6b7280; margin-top:1px;">(ถัง ${item.origAmountVal} ${item.unit} · ฿${item.origCost.toFixed(2)})</div>` : `<div style="font-size:0.7rem; color:#6b7280;">(฿${item.origCost.toFixed(2)})</div>`}
                       </td>
-                      <td style="padding:0.45rem 0.6rem; text-align:center; font-weight:700; color:#059669; white-space:nowrap;">
-                        ${item.newAmountVal} ${item.unit} <span style="font-size:0.68rem; color:#047857;">(฿${item.newCost.toFixed(2)})</span>
+                      <td style="padding:0.5rem 0.65rem; text-align:center; font-weight:700; color:#059669;">
+                        <div style="font-weight:800; font-size:0.85rem; color:#059669;">${item.newAmountPerCup} ${item.unit}<span style="font-size:0.7rem; font-weight:normal; color:#047857;">/แก้ว</span></div>
+                        ${!isCup ? `<div style="font-size:0.7rem; color:#047857; margin-top:1px;">(ถัง ${item.newAmountVal} ${item.unit} · ฿${item.newCost.toFixed(2)})</div>` : `<div style="font-size:0.7rem; color:#047857;">(฿${item.newCost.toFixed(2)})</div>`}
                       </td>
-                      <td style="padding:0.45rem 0.6rem; text-align:right; font-weight:700; color:#dc2626; white-space:nowrap;">
-                        -${item.diffAmount} ${item.unit} <span style="font-size:0.7rem; color:#b91c1c;">(-฿${item.diffCost.toFixed(2)})</span>
+                      <td style="padding:0.5rem 0.65rem; text-align:right; font-weight:700; color:#dc2626;">
+                        <div>-${item.diffAmountPerCup} ${item.unit}<span style="font-size:0.7rem; font-weight:normal;">/แก้ว</span></div>
+                        ${!isCup ? `<div style="font-size:0.7rem; color:#b91c1c; margin-top:1px;">(-ถัง ${item.diffAmount} ${item.unit} · -฿${item.diffCost.toFixed(2)})</div>` : `<div style="font-size:0.7rem; color:#b91c1c;">(-฿${item.diffCost.toFixed(2)})</div>`}
                       </td>
                     </tr>
                   `;
       }).join('')}
               </tbody>
               <tfoot>
-                <tr style="background:#fef3c7; font-weight:800; border-top:1.5px solid #fed7aa; color:#78350f; white-space:nowrap;">
-                  <td style="padding:0.5rem 0.6rem;">ต้นทุนรวม:</td>
-                  <td style="padding:0.5rem 0.6rem; text-align:center; color:#dc2626;">฿${unitCost.toFixed(2)}/แก้ว</td>
-                  <td style="padding:0.5rem 0.6rem; text-align:center; color:#059669;">฿${opt.optimizedUnitCost.toFixed(2)}/แก้ว</td>
-                  <td style="padding:0.5rem 0.6rem; text-align:right; color:#059669;">ลดลง ฿${unitCostDiff.toFixed(2)}</td>
+                <tr style="background:#fef3c7; font-weight:800; border-top:2px solid #fed7aa; color:#78350f; white-space:nowrap;">
+                  <td style="padding:0.55rem 0.65rem;">ต้นทุนรวม:</td>
+                  <td style="padding:0.55rem 0.65rem; text-align:center; color:#dc2626;">
+                    <div>฿${unitCost.toFixed(2)}/แก้ว</div>
+                    ${!isCup ? `<div style="font-size:0.7rem; color:#78350f; font-weight:600;">(รวมถัง ฿${totalJarCost.toFixed(2)})</div>` : ''}
+                  </td>
+                  <td style="padding:0.55rem 0.65rem; text-align:center; color:#059669;">
+                    <div>฿${opt.optimizedUnitCost.toFixed(2)}/แก้ว</div>
+                    ${!isCup ? `<div style="font-size:0.7rem; color:#047857; font-weight:700;">(รวมถัง ฿${opt.optimizedTotalCost.toFixed(2)})</div>` : ''}
+                  </td>
+                  <td style="padding:0.55rem 0.65rem; text-align:right; color:#059669;">
+                    <div>ลดลง ฿${unitCostDiff.toFixed(2)}/แก้ว</div>
+                    ${!isCup ? `<div style="font-size:0.7rem; color:#047857; font-weight:700;">(ประหยัด ฿${(totalJarCost - opt.optimizedTotalCost).toFixed(2)}/ถัง)</div>` : ''}
+                  </td>
                 </tr>
               </tfoot>
             </table>
           </div>
-
-          <!-- Mobile Cards View (Redesigned for Phone screens) -->
+          <!-- Mobile Cards View -->
           <div class="opt-mobile-list">
             ${opt.items.map((item) => {
         if (item.isZeroCost) {
@@ -6324,7 +6493,7 @@ class WaterFlowApp {
                       <span class="opt-mobile-col-val">${item.origAmountVal} ${item.unit} (฿0)</span>
                     </div>
                     <div class="opt-mobile-col">
-                      <span class="opt-mobile-col-label">สูตรกำไร 5บ.</span>
+                      <span class="opt-mobile-col-label">สูตรกำไร ฿${targetProfit.toFixed(2)}</span>
                       <span class="opt-mobile-col-val val-new">${item.newAmountVal} ${item.unit} (฿0)</span>
                     </div>
                   </div>
@@ -6344,7 +6513,7 @@ class WaterFlowApp {
                       <span class="opt-mobile-col-val">${item.origAmountVal} ${item.unit} (฿${item.origCost.toFixed(2)})</span>
                     </div>
                     <div class="opt-mobile-col">
-                      <span class="opt-mobile-col-label">สูตรกำไร 5บ.</span>
+                      <span class="opt-mobile-col-label">สูตรกำไร ฿${targetProfit.toFixed(2)}</span>
                       <span class="opt-mobile-col-val val-new">${item.newAmountVal} ${item.unit} (฿${item.newCost.toFixed(2)})</span>
                     </div>
                   </div>
@@ -6363,7 +6532,7 @@ class WaterFlowApp {
                     <span class="opt-mobile-col-val" style="color:#6b7280;">${item.origAmountVal} ${item.unit} <span style="font-size:0.72rem;">(฿${item.origCost.toFixed(2)})</span></span>
                   </div>
                   <div class="opt-mobile-col">
-                    <span class="opt-mobile-col-label" style="color:#047857;">สูตรใหม่ (กำไร 5บ.)</span>
+                    <span class="opt-mobile-col-label" style="color:#047857;">สูตรใหม่ (กำไร ฿${targetProfit.toFixed(2)})</span>
                     <span class="opt-mobile-col-val val-new">${item.newAmountVal} ${item.unit} <span style="font-size:0.72rem; color:#047857;">(฿${item.newCost.toFixed(2)})</span></span>
                   </div>
                 </div>
@@ -6390,23 +6559,44 @@ class WaterFlowApp {
             <span style="font-size:0.75rem; color:#9a3412;">
               💡 กดปุ่มเพื่ออัปเดตสัดส่วนลงในสูตรทันที
             </span>
-            <button type="button" id="btnApplyOptimized5Baht" class="btn-fastwork-sm opt-btn-apply"
+            <button type="button" id="btnApplyOptimizedTargetProfit" class="btn-fastwork-sm opt-btn-apply"
               style="background:#059669; border-color:#047857; color:#ffffff; font-weight:700; padding:0.48rem 0.95rem; box-shadow:0 2px 6px rgba(5,150,105,0.25); display:inline-flex; align-items:center; gap:0.35rem;">
-              <span>⚡ ปรับใช้สูตรกำไร 5 บาททันที</span>
+              <span>⚡ ปรับใช้สูตรกำไร ฿${targetProfit.toFixed(2)} ทันที</span>
             </button>
           </div>
         </div>
       `;
 
-      const btnApply = document.getElementById('btnApplyOptimized5Baht');
+      const btnApply = document.getElementById('btnApplyOptimizedTargetProfit');
       if (btnApply) {
         btnApply.onclick = () => {
-          this.apply5BahtOptimizedRecipe();
+          this.apply5BahtOptimizedRecipe(targetProfit);
         };
       }
+
+      const cardInput = document.getElementById('cardTargetProfitInput');
+      if (cardInput) {
+        cardInput.addEventListener('change', (e) => {
+          const val = parseFloat(e.target.value) || 0;
+          if (val > 0) {
+            const fInput = document.getElementById('recTargetProfit');
+            if (fInput) fInput.value = val;
+            this.updateRecipeModalCalculations();
+          }
+        });
+      }
+
+      document.querySelectorAll('.btn-preset-profit').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const val = parseFloat(btn.dataset.val) || 5;
+          const fInput = document.getElementById('recTargetProfit');
+          if (fInput) fInput.value = val;
+          this.updateRecipeModalCalculations();
+        });
+      });
+
       return;
     }
-
     // กำไรต่ำทั่วไปเมื่อ margin < 45% หรือ profitPerCup < 10 บาท
     const isLowProfit = marginPercent < 45 || profitPerCup < 10;
 
@@ -6676,8 +6866,8 @@ class WaterFlowApp {
         const mode = document.getElementById('recMode')?.value || 'jar';
         const isCup = mode === 'cup';
         const jarLiters = isCup ? 0 : (parseFloat(document.getElementById('recJarLiters')?.value) || 6);
-        const cupSizeOz = parseInt(document.getElementById('recCupSizeOz')?.value) || 16;
-        const yieldCups = isCup ? 1 : (parseInt(document.getElementById('recYieldCups')?.value) || 25);
+        const cupSizeOz = parseInt(document.getElementById('recCupSizeOz')?.value) || 22;
+        const yieldCups = isCup ? 1 : (parseInt(document.getElementById('recYieldCups')?.value) || 24);
         const jarCapacity = isCup ? `แก้ว ${cupSizeOz} oz (1 แก้ว)` : (document.getElementById('recJarCapacity')?.value.trim() || `โหล/ถัง ${jarLiters} ลิตร (${yieldCups} แก้ว)`);
         const instructions = document.getElementById('recInstructions')?.value.trim() || '';
 
@@ -6719,6 +6909,7 @@ class WaterFlowApp {
         const unitCost = isCup ? totalCost : (yieldCups > 0 ? (totalCost / yieldCups) : 0);
         const sellingPrice = parseFloat(document.getElementById('recSellingPrice')?.value) || 25;
         const suggestedPrice = sellingPrice;
+        const targetProfit = parseFloat(document.getElementById('recTargetProfit')?.value) || 5;
 
         // บันทึกรายการสัดส่วนน้ำชง 1 แก้วคู่กับสูตร (ถ้าเป็นโหมดแก้ว ใช้วัตถุดิบแก้วจาก ingredients ได้)
         const singleCupRows = document.querySelectorAll('#singleCupContainer .single-cup-row');
@@ -6737,6 +6928,7 @@ class WaterFlowApp {
           mode,
           jarLiters,
           cupSizeOz,
+          targetProfit,
           yieldCups,
           sellingPrice,
           suggestedPrice,
@@ -6830,25 +7022,63 @@ const quickRestockForm = document.getElementById('quickRestockForm');
     let lowCount = 0;
     let normalCount = 0;
     let noAlertCount = 0;
+    let outOfStockCount = 0;
     let totalValue = 0;
 
     list.forEach(item => {
+      const qty = Number(item.qty) || 0;
       const minQty = Number(item.minQty) || 0;
-      const isLow = minQty > 0 && Number(item.qty) <= minQty;
-      if (minQty === 0) noAlertCount++;
-      else if (isLow) lowCount++;
-      else normalCount++;
-      totalValue += (Number(item.qty) || 0) * (Number(item.unitCost) || 0);
+      const isOutOfStock = qty <= 0;
+      const isLow = (minQty > 0 && qty <= minQty) || isOutOfStock;
+
+      if (isOutOfStock) {
+        outOfStockCount++;
+      }
+      if (isLow) {
+        lowCount++;
+      } else if (minQty === 0) {
+        noAlertCount++;
+      } else {
+        normalCount++;
+      }
+
+      if (qty > 0) {
+        totalValue += qty * (Number(item.unitCost) || 0);
+      }
     });
+
+    // แยกรายการสินค้า:
+    // รายการที่มีสต๊อก (> 0) แสดงในหน้านี้
+    // รายการที่สต๊อกหมด (<= 0) ย้ายไปแสดงที่หน้า "สินค้าใกล้หมด (เตือนซื้อ)" แทน
+    const activeList = list.filter(item => (Number(item.qty) || 0) > 0);
+    const outOfStockList = list.filter(item => (Number(item.qty) || 0) <= 0);
+
+    // Update Out of Stock Notice Banner
+    const outOfStockBanner = document.getElementById('stockOutOfStockNoticeBanner');
+    const outOfStockTitle = document.getElementById('stockOutOfStockBannerTitle');
+    if (outOfStockBanner) {
+      if (outOfStockList.length > 0) {
+        outOfStockBanner.style.display = 'flex';
+        if (outOfStockTitle) {
+          outOfStockTitle.textContent = `มีสินค้าหมดสต๊อก (${outOfStockList.length} รายการ)`;
+        }
+      } else {
+        outOfStockBanner.style.display = 'none';
+      }
+    }
 
     // Update KPI Cards
     const kpiLow = document.getElementById('kpiStockLowCount');
     const kpiTotal = document.getElementById('kpiStockTotalItems');
     const kpiNormal = document.getElementById('kpiStockNormalCount');
     const kpiValue = document.getElementById('kpiStockTotalValue');
+    const kpiLowSub = document.getElementById('kpiStockLowSubtext');
+    const kpiTotalSub = document.getElementById('kpiStockTotalSubtext');
 
     if (kpiLow) kpiLow.textContent = `${lowCount} รายการ`;
-    if (kpiTotal) kpiTotal.textContent = `${list.length} รายการ`;
+    if (kpiLowSub) kpiLowSub.textContent = outOfStockCount > 0 ? `หมดสต๊อก ${outOfStockCount} | ใกล้หมด ${lowCount - outOfStockCount}` : 'คลิกเพื่อไปหน้าสั่งซื้อด่วน';
+    if (kpiTotal) kpiTotal.textContent = `${activeList.length} รายการ`;
+    if (kpiTotalSub) kpiTotalSub.textContent = outOfStockCount > 0 ? `ย้ายไปหน้าเตือนซื้อ ${outOfStockCount} รายการ` : 'มีสต๊อกพร้อมชงขาย';
     if (kpiNormal) kpiNormal.textContent = `${normalCount} รายการ`;
     if (kpiValue) kpiValue.textContent = this.formatCurrency(totalValue);
 
@@ -6867,28 +7097,41 @@ const quickRestockForm = document.getElementById('quickRestockForm');
     // Update Filter labels
     const tabFilterAllText = document.getElementById('tabFilterAllText');
     const tabFilterLowText = document.getElementById('tabFilterLowText');
-    if (tabFilterAllText) tabFilterAllText.textContent = `ทั้งหมด (${list.length})`;
-    if (tabFilterLowText) tabFilterLowText.textContent = `⚠️ สินค้าใกล้หมด (${lowCount})`;
+    if (tabFilterAllText) tabFilterAllText.textContent = `มีสต๊อก (${activeList.length})`;
+    if (tabFilterLowText) tabFilterLowText.textContent = `⚠️ เตือนซื้อ (${lowCount})`;
 
     // Render Daily Stock Profit Card
     this.renderStockProfitCard();
 
-    if (list.length === 0) {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="8" class="text-center py-4 text-muted">
-            ยังไม่มีสินค้าในสต๊อก กดปุ่ม <b>"+ เพิ่มสินค้าใหม่เข้าสต๊อก"</b> หรือ <b>"ซิงค์จากบิลซื้อของ"</b>
-          </td>
-        </tr>
-      `;
+    if (activeList.length === 0) {
+      if (list.length > 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8" class="text-center py-4 text-muted">
+              สินค้าในร้านหมดสต๊อกทุกรายการ (ทั้งหมด ${list.length} รายการ ถูกย้ายไปแสดงที่หน้า 
+              <a href="javascript:void(0)" onclick="app.switchTab('stock-low')" style="font-weight:700; color:var(--danger); text-decoration:underline;">
+                🚨 สินค้าใกล้หมด (เตือนซื้อ)
+              </a> เพื่อจัดซื้อเติมของ)
+            </td>
+          </tr>
+        `;
+      } else {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8" class="text-center py-4 text-muted">
+              ยังไม่มีสินค้าในสต๊อก กดปุ่ม <b>"+ เพิ่มสินค้าใหม่เข้าสต๊อก"</b> หรือ <b>"ซิงค์จากบิลซื้อของ"</b>
+            </td>
+          </tr>
+        `;
+      }
       this.refreshLucide();
       return;
     }
 
-    // Sort according to stockSortOrder (default: newest)
+    // Sort according to stockSortOrder (default: newest) among active stock items
     const stockSortEl = document.getElementById('stockSortOrder');
     const stockSort = stockSortEl?.dataset?.order || stockSortEl?.value || 'newest';
-    const sorted = [...list].sort((a, b) => {
+    const sorted = [...activeList].sort((a, b) => {
       const idA = String(a.id || '');
       const idB = String(b.id || '');
       const aMin = Number(a.minQty) || 0;
@@ -7033,6 +7276,10 @@ const quickRestockForm = document.getElementById('quickRestockForm');
   }
 
   setStockFilter(type) {
+    if (type === 'low') {
+      this.switchTab('stock-low');
+      return;
+    }
     const radio = document.querySelector(`input[name="stockSubFilter"][value="${type}"]`);
     if (radio) {
       radio.checked = true;
@@ -7061,6 +7308,7 @@ const quickRestockForm = document.getElementById('quickRestockForm');
       date: dateStr,
       time: timeStr,
       timestamp: Date.now(),
+      itemId: extra.itemId || null,
       itemName: itemName,
       actionType: actionType, // 'USE' (เบิก/ตัดสต๊อก), 'RESTOCK' (เติมสต๊อก), 'DIRECT_SET' (แก้ไขโดยตรง)
       changeQty: changeQty,
@@ -7096,12 +7344,72 @@ const quickRestockForm = document.getElementById('quickRestockForm');
     item.qty = parsed;
 
     const actionType = diff > 0 ? 'RESTOCK' : 'USE';
-    let note = `พิมพ์ปรับจำนวนจาก ${oldQty} เป็น ${parsed}`;
-    if (diff < 0 && item.category === 'STOCK' && (Number(item.sellingPrice) || 0) > 0) {
-      const uProfit = (Number(item.sellingPrice) - (Number(item.unitCost) || 0)) * Math.abs(diff);
-      note += ` | กำไรที่ได้ +฿${uProfit.toFixed(2)} (ขาย @฿${item.sellingPrice})`;
+    const isSellable = item.category === 'STOCK' || (Number(item.sellingPrice) || 0) > 0 || (item.unit || '').includes('ลัง');
+    const useQty = Math.abs(diff);
+    const unitCost = Number(item.unitCost) || 0;
+    let sellPrice = Number(item.sellingPrice) || 0;
+    let saleProfitRecorded = null;
+
+    if (diff < 0 && isSellable) {
+      // คำนวณราคาขายอัตโนมัติทันทีหากยังไม่ได้ตั้งราคา โดยไม่เด้ง alert ใดๆ รบกวนผู้ใช้
+      if (sellPrice <= 0 && unitCost > 0) {
+        sellPrice = Math.round(unitCost * 1.3);
+        item.sellingPrice = sellPrice;
+      }
+
+      if (sellPrice > 0) {
+        const totalRevenue = parseFloat((useQty * sellPrice).toFixed(2));
+        const totalCost = parseFloat((useQty * unitCost).toFixed(2));
+        const totalProfit = parseFloat((totalRevenue - totalCost).toFixed(2));
+        const profitStr = totalProfit >= 0 ? `+฿${totalProfit.toFixed(2)}` : `-฿${Math.abs(totalProfit).toFixed(2)}`;
+        const logNote = `เบิกขาย ${useQty} ${item.unit || 'หน่วย'} (@฿${sellPrice.toFixed(2)} ทุน ฿${unitCost.toFixed(2)}) กำไร ${profitStr} [ปรับสต๊อกเป็น ${parsed}]`;
+
+        this.logStockAction(item.name, 'USE', diff, parsed, item.unit || '', logNote, {
+          itemId: item.id,
+          profit: totalProfit,
+          revenue: totalRevenue,
+          cost: totalCost,
+          sellingPrice: sellPrice,
+          unitCost: unitCost,
+          isStockSale: true,
+          category: item.category || 'STOCK'
+        });
+
+        // บันทึกเข้า Daily Sales (ยอดขายประจำวัน) อัตโนมัติทันที
+        const todayStr = this.formatDate(new Date());
+        if (!Array.isArray(this.data.dailySales)) this.data.dailySales = [];
+        const existingIndex = this.data.dailySales.findIndex(d => d.date === todayStr);
+        const saleDesc = `ขาย ${item.name} x${useQty} ${item.unit || 'หน่วย'} (กำไร ${profitStr})`;
+        if (existingIndex !== -1) {
+          const ex = this.data.dailySales[existingIndex];
+          ex.revenue = parseFloat(((Number(ex.revenue) || 0) + totalRevenue).toFixed(2));
+          ex.cost = parseFloat(((Number(ex.cost) || 0) + totalCost).toFixed(2));
+          ex.materialCost = parseFloat(((Number(ex.materialCost) || 0) + totalCost).toFixed(2));
+          ex.profit = parseFloat(((Number(ex.profit) || 0) + totalProfit).toFixed(2));
+          ex.note = ex.note ? `${ex.note}, ${saleDesc}` : saleDesc;
+        } else {
+          const costInfo = this.getSystemCostForDate(todayStr, totalRevenue);
+          const dailyRent = costInfo.dailyRent || 0;
+          const newRecord = {
+            id: 'd_' + Date.now(),
+            date: todayStr,
+            revenue: totalRevenue,
+            cost: parseFloat((totalCost + dailyRent).toFixed(2)),
+            materialCost: totalCost,
+            dailyRent: dailyRent,
+            profit: parseFloat((totalRevenue - totalCost - dailyRent).toFixed(2)),
+            note: saleDesc
+          };
+          this.data.dailySales.unshift(newRecord);
+        }
+
+        saleProfitRecorded = totalProfit;
+      } else {
+        this.logStockAction(item.name, 'USE', diff, parsed, item.unit || '', `พิมพ์ปรับจำนวนจาก ${oldQty} เป็น ${parsed}`);
+      }
+    } else {
+      this.logStockAction(item.name, actionType, diff, parsed, item.unit || '', `พิมพ์ปรับจำนวนจาก ${oldQty} เป็น ${parsed}`);
     }
-    this.logStockAction(item.name, actionType, diff, parsed, item.unit || '', note);
 
     // ถ้าพิมพ์เพิ่มจำนวน (diff > 0) ให้สร้างบิลรายจ่ายของเดือนปัจจุบันอัตโนมัติ (จำนวนที่เพิ่ม × ต้นทุนต่อหน่วย)
     if (diff > 0 && (Number(item.unitCost) || 0) > 0) {
@@ -7129,15 +7437,21 @@ const quickRestockForm = document.getElementById('quickRestockForm');
     this.saveData();
     this.syncRecipesWithExpenses();
     this.renderStock();
+    this.renderStockProfitCard();
+    this.renderStockHistory();
     this.renderLowStockAlertView();
     this.renderExpenses();
     this.renderRecipes();
     this.calculatePricing();
     this.renderDashboard();
+    this.renderTodaySummary();
+    this.renderCalendar();
 
     if (diff > 0 && (Number(item.unitCost) || 0) > 0) {
       const expVal = (diff * item.unitCost).toFixed(2);
-      this.showToast(`ปรับยอด "${item.name}" เป็น ${parsed} ${item.unit || ''} (หักต้นทุนรายจ่ายเดือนนี้ ฿${this.formatCurrency(expVal)} อัตโนมัติ)`, 'success');
+      this.showToast(`ปรับยอด "${item.name}" เป็น ${parsed} ${item.unit || ''} (ลงต้นทุนรายจ่ายเดือนนี้ ฿${this.formatCurrency(expVal)} อัตโนมัติ)`, 'success');
+    } else if (saleProfitRecorded !== null) {
+      this.showToast(`✅ เบิกขาย "${item.name}" ${useQty} ${item.unit || 'หน่วย'} สำเร็จ! ได้กำไร ${saleProfitRecorded >= 0 ? '+' : ''}${this.formatCurrency(saleProfitRecorded)} (คงเหลือ ${parsed})`, 'success');
     } else {
       this.showToast(`ปรับยอดคงเหลือ "${item.name}" เป็น ${parsed} ${item.unit || ''} (บันทึกประวัติแล้ว)`, 'success');
     }
@@ -7145,7 +7459,7 @@ const quickRestockForm = document.getElementById('quickRestockForm');
 
   adjustStockQty(itemId, delta) {
     if (delta > 0) {
-      // เมื่อกดปุ่ม + ให้เปิดหน้าต่างเติมของ เพื่อให้ตรวจ/แก้ราคา และคำนวณต้นทุนเฉลี่ยถ่วงน้ำหนัก (Moving Average Cost)
+      // เมื่อกดปุ่ม + ให้เปิดหน้าต่างเติมของ เพื่อตรวจ/แก้ราคา และคำนวณต้นทุน
       this.openQuickRestockModal(itemId, delta);
       return;
     }
@@ -7153,31 +7467,12 @@ const quickRestockForm = document.getElementById('quickRestockForm');
     const item = (this.data.stockItems || []).find(x => x.id === itemId);
     if (!item) return;
 
-    // เมื่อกดปุ่ม - : ถ้าเป็นสินค้าหมวด "สำเร็จรูป/ลัง" (category === 'STOCK')
-    // ให้เปิด Modal คำนวณกำไรจากการเบิกขายทันที
-    if (item.category === 'STOCK') {
-      this.openStockUseProfitModal(itemId, Math.abs(delta) || 1);
-      return;
-    }
-
-    // สำหรับสินค้าหมวดอื่นๆ (วัตถุดิบชง / บรรจุภัณฑ์ / อื่นๆ) ตัดสต๊อกออกตามปกติทันที
     const oldQty = Number(item.qty) || 0;
     const newQty = Math.max(0, oldQty + delta);
     if (oldQty === newQty) return;
 
-    const actualDiff = newQty - oldQty;
-    item.qty = newQty;
-
-    const actionType = 'USE';
-    const note = `กดเบิก/ตัดใช้สต๊อก (${delta})`;
-    this.logStockAction(item.name, actionType, actualDiff, newQty, item.unit || '', note);
-
-    this.saveData();
-    this.renderStock();
-    this.renderLowStockAlertView();
-    this.renderDashboard();
-
-    this.showToast(`ตัดสต๊อก ${item.name} ${delta} ${item.unit} (คงเหลือ ${newQty})`, 'info');
+    // เมื่อกดปุ่ม - เรียก setExactStockQty เพื่อตัดสต๊อกและคิดกำไรอัตโนมัติทันที โดยไม่ต้องมี popup หรือกดยืนยัน
+    this.setExactStockQty(itemId, newQty);
   }
 
   // เปิดหน้าต่างเติมของเข้าร้าน & คำนวณต้นทุนเฉลี่ยถ่วงน้ำหนัก (Moving Average Cost)
@@ -7511,11 +7806,7 @@ const quickRestockForm = document.getElementById('quickRestockForm');
     const currentUnitCost = Number(item.unitCost) || 0;
     const unit = item.unit || 'หน่วย';
 
-    if (useQty > currentQty) {
-      if (!confirm(`จำนวนที่เบิกขาย (${useQty} ${unit}) มากกว่าสต๊อกที่มีในร้าน (${currentQty} ${unit}) ต้องการดำเนินการต่อหรือไม่?`)) {
-        return;
-      }
-    }
+    // อนุญาตให้ตัดสต๊อกได้ทันทีโดยไม่ต้องเด้ง confirm บล็อกผู้ใช้
 
     const newQty = Math.max(0, currentQty - useQty);
     const totalRevenue = parseFloat((useQty * sellPrice).toFixed(2));
@@ -7532,6 +7823,7 @@ const quickRestockForm = document.getElementById('quickRestockForm');
     const profitStr = totalProfit >= 0 ? `+฿${totalProfit.toFixed(2)}` : `-฿${Math.abs(totalProfit).toFixed(2)}`;
     const logNote = `เบิกขาย ${useQty} ${unit} (@฿${sellPrice.toFixed(2)} ทุน ฿${currentUnitCost.toFixed(2)}) กำไร ${profitStr}${addToDailySales ? ' [ลงยอดขายวันนี้แล้ว]' : ''}${userNote ? ' • ' + userNote : ''}`;
     this.logStockAction(item.name, 'USE', -useQty, newQty, unit, logNote, {
+      itemId: item.id,
       profit: totalProfit,
       revenue: totalRevenue,
       cost: totalCost,
@@ -7585,8 +7877,8 @@ const quickRestockForm = document.getElementById('quickRestockForm');
     this.renderStockHistory();
 
     const toastMsg = totalProfit >= 0
-      ? `✅ เบิกขาย "${item.name}" ${useQty} ${unit} สำเร็จ! ได้กำไร +฿${this.formatCurrency(totalProfit)} (คงเหลือ ${newQty} ${unit})`
-      : `⚠️ เบิกขาย "${item.name}" ${useQty} ${unit} ขาดทุน -฿${this.formatCurrency(Math.abs(totalProfit))} (คงเหลือ ${newQty} ${unit})`;
+      ? `✅ เบิกขาย "${item.name}" ${useQty} ${unit} สำเร็จ! ได้กำไร +${this.formatCurrency(totalProfit)} (คงเหลือ ${newQty} ${unit})`
+      : `⚠️ เบิกขาย "${item.name}" ${useQty} ${unit} ขาดทุน -${this.formatCurrency(Math.abs(totalProfit))} (คงเหลือ ${newQty} ${unit})`;
     this.showToast(toastMsg, totalProfit >= 0 ? 'success' : 'info');
   }
 
@@ -7603,8 +7895,8 @@ const quickRestockForm = document.getElementById('quickRestockForm');
       revenue = log.revenue !== null && log.revenue !== undefined ? Number(log.revenue) : null;
       cost = log.cost !== null && log.cost !== undefined ? Number(log.cost) : null;
     } else if (log.note) {
-      // Regex parse จาก note เช่น "กำไร +฿50.00" หรือ "กำไร -฿10.00"
-      const profitMatch = log.note.match(/กำไร\s*([+-]?)\s*฿?([0-9,]+(?:\.[0-9]+)?)/);
+      // Regex parse จาก note เช่น "กำไร +฿50.00" หรือ "กำไรที่ได้ +฿50.00" หรือ "กำไร -฿10.00"
+      const profitMatch = log.note.match(/กำไร(?:ที่ได้)?\s*([+-]?)\s*฿?([0-9,]+(?:\.[0-9]+)?)/);
       if (profitMatch) {
         const sign = profitMatch[1] === '-' ? -1 : 1;
         const val = parseFloat(profitMatch[2].replace(/,/g, '')) || 0;
@@ -7628,7 +7920,7 @@ const quickRestockForm = document.getElementById('quickRestockForm');
   // รวบรวมข้อมูลกำไรสต๊อกสำหรับวันที่กำหนด
   getStockProfitDataForDate(targetDateStr) {
     const logs = this.data.stockLogs || [];
-    const dateLogs = logs.filter(l => l.date === targetDateStr && l.actionType === 'USE');
+    const dateLogs = logs.filter(l => l.date === targetDateStr && (l.actionType === 'USE' || l.actionType === 'DIRECT_SET' || Number(l.changeQty) < 0));
     
     let totalProfit = 0;
     let totalRevenue = 0;
@@ -7637,6 +7929,9 @@ const quickRestockForm = document.getElementById('quickRestockForm');
     const saleItems = [];
 
     dateLogs.forEach(log => {
+      if (!log.id) {
+        log.id = 'log_' + Date.now() + Math.random().toString(36).substring(2, 5);
+      }
       const parsed = this.parseProfitInfoFromLog(log);
       if (parsed !== null) {
         const qty = Math.abs(Number(log.changeQty) || 0);
@@ -7669,6 +7964,84 @@ const quickRestockForm = document.getElementById('quickRestockForm');
       marginPct: parseFloat(marginPct.toFixed(1)),
       items: saleItems
     };
+  }
+
+  // ยกเลิกการเบิก / คืนค่าสต๊อกสินค้าและย้อนคืนกำไร (เผื่อผู้ใช้ป้อนผิดหรือเบิกผิดพลาด)
+  revertStockUse(logId) {
+    if (!logId) return;
+    const logs = this.data.stockLogs || [];
+    const logIndex = logs.findIndex(l => l.id === logId);
+    if (logIndex === -1) {
+      this.showToast('ไม่พบรายการเบิกที่ต้องการคืนค่าในระบบ', 'error');
+      return;
+    }
+
+    const log = logs[logIndex];
+    const qtyToRestore = Math.abs(Number(log.changeQty) || 0);
+    if (qtyToRestore <= 0) {
+      this.showToast('รายการนี้ไม่มีจำนวนที่ต้องคืนค่า', 'info');
+      return;
+    }
+
+    const itemName = log.itemName;
+    const unit = log.unit || 'หน่วย';
+    const logDate = log.date || this.formatDate(new Date());
+    const parsed = this.parseProfitInfoFromLog(log);
+
+    // 1. คืนจำนวนสต๊อกสินค้ากลับเข้าคลัง
+    let item = null;
+    if (log.itemId) {
+      item = (this.data.stockItems || []).find(x => x.id === log.itemId);
+    }
+    if (!item) {
+      item = (this.data.stockItems || []).find(x => x.name === itemName);
+    }
+
+    let newQty = 0;
+    if (item) {
+      item.qty = parseFloat(((Number(item.qty) || 0) + qtyToRestore).toFixed(2));
+      newQty = item.qty;
+    }
+
+    // 2. ปรับลดยอดขาย ต้นทุน และกำไรใน dailySales ของวันที่เบิก
+    if (parsed && (parsed.revenue > 0 || parsed.cost > 0 || parsed.profit !== 0)) {
+      if (Array.isArray(this.data.dailySales)) {
+        const salesIndex = this.data.dailySales.findIndex(d => d.date === logDate);
+        if (salesIndex !== -1) {
+          const ex = this.data.dailySales[salesIndex];
+          ex.revenue = Math.max(0, parseFloat(((Number(ex.revenue) || 0) - parsed.revenue).toFixed(2)));
+          ex.cost = Math.max(0, parseFloat(((Number(ex.cost) || 0) - parsed.cost).toFixed(2)));
+          ex.materialCost = Math.max(0, parseFloat(((Number(ex.materialCost) || 0) - parsed.cost).toFixed(2)));
+          ex.profit = parseFloat(((Number(ex.profit) || 0) - parsed.profit).toFixed(2));
+
+          // ถ้า revenue และ cost กลายเป็น 0 และไม่มี cupCount (สร้างขึ้นมาเฉพาะการเบิกนี้) ลบออกเพื่อไม่ให้ค้างขยะ
+          if ((Number(ex.revenue) || 0) === 0 && (Number(ex.cost) || 0) === 0 && (!ex.cupCount || ex.cupCount === 0)) {
+            this.data.dailySales.splice(salesIndex, 1);
+          }
+        }
+      }
+    }
+
+    // 3. ลบรายการ log การเบิกเดิมออกจาก stockLogs
+    logs.splice(logIndex, 1);
+
+    // 4. บันทึก Stock Log แจ้งการคืนค่า (RESTOCK) เพื่อเป็นประวัติ
+    this.logStockAction(itemName, 'RESTOCK', qtyToRestore, newQty, unit, `↩️ คืนค่าจากการเบิกผิดพลาด (คืนสต๊อก +${qtyToRestore} ${unit})`, {
+      itemId: item ? item.id : null,
+      isReversal: true
+    });
+
+    // 5. บันทึกข้อมูลและอัปเดตหน้าจอทั้งหมดทันที
+    this.saveData();
+    this.renderStock();
+    this.renderStockProfitCard();
+    this.renderStockHistory();
+    this.renderLowStockAlertView();
+    this.renderDashboard();
+    this.renderTodaySummary(logDate);
+    this.renderCalendar();
+
+    this.showToast(`↩️ คืนค่า "${itemName}" จำนวน ${qtyToRestore} ${unit} กลับเข้าสต๊อกเรียบร้อยแล้ว`, 'success');
   }
 
   // Render Daily Stock Profit Card ในหน้าสต๊อก
@@ -7743,8 +8116,10 @@ const quickRestockForm = document.getElementById('quickRestockForm');
     if (listEl) {
       if (data.items.length === 0) {
         listEl.innerHTML = `
-          <div class="text-center text-muted py-2" style="font-size:0.8rem; background:#f8fafc; border:1px dashed #cbd5e1; border-radius:var(--radius-sm);">
-            ไม่มีรายการเบิกขายสำเร็จรูปในวันที่เลือก (เมื่อกดปุ่ม <b>-</b> ที่สินค้าสำเร็จรูป/ลัง ระบบจะคิดกำไรและรวมยอดให้อัตโนมัติ)
+          <div class="text-center text-muted py-3 px-2" style="font-size:0.8rem; background:#f8fafc; border:1px dashed #cbd5e1; border-radius:var(--radius-sm); line-height:1.5;">
+            <i data-lucide="package-search" style="width:20px; height:20px; color:#94a3b8; display:block; margin:0 auto 4px;"></i>
+            ไม่มีรายการเบิกขายสำเร็จรูปในวันที่เลือก<br>
+            <span style="font-size:0.75rem; color:#64748b;">(เมื่อกดปุ่ม <b>-</b> ที่สินค้าสำเร็จรูป/ลัง ระบบจะคิดกำไรและบันทึกรายการให้อัตโนมัติ)</span>
           </div>
         `;
       } else {
@@ -7752,20 +8127,31 @@ const quickRestockForm = document.getElementById('quickRestockForm');
           const profitColor = item.profit >= 0 ? '#15803d' : '#dc2626';
           const profitSign = item.profit >= 0 ? '+' : '';
           return `
-            <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:var(--radius-sm); padding:0.45rem 0.65rem; display:flex; justify-content:space-between; align-items:center; font-size:0.82rem;">
-              <div style="display:flex; align-items:center; gap:0.45rem; overflow:hidden;">
-                <span class="text-xs text-muted" style="white-space:nowrap;">⏰ ${item.time}</span>
-                <b class="text-main" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${this.escapeHtml(item.itemName)}</b>
-                <span class="pill-tag purple-tag" style="font-size:0.68rem; padding:0.05rem 0.35rem;">${item.qty} ${this.escapeHtml(item.unit)}</span>
+            <div class="stock-day-sale-item">
+              <div class="stock-day-item-main">
+                <div class="stock-day-item-title-wrap">
+                  <span class="stock-day-item-time">⏰ ${item.time}</span>
+                  <b class="stock-day-item-name" title="${this.escapeHtml(item.itemName)}">${this.escapeHtml(item.itemName)}</b>
+                </div>
+                <span class="pill-tag purple-tag stock-day-item-qty">${item.qty} ${this.escapeHtml(item.unit)}</span>
               </div>
-              <div style="text-align:right; white-space:nowrap; flex-shrink:0;">
-                <span style="font-weight:700; color:${profitColor}; font-size:0.9rem;">${profitSign}฿${this.formatCurrency(item.profit)}</span>
-                <span class="text-xs text-muted ml-1" title="ยอดขาย ฿${this.formatCurrency(item.revenue)} / ทุน ฿${this.formatCurrency(item.cost)}">(ขาย ฿${this.formatCurrency(item.revenue)})</span>
+              <div class="stock-day-item-right">
+                <div style="line-height:1.2;">
+                  <span class="stock-day-item-profit" style="color:${profitColor};">${profitSign}${this.formatCurrency(item.profit)}</span>
+                  <span class="stock-day-item-subinfo" title="ยอดขาย ${this.formatCurrency(item.revenue)} / ทุน ${this.formatCurrency(item.cost)}">(ขาย ${this.formatCurrency(item.revenue)})</span>
+                </div>
+                <button type="button" 
+                  class="btn-stock-revert" 
+                  onclick="app.revertStockUse('${item.id}')" 
+                  title="คืนค่า/ยกเลิกการเบิกรายการนี้ (คืนสต๊อก ${item.qty} ${this.escapeHtml(item.unit)} และยกเลิกกำไร)">
+                  ↩️ คืนค่า
+                </button>
               </div>
             </div>
           `;
         }).join('');
       }
+      this.refreshLucide();
     }
   }
 
@@ -7947,6 +8333,13 @@ const quickRestockForm = document.getElementById('quickRestockForm');
       const changeSign = log.changeQty > 0 ? `+${log.changeQty}` : `${log.changeQty}`;
       const changeClass = isUse ? 'text-danger' : 'text-green';
 
+      const canRevert = isUse && (Number(log.changeQty) < 0) && Boolean(log.id);
+      const revertBtn = canRevert ? `
+        <button type="button" class="btn btn-xs ml-2" onclick="app.revertStockUse('${log.id}')" title="คืนค่า/ยกเลิกรายการเบิกนี้" style="background:#fff1f2; color:#e11d48; border:1px solid #fecdd3; padding:0.15rem 0.45rem; border-radius:var(--radius-sm); font-size:0.72rem; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:0.2rem;">
+          ↩️ คืนค่า
+        </button>
+      ` : '';
+
       return `
         <tr>
           <td>
@@ -7966,7 +8359,10 @@ const quickRestockForm = document.getElementById('quickRestockForm');
             <span class="text-xs text-muted ml-1">${this.escapeHtml(log.unit || '')}</span>
           </td>
           <td>
-            <div class="text-sm text-muted" style="line-height:1.4;">${this.formatLogNote(log.note || '-')}</div>
+            <div class="text-sm text-muted" style="line-height:1.4; display:flex; align-items:center; justify-content:space-between;">
+              <span>${this.formatLogNote(log.note || '-')}</span>
+              ${revertBtn}
+            </div>
           </td>
         </tr>
       `;
@@ -8619,10 +9015,25 @@ const quickRestockForm = document.getElementById('quickRestockForm');
       this.currentLowStockSupplierFilter = 'ALL';
     }
 
-    // Filter only critical low-stock items (exclude items with minQty <= 0 which means no alert)
+    // รวมรายการที่วิกฤต:
+    // 1. สต๊อกเหลือ 0 หรือติดลบ (หมดสต๊อกเกลี้ยงร้าน ย้ายมาจากหน้าสต๊อกหลัก)
+    // 2. มี minQty > 0 และ qty <= minQty (ใกล้หมดต่ำกว่าเกณฑ์)
     const lowItems = list.filter(item => {
+      const qty = Number(item.qty) || 0;
       const min = Number(item.minQty) || 0;
-      return min > 0 && Number(item.qty) <= min;
+      const isOutOfStock = qty <= 0;
+      const isLow = (min > 0 && qty <= min) || isOutOfStock;
+      return isLow;
+    });
+
+    // เรียงลำดับ: สินค้าที่เหลือ 0 (หมดเกลี้ยง) ขึ้นมาก่อนเป็นลำดับแรกสุด
+    lowItems.sort((a, b) => {
+      const aQty = Number(a.qty) || 0;
+      const bQty = Number(b.qty) || 0;
+      const aZero = aQty <= 0 ? 0 : 1;
+      const bZero = bQty <= 0 ? 0 : 1;
+      if (aZero !== bZero) return aZero - bZero;
+      return a.name.localeCompare(b.name, 'th');
     });
 
     let totalSuggestedQty = 0;
@@ -8630,8 +9041,11 @@ const quickRestockForm = document.getElementById('quickRestockForm');
     const supplierMap = {};
 
     lowItems.forEach(item => {
-      // แนะนำสั่งซื้อเท่ากับ (จุดปลอดภัย x 2 หรือเติมให้เต็มรอบ)
-      const diff = Math.max(1, (Number(item.minQty) * 2) - Number(item.qty));
+      const qty = Number(item.qty) || 0;
+      const min = Number(item.minQty) || 0;
+      // แนะนำสั่งซื้อ: ถ้าไม่มี minQty ให้สั่งตาม packSize หรืออย่างน้อย 1
+      const defaultPack = Number(item.packSize) || ((item.unit || '').includes('ลัง') ? 24 : 1);
+      const diff = Math.max(1, (min * 2) - qty, defaultPack);
       const cost = diff * (Number(item.unitCost) || 0);
       totalSuggestedQty += diff;
       totalEstBudget += cost;
@@ -8736,6 +9150,19 @@ const quickRestockForm = document.getElementById('quickRestockForm');
       btnCopy.onclick = () => this.copyShoppingListToClipboard(displayedItems, supplierMap);
     }
 
+    if (lowItems.length === 0) {
+      container.innerHTML = `
+        <div style="grid-column: 1 / -1; text-align: center; padding: 3rem 1.5rem; background: #f0fdf4; border: 1.5px dashed #86efac; border-radius: var(--radius-md);">
+          <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🎉</div>
+          <h3 style="color: #15803d; font-weight: 800; font-size: 1.15rem;">สต๊อกสินค้าและวัตถุดิบทุกรายการยังปลอดภัยดี</h3>
+          <p style="color: #166534; font-size: 0.9rem; margin-top: 0.25rem;">ไม่มีสินค้าที่หมดหรือเหลือน้อยกว่าเกณฑ์ปลอดภัยในขณะนี้</p>
+          <button class="btn-fastwork mt-3" onclick="app.switchTab('stock')">กลับไปดูสต๊อกร้านค้า & วัตถุดิบ</button>
+        </div>
+      `;
+      this.refreshLucide();
+      return;
+    }
+
     if (displayedItems.length === 0) {
       container.innerHTML = `
         <div style="grid-column: 1 / -1; text-align: center; padding: 3rem 1.5rem; background: #fffbeb; border: 1.5px dashed #fcd34d; border-radius: var(--radius-md);">
@@ -8750,15 +9177,17 @@ const quickRestockForm = document.getElementById('quickRestockForm');
     }
 
     container.innerHTML = displayedItems.map(item => {
-      const currentQty = Number(item.qty);
-      const minQty = Number(item.minQty);
+      const currentQty = Number(item.qty) || 0;
+      const minQty = Number(item.minQty) || 0;
       const unit = item.unit || 'หน่วย';
       const unitCost = Number(item.unitCost) || 0;
+      const isOutOfStock = currentQty <= 0;
 
       // คำนวณ % คงเหลือเทียบกับ minQty (0-100)
-      const ratioPct = Math.min(100, Math.round((currentQty / Math.max(1, minQty)) * 100));
+      const ratioPct = isOutOfStock ? 0 : Math.min(100, Math.round((currentQty / Math.max(1, minQty)) * 100));
       // จำนวนแนะนำสั่งซื้อ
-      const suggestedBuy = Math.max(1, (minQty * 2) - currentQty);
+      const defaultPack = Number(item.packSize) || (unit.includes('ลัง') ? 24 : 1);
+      const suggestedBuy = Math.max(1, (minQty * 2) - currentQty, defaultPack);
       const estCost = suggestedBuy * unitCost;
 
       const catLabel = item.category === 'INGREDIENT' ? 'วัตถุดิบชงน้ำ'
@@ -8816,24 +9245,27 @@ const quickRestockForm = document.getElementById('quickRestockForm');
                 </div>
                 <div class="low-stock-item-name">${this.escapeHtml(item.name)}</div>
               </div>
-              <div class="low-stock-badge-critical">
-                <i data-lucide="alert-triangle" style="width:13px;height:13px;"></i>
-                <span>วิกฤต</span>
+              <div class="low-stock-badge-critical" style="${isOutOfStock ? 'background:#dc2626; color:#ffffff; font-weight:800;' : ''}">
+                <i data-lucide="${isOutOfStock ? 'x-circle' : 'alert-triangle'}" style="width:13px;height:13px;"></i>
+                <span>${isOutOfStock ? '🚨 หมดสต๊อก (เหลือ 0)' : '⚠️ ใกล้หมด'}</span>
               </div>
             </div>
 
             <!-- Visual Stock Meter -->
             <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; margin-top:0.4rem;">
               <span class="text-muted">ระดับสต๊อกปัจจุบัน:</span>
-              <span class="font-bold text-danger">${currentQty} / ${minQty} ${this.escapeHtml(unit)}</span>
+              ${isOutOfStock
+                ? `<span class="font-bold" style="color:#dc2626; background:#fee2e2; padding:0.12rem 0.5rem; border-radius:4px; font-size:0.85rem;">🚨 หมดสต๊อก (0 ${this.escapeHtml(unit)})</span>`
+                : `<span class="font-bold text-danger">${currentQty} / ${minQty} ${this.escapeHtml(unit)}</span>`
+              }
             </div>
             <div class="low-stock-meter">
-              <div class="low-stock-meter-fill" style="width: ${Math.max(8, ratioPct)}%;"></div>
+              <div class="low-stock-meter-fill" style="width: ${isOutOfStock ? 0 : Math.max(8, ratioPct)}%; ${isOutOfStock ? 'background:#ef4444;' : ''}"></div>
             </div>
 
             <div class="low-stock-metrics-row">
               <div>ต้นทุนเดิม: <b>${this.formatCurrency(unitCost)}</b>/${this.escapeHtml(unit)}</div>
-              <div>เกณฑ์ขั้นต่ำ: <b>${minQty} ${this.escapeHtml(unit)}</b></div>
+              <div>เกณฑ์ขั้นต่ำ: <b>${minQty > 0 ? `${minQty} ${this.escapeHtml(unit)}` : 'ไม่ได้ตั้งเกณฑ์'}</b></div>
             </div>
 
             <!-- Recommendation Alert Box -->
@@ -8856,7 +9288,7 @@ const quickRestockForm = document.getElementById('quickRestockForm');
           <div class="low-stock-card-actions" style="flex-wrap:wrap;">
             <button class="btn-fastwork-sm" style="flex:1; background:#dc2626; color:#ffffff; font-weight:700; justify-content:center;" onclick="app.quickRestockItem('${item.id}', ${suggestedBuy})">
               <i data-lucide="plus-circle"></i>
-              <span>กดเติมทันที (+${suggestedBuy})</span>
+              <span>${isOutOfStock ? `เติมของเข้าสต๊อก (+${suggestedBuy})` : `กดเติมทันที (+${suggestedBuy})`}</span>
             </button>
             ${supplierActionBtn}
             <button class="btn-outline-fastwork btn-sm" onclick="app.openStockModal('${item.id}')" title="แก้ไขสต๊อก / แหล่งซื้อ">
@@ -8902,13 +9334,15 @@ const quickRestockForm = document.getElementById('quickRestockForm');
       const g = grouped[sup];
       text += `\n🛒 แหล่งซื้อ: ${sup}${g.url ? `\n🔗 ลิ้งก์ร้าน: ${g.url}` : ''}\n-------------------------\n`;
       g.items.forEach(({ item, parsed }) => {
-        const minQty = Number(item.minQty);
-        const currentQty = Number(item.qty);
-        const suggestedBuy = Math.max(1, (minQty * 2) - currentQty);
+        const minQty = Number(item.minQty) || 0;
+        const currentQty = Number(item.qty) || 0;
+        const defaultPack = Number(item.packSize) || ((item.unit || '').includes('ลัง') ? 24 : 1);
+        const suggestedBuy = Math.max(1, (minQty * 2) - currentQty, defaultPack);
         const est = suggestedBuy * (Number(item.unitCost) || 0);
         totalEst += est;
         const linkNote = parsed.isUrl ? ` [ลิ้งก์: ${parsed.url}]` : '';
-        text += `  • ${item.name} สั่งเพิ่ม: ${suggestedBuy} ${item.unit || ''} (เหลือในร้าน: ${currentQty})${linkNote}\n`;
+        const statusNote = currentQty <= 0 ? '🚨 หมดสต๊อก 0' : `เหลือในร้าน: ${currentQty}`;
+        text += `  • ${item.name} สั่งเพิ่ม: ${suggestedBuy} ${item.unit || ''} (${statusNote})${linkNote}\n`;
       });
     });
 
