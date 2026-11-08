@@ -4231,6 +4231,26 @@ body {
   color: #ffffff !important;
 }
 
+/* Expense Search Toolbar */
+.figma-expense-search-bar {
+  width: 100%;
+}
+
+.figma-expense-search-bar .input-with-affix input {
+  transition: all 0.2s ease-in-out;
+}
+
+.figma-expense-search-bar .input-with-affix input:focus {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px rgba(0, 80, 240, 0.12) !important;
+  outline: none;
+}
+
+#expenseSearchClearBtn:hover {
+  color: var(--danger) !important;
+  background-color: #fee2e2 !important;
+}
+
 /* Expense Transaction Card (.figma-exp-card) */
 .figma-exp-card {
   background: var(--bg-card);

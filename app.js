@@ -1147,6 +1147,29 @@ class WaterFlowApp {
       });
     });
 
+    // Expense Realtime Search Input (ชื่อ, หมวด, แหล่งซื้อ, หมายเหตุ)
+    const expSearchInput = document.getElementById('expenseSearchInput');
+    const expSearchClear = document.getElementById('expenseSearchClearBtn');
+    if (expSearchInput) {
+      expSearchInput.addEventListener('input', (e) => {
+        const q = e.target.value.trim();
+        if (expSearchClear) {
+          expSearchClear.style.display = q ? 'block' : 'none';
+        }
+        this.renderExpenses();
+      });
+    }
+    if (expSearchClear) {
+      expSearchClear.addEventListener('click', () => {
+        if (expSearchInput) {
+          expSearchInput.value = '';
+          expSearchClear.style.display = 'none';
+          expSearchInput.focus();
+        }
+        this.renderExpenses();
+      });
+    }
+
     // Pricing Calculator
     this.bindPricingCalc();
 
@@ -1626,6 +1649,8 @@ class WaterFlowApp {
       this.renderStock();
     } else if (cleanTabId === 'stock-history') {
       this.renderStockHistory();
+    } else if (cleanTabId === 'expenses') {
+      this.renderExpenses();
     }
 
     if (cleanTabId === 'dashboard') {
@@ -2877,11 +2902,39 @@ class WaterFlowApp {
   // TAB 3: EXPENSES & INGREDIENT COSTS
   // -------------------------------------------------------------------------
   renderExpenses() {
-    const filter = document.getElementById('expenseCategoryFilter').value;
+    const filter = document.getElementById('expenseCategoryFilter')?.value || 'ALL';
+    const searchInput = document.getElementById('expenseSearchInput');
+    const query = (searchInput?.value || '').toLowerCase().trim();
     let list = [...this.data.expenses];
 
     if (filter !== 'ALL') {
       list = list.filter(e => e.category === filter);
+    }
+
+    if (query) {
+      list = list.filter(exp => {
+        const title = String(exp.title || '').toLowerCase();
+        const supplier = String(exp.supplier || '').toLowerCase();
+        const note = String(exp.note || '').toLowerCase();
+        const cat = String(exp.category || '').toLowerCase();
+        const catThai = exp.category === 'INGREDIENT' ? 'วัตถุดิบชงน้ำ วัตถุดิบ ชงน้ำ'
+          : exp.category === 'PACKAGING' ? 'บรรจุภัณฑ์ แก้ว ฝา หลอด'
+          : exp.category === 'FRIDGE_DRINK' ? 'น้ำขายในตู้ เครื่องดื่ม แช่เย็น'
+          : exp.category === 'STOCK' ? 'ยกลัง สำเร็จรูป ลัง'
+          : 'อื่นๆ น้ำแข็ง ทั่วไป';
+        const dateStr = String(exp.date || '');
+        const thaiDate = this.formatThaiDate(exp.date, true).toLowerCase();
+        const unit = String(exp.packUnit || '').toLowerCase();
+
+        return title.includes(query)
+          || supplier.includes(query)
+          || note.includes(query)
+          || cat.includes(query)
+          || catThai.toLowerCase().includes(query)
+          || dateStr.includes(query)
+          || thaiDate.includes(query)
+          || unit.includes(query);
+      });
     }
 
     const totalAllExpenses = this.data.expenses.reduce((a, b) => a + (Number(b.amount) || 0), 0);
@@ -2907,15 +2960,15 @@ class WaterFlowApp {
     if (countBadge) countBadge.textContent = `${list.length} รายการ`;
 
     if (list.length === 0) {
-      if (tbody) tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-4">ไม่มีรายการค่าใช้จ่ายในหมวดหมู่นี้</td></tr>`;
+      if (tbody) tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-4">${query ? 'ไม่พบรายการที่ตรงกับคำค้นหา' : 'ไม่มีรายการค่าใช้จ่ายในหมวดหมู่นี้'}</td></tr>`;
       if (feedWrap) {
         feedWrap.innerHTML = `
           <div class="figma-tx-empty">
             <div class="figma-tx-empty-icon">
-              <i data-lucide="inbox"></i>
+              <i data-lucide="${query ? 'search-x' : 'inbox'}"></i>
             </div>
-            <div class="figma-tx-empty-title">ไม่มีรายการค่าใช้จ่ายในหมวดหมู่นี้</div>
-            <div class="figma-tx-empty-desc">กดปุ่ม "+ เพิ่มค่าใช้จ่าย" ด้านบนเพื่อเริ่มบันทึกบิลซื้อของ</div>
+            <div class="figma-tx-empty-title">${query ? 'ไม่พบรายการที่ตรงกับคำค้นหา' : 'ไม่มีรายการค่าใช้จ่ายในหมวดหมู่นี้'}</div>
+            <div class="figma-tx-empty-desc">${query ? `ไม่พบข้อมูลที่ตรงกับ "${this.escapeHtml(query)}" ลองเปลี่ยนคำค้นหา หรือล้างช่องค้นหา` : 'กดปุ่ม "+ เพิ่มค่าใช้จ่าย" ด้านบนเพื่อเริ่มบันทึกบิลซื้อของ'}</div>
           </div>
         `;
       }
@@ -3034,9 +3087,22 @@ class WaterFlowApp {
                 </div>
                 <div class="fec-title-wrap">
                   <div class="fec-title" title="${this.escapeHtml(exp.title)}">${this.escapeHtml(exp.title)}</div>
-                  <div class="fec-meta-row">
+                  <div class="fec-meta-row" style="flex-wrap:wrap; gap:0.35rem; align-items:center;">
                     <span class="fec-date">${this.formatThaiDate(exp.date)}</span>
                     <span class="fec-badge ${badgeClass}">${catName}</span>
+                    ${(() => {
+                      if (!exp.supplier) return '';
+                      const sup = this.parseSupplier(exp.supplier);
+                      if (sup.isUrl) {
+                        return `<a href="${this.escapeHtml(sup.url)}" target="_blank" rel="noopener noreferrer" 
+                          class="pill-tag orange-tag" 
+                          style="font-size:0.7rem; padding:0.1rem 0.45rem; text-decoration:none; display:inline-flex; align-items:center; gap:0.25rem; background:#ffedd5; color:#c2410c; border:1px solid #fed7aa; border-radius:9999px;" 
+                          title="เปิดลิ้งก์สั่งซื้อ ${this.escapeHtml(sup.domain)}">
+                          🛒 ${this.escapeHtml(sup.name)} <i data-lucide="external-link" style="width:10px;height:10px;"></i>
+                        </a>`;
+                      }
+                      return `<span class="pill-tag orange-tag" style="font-size:0.7rem; padding:0.1rem 0.45rem; background:#ffedd5; color:#c2410c; border:1px solid #fed7aa; border-radius:9999px;">🛒 ${this.escapeHtml(exp.supplier)}</span>`;
+                    })()}
                   </div>
                 </div>
               </div>

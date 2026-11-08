@@ -551,7 +551,7 @@
           <div class="figma-expense-header mb-3">
             <button class="figma-btn-add-expense" id="btnOpenExpenseModal" title="เพิ่มรายการค่าใช้จ่าย">
               <i data-lucide="plus"></i>
-              <span>+ เพิ่มค่าใช้จ่าย</span>
+              <span>เพิ่มค่าใช้จ่าย</span>
             </button>
           </div>
 
@@ -625,6 +625,24 @@
               <option value="STOCK">STOCK</option>
               <option value="OTHER">OTHER</option>
             </select>
+          </div>
+
+          <!-- Search & Filter Bar (ค้นหาชื่อ, หมวด, แหล่งซื้อ, หมายเหตุ) -->
+          <div class="figma-expense-search-bar mb-3">
+            <div class="input-with-affix" style="position:relative; width:100%;">
+              <span class="affix-left"
+                style="color:var(--text-muted); position:absolute; left:0.85rem; top:50%; transform:translateY(-50%); pointer-events:none; display:flex; align-items:center;">
+                <i data-lucide="search" style="width:16px;height:16px;"></i>
+              </span>
+              <input type="text" id="expenseSearchInput" class="form-input"
+                placeholder="ค้นหาชื่อสินค้า, หมวด, แหล่งซื้อ..."
+                style="padding-left:2.5rem; padding-right:2.4rem; height:42px; font-size:0.875rem; border-radius:var(--radius-md); background:#ffffff; width:100%; box-shadow:0 1px 2px rgba(0,0,0,0.04); border:1px solid var(--border-color);">
+              <button type="button" id="expenseSearchClearBtn"
+                style="display:none; position:absolute; right:0.65rem; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--text-muted); cursor:pointer; padding:0.25rem; border-radius:50%;"
+                title="ล้างคำค้นหา">
+                <i data-lucide="x" style="width:15px;height:15px;"></i>
+              </button>
+            </div>
           </div>
 
           <!-- History Feed Header -->
@@ -1102,7 +1120,8 @@
             <div class="stat-meta">
               <div class="stat-label" style="color:var(--danger); font-weight:700;">สินค้าวิกฤต (หมด/ใกล้หมด)</div>
               <div class="stat-value text-danger" id="kpiStockLowCount">0 รายการ</div>
-              <div class="stat-subtext" id="kpiStockLowSubtext" style="color:#b91c1c; font-weight:600;">คลิกเพื่อไปหน้าสั่งซื้อด่วน</div>
+              <div class="stat-subtext" id="kpiStockLowSubtext" style="color:#b91c1c; font-weight:600;">
+                คลิกเพื่อไปหน้าสั่งซื้อด่วน</div>
             </div>
           </div>
 
@@ -1306,8 +1325,10 @@
               <div style="display:flex; align-items:center; gap:0.55rem;">
                 <span style="font-size:1.25rem;">🚨</span>
                 <div>
-                  <b style="color:#991b1b; font-size:0.875rem;" id="stockOutOfStockBannerTitle">มีสินค้าหมดสต๊อก (0 รายการ)</b>
-                  <div class="text-xs" style="color:#b91c1c;">ระบบได้ย้ายรายการที่สต๊อกเหลือ 0 ไปแสดงที่ศูนย์สั่งซื้อด่วนเรียบร้อยแล้ว</div>
+                  <b style="color:#991b1b; font-size:0.875rem;" id="stockOutOfStockBannerTitle">มีสินค้าหมดสต๊อก (0
+                    รายการ)</b>
+                  <div class="text-xs" style="color:#b91c1c;">ระบบได้ย้ายรายการที่สต๊อกเหลือ 0
+                    ไปแสดงที่ศูนย์สั่งซื้อด่วนเรียบร้อยแล้ว</div>
                 </div>
               </div>
               <button type="button" class="btn btn-sm" onclick="app.switchTab('stock-low')"
@@ -1652,10 +1673,14 @@
             </div>
             <div class="card-body">
               <p class="text-sm text-muted mb-3" style="line-height: 1.55;">
-                ลบข้อมูลทั้งหมดในระบบ รวมถึง <strong>ยอดขายประจำวัน, บันทึกค่าใช้จ่าย & วัตถุดิบ, สต๊อกสินค้า, สูตรชงน้ำ, สินค้าเมนูขาย และปฏิทินวันหยุด</strong> โดยระบบจะล้างข้อมูลและคืนค่าระบบกลับเป็นค่าเริ่มต้นว่างเปล่าทั้งหมด
+                ลบข้อมูลทั้งหมดในระบบ รวมถึง <strong>ยอดขายประจำวัน, บันทึกค่าใช้จ่าย & วัตถุดิบ, สต๊อกสินค้า,
+                  สูตรชงน้ำ, สินค้าเมนูขาย และปฏิทินวันหยุด</strong>
+                โดยระบบจะล้างข้อมูลและคืนค่าระบบกลับเป็นค่าเริ่มต้นว่างเปล่าทั้งหมด
               </p>
-              <div style="background: #fef2f2; border-left: 3.5px solid #ef4444; padding: 0.7rem 0.95rem; border-radius: var(--radius-sm); margin-bottom: 1rem; font-size: 0.82rem; color: #991b1b; line-height: 1.5;">
-                ⚠️ <strong>ข้อควรระวัง:</strong> ข้อมูลที่ถูกลบจะไม่สามารถกู้คืนได้ แนะนำให้กด <em>"ดาวน์โหลดไฟล์สำรองข้อมูล (Export JSON)"</em> ด้านบนเก็บไว้ก่อนดำเนินการ
+              <div
+                style="background: #fef2f2; border-left: 3.5px solid #ef4444; padding: 0.7rem 0.95rem; border-radius: var(--radius-sm); margin-bottom: 1rem; font-size: 0.82rem; color: #991b1b; line-height: 1.5;">
+                ⚠️ <strong>ข้อควรระวัง:</strong> ข้อมูลที่ถูกลบจะไม่สามารถกู้คืนได้ แนะนำให้กด
+                <em>"ดาวน์โหลดไฟล์สำรองข้อมูล (Export JSON)"</em> ด้านบนเก็บไว้ก่อนดำเนินการ
               </div>
               <button type="button" class="btn-danger-solid" id="btnOpenResetAllModal">
                 <i data-lucide="alert-triangle" style="width: 17px; height: 17px;"></i>
@@ -1874,7 +1899,8 @@
           style="display:none; background:#eff6ff; border:1.5px dashed #93c5fd; border-radius:var(--radius-md); padding:0.75rem 1rem; margin-bottom:1rem;">
           <div class="form-row two-col mb-0" style="align-items:center;">
             <div class="form-group mb-0">
-              <label class="form-label font-bold" for="expCrateBottles" style="color:#1d4ed8; font-size:0.85rem;" id="expSubUnitsLabel">
+              <label class="form-label font-bold" for="expCrateBottles" style="color:#1d4ed8; font-size:0.85rem;"
+                id="expSubUnitsLabel">
                 🍾 จำนวนขวดใน 1 ลัง <span class="text-danger">*</span>
               </label>
               <div class="input-with-affix">
@@ -1882,7 +1908,8 @@
                   placeholder="เช่น 12 หรือ 24" min="1" step="1" value="12">
                 <span class="affix-right" id="expSubUnitsAffix">ขวด/ลัง</span>
               </div>
-              <span class="field-hint" style="color:#3b82f6;" id="expSubUnitsHint">ระบุจำนวนชิ้น/ขวดต่อลัง เพื่อคำนวณราคาต้นทุนต่อหน่วยบรรจุจริง</span>
+              <span class="field-hint" style="color:#3b82f6;" id="expSubUnitsHint">ระบุจำนวนชิ้น/ขวดต่อลัง
+                เพื่อคำนวณราคาต้นทุนต่อหน่วยบรรจุจริง</span>
             </div>
             <div
               style="background:#ffffff; border-radius:var(--radius-sm); padding:0.6rem 0.85rem; border:1px solid #bfdbfe;">
@@ -2012,10 +2039,18 @@
             </div>
             <div style="display:flex; gap:0.35rem; margin-top:0.35rem; align-items:center; flex-wrap:wrap;">
               <span style="font-size:0.75rem; color:var(--text-muted); font-weight:600;">เลือกด่วน:</span>
-              <button type="button" class="btn-fastwork-xs btn-liter-preset" data-liters="5" style="padding:2px 8px; font-size:0.75rem; border-radius:4px; border:1px solid var(--border-color); background:#fff; cursor:pointer;">5 ลิตร</button>
-              <button type="button" class="btn-fastwork-xs btn-liter-preset" data-liters="6" style="padding:2px 8px; font-size:0.75rem; border-radius:4px; border:1px solid var(--border-color); background:#fff; cursor:pointer;">6 ลิตร</button>
-              <button type="button" class="btn-fastwork-xs btn-liter-preset" data-liters="8" style="padding:2px 8px; font-size:0.75rem; border-radius:4px; border:1px solid var(--border-color); background:#fff; cursor:pointer;">8 ลิตร</button>
-              <button type="button" class="btn-fastwork-xs btn-liter-preset" data-liters="10" style="padding:2px 8px; font-size:0.75rem; border-radius:4px; border:1px solid var(--border-color); background:#fff; cursor:pointer;">10 ลิตร</button>
+              <button type="button" class="btn-fastwork-xs btn-liter-preset" data-liters="5"
+                style="padding:2px 8px; font-size:0.75rem; border-radius:4px; border:1px solid var(--border-color); background:#fff; cursor:pointer;">5
+                ลิตร</button>
+              <button type="button" class="btn-fastwork-xs btn-liter-preset" data-liters="6"
+                style="padding:2px 8px; font-size:0.75rem; border-radius:4px; border:1px solid var(--border-color); background:#fff; cursor:pointer;">6
+                ลิตร</button>
+              <button type="button" class="btn-fastwork-xs btn-liter-preset" data-liters="8"
+                style="padding:2px 8px; font-size:0.75rem; border-radius:4px; border:1px solid var(--border-color); background:#fff; cursor:pointer;">8
+                ลิตร</button>
+              <button type="button" class="btn-fastwork-xs btn-liter-preset" data-liters="10"
+                style="padding:2px 8px; font-size:0.75rem; border-radius:4px; border:1px solid var(--border-color); background:#fff; cursor:pointer;">10
+                ลิตร</button>
             </div>
             <span class="field-hint">เช่น 5 ลิตร หรือ 6 ลิตร</span>
           </div>
@@ -2083,7 +2118,9 @@
           <div class="space-between align-center mb-1">
             <div>
               <label class="form-label mb-0 font-bold" id="batchSectionTitle">รายการส่วนผสมต่อ 1 โหล/ถัง:</label>
-              <span class="field-hint" id="batchSectionHint" style="margin-top:2px; display:block;">ระบุวัตถุดิบที่ใช้ผสมใน 1 โหล/ถัง (หรือกำหนดสัดส่วน 1 แก้วด้านบน แล้วกด "⚡ คำนวณขยายสูตรลง 1 โหล" เพื่อคำนวณลงมาอัตโนมัติ)</span>
+              <span class="field-hint" id="batchSectionHint"
+                style="margin-top:2px; display:block;">ระบุวัตถุดิบที่ใช้ผสมใน 1 โหล/ถัง (หรือกำหนดสัดส่วน 1 แก้วด้านบน
+                แล้วกด "⚡ คำนวณขยายสูตรลง 1 โหล" เพื่อคำนวณลงมาอัตโนมัติ)</span>
             </div>
             <button type="button" class="btn-fastwork-sm" id="btnAddIngredientRow">
               <i data-lucide="plus"></i>
@@ -2120,24 +2157,27 @@
             <span class="pill-tag green-tag" style="font-size:0.75rem; font-weight:700;">คำนวณกำไรตามราคาจริง</span>
           </div>
 
-          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:0.65rem; align-items:center;">
+          <div
+            style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:0.65rem; align-items:center;">
             <div>
-              <label class="form-label mb-1" for="recSellingPrice" style="font-size:0.8rem; font-weight:700;">ราคาขาย/แก้ว</label>
+              <label class="form-label mb-1" for="recSellingPrice"
+                style="font-size:0.8rem; font-weight:700;">ราคาขาย/แก้ว</label>
               <div class="input-with-affix" style="width:100%;">
                 <span class="affix-left" style="font-weight:700; color:var(--primary);">฿</span>
-                <input type="number" id="recSellingPrice" class="form-input font-bold" placeholder="ราคาขาย" value="25" min="0"
-                  step="any"
+                <input type="number" id="recSellingPrice" class="form-input font-bold" placeholder="ราคาขาย" value="25"
+                  min="0" step="any"
                   style="font-size:1.1rem; font-weight:800; color:var(--primary); height:40px; padding-left:2.2rem;"
                   required>
               </div>
             </div>
 
             <div>
-              <label class="form-label mb-1" for="recTargetProfit" style="font-size:0.8rem; font-weight:700; color:#c2410c;">🎯 กำไรที่ต้องการ/แก้ว</label>
+              <label class="form-label mb-1" for="recTargetProfit"
+                style="font-size:0.8rem; font-weight:700; color:#c2410c;">🎯 กำไรที่ต้องการ/แก้ว</label>
               <div class="input-with-affix" style="width:100%;">
                 <span class="affix-left" style="font-weight:800; color:#ea580c;">฿</span>
-                <input type="number" id="recTargetProfit" class="form-input font-bold" placeholder="เช่น 5" value="5" min="0.5"
-                  step="0.5"
+                <input type="number" id="recTargetProfit" class="form-input font-bold" placeholder="เช่น 5" value="5"
+                  min="0.5" step="0.5"
                   style="font-size:1.1rem; font-weight:800; color:#c2410c; height:40px; padding-left:2.2rem; background:#fff7ed; border-color:#fdba74;"
                   title="กำหนดกำไรต่อแก้วที่ต้องการ (ระบบจะช่วยคำนวณปรับลดสูตรให้ได้ตามนี้)">
               </div>
@@ -2760,20 +2800,24 @@
           <i data-lucide="alert-triangle" style="color:#dc2626; width:22px; height:22px;"></i>
           <span>ยืนยันการลบข้อมูลทั้งหมดในระบบ</span>
         </div>
-        <button type="button" class="modal-close" data-close="resetAllDataModal" id="btnCloseResetAllModal">&times;</button>
+        <button type="button" class="modal-close" data-close="resetAllDataModal"
+          id="btnCloseResetAllModal">&times;</button>
       </div>
       <div class="modal-body" style="padding:1.25rem;">
         <div style="text-align:center; margin-bottom:1rem;">
-          <div style="width:52px; height:52px; border-radius:50%; background:#fee2e2; color:#dc2626; display:inline-flex; align-items:center; justify-content:center; margin-bottom:0.75rem;">
+          <div
+            style="width:52px; height:52px; border-radius:50%; background:#fee2e2; color:#dc2626; display:inline-flex; align-items:center; justify-content:center; margin-bottom:0.75rem;">
             <i data-lucide="trash-2" style="width:28px; height:28px;"></i>
           </div>
-          <h3 style="font-size:1.05rem; font-weight:800; color:#1f2937; margin-bottom:0.35rem;">คุณแน่ใจหรือไม่ว่าต้องการลบข้อมูลทั้งหมด?</h3>
+          <h3 style="font-size:1.05rem; font-weight:800; color:#1f2937; margin-bottom:0.35rem;">
+            คุณแน่ใจหรือไม่ว่าต้องการลบข้อมูลทั้งหมด?</h3>
           <p style="font-size:0.83rem; color:#6b7280; line-height:1.5;">
             ข้อมูลต่อไปนี้ทั้งหมดจะถูกลบออกจากเครื่องและคลาวด์อย่างถาวร:
           </p>
         </div>
 
-        <div style="background:#f9fafb; border:1px solid #e5e7eb; border-radius:var(--radius-sm); padding:0.75rem 1rem; margin-bottom:1rem; font-size:0.82rem; color:#374151;">
+        <div
+          style="background:#f9fafb; border:1px solid #e5e7eb; border-radius:var(--radius-sm); padding:0.75rem 1rem; margin-bottom:1rem; font-size:0.82rem; color:#374151;">
           <ul style="margin:0; padding-left:1.2rem; line-height:1.75;">
             <li>📊 ประวัติและยอดขายประจำวันทั้งหมด (<strong id="resetCountSales">0</strong> วัน)</li>
             <li>💸 บันทึกต้นทุนและค่าใช้จ่ายวัตถุดิบ (<strong id="resetCountExpenses">0</strong> รายการ)</li>
@@ -2786,14 +2830,20 @@
 
         <div style="margin-bottom:1.15rem;">
           <label style="font-size:0.82rem; font-weight:700; color:#374151; display:block; margin-bottom:0.4rem;">
-            พิมพ์คำว่า <span style="color:#dc2626; font-weight:800; background:#fee2e2; padding:0.1rem 0.45rem; border-radius:3px;">DELETE</span> หรือ <span style="color:#dc2626; font-weight:800; background:#fee2e2; padding:0.1rem 0.45rem; border-radius:3px;">ลบ</span> เพื่อยืนยัน:
+            พิมพ์คำว่า <span
+              style="color:#dc2626; font-weight:800; background:#fee2e2; padding:0.1rem 0.45rem; border-radius:3px;">DELETE</span>
+            หรือ <span
+              style="color:#dc2626; font-weight:800; background:#fee2e2; padding:0.1rem 0.45rem; border-radius:3px;">ลบ</span>
+            เพื่อยืนยัน:
           </label>
-          <input type="text" id="inputConfirmDeleteAll" class="form-input" placeholder="พิมพ์คำว่า DELETE หรือ ลบ" autocomplete="off"
+          <input type="text" id="inputConfirmDeleteAll" class="form-input" placeholder="พิมพ์คำว่า DELETE หรือ ลบ"
+            autocomplete="off"
             style="font-size:0.95rem; font-weight:700; text-align:center; letter-spacing:1px; border-color:#fca5a5; height:42px;">
         </div>
 
         <div style="display:flex; gap:0.5rem; justify-content:flex-end;">
-          <button type="button" class="btn-secondary" data-close="resetAllDataModal" id="btnCancelResetAll">ยกเลิก</button>
+          <button type="button" class="btn-secondary" data-close="resetAllDataModal"
+            id="btnCancelResetAll">ยกเลิก</button>
           <button type="button" class="btn-danger-solid" id="btnConfirmDeleteAll" disabled>
             <i data-lucide="trash-2" style="width:16px; height:16px;"></i>
             <span>ยืนยันลบข้อมูลทั้งหมด</span>
