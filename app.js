@@ -51,7 +51,8 @@ const DEFAULT_DATA = {
   stockItems: [],
   stockLogs: [],
   savedProducts: [],
-  customHolidays: []
+  customHolidays: [],
+  drinkSalesLogs: []
 };
 
 class WaterFlowApp {
@@ -104,6 +105,9 @@ class WaterFlowApp {
       }
       if (!Array.isArray(parsed.customHolidays)) {
         parsed.customHolidays = [];
+      }
+      if (!Array.isArray(parsed.drinkSalesLogs)) {
+        parsed.drinkSalesLogs = [];
       }
       if (!Array.isArray(parsed.stockItems)) {
         parsed.stockItems = [];
@@ -288,6 +292,7 @@ class WaterFlowApp {
     this.renderCalendar();
     this.renderRecipes();
     this.renderStock();
+    this.renderDrinkSalesHistory();
     this.refreshLucide();
   }
 
@@ -1664,6 +1669,7 @@ class WaterFlowApp {
       this.initDrinkSales();
       this.populateDrinkSalesRecipes();
       this.calculateDrinkSalesCups();
+      this.renderDrinkSalesHistory();
     } else if (cleanTabId === 'stock-history') {
       this.renderStockHistory();
     } else if (cleanTabId === 'expenses') {
@@ -10592,11 +10598,26 @@ const quickRestockForm = document.getElementById('quickRestockForm');
 
     // Bind add-recipe button
     const btnAddRecipe = document.getElementById('btnDrinkSalesAddRecipe');
-    if (btnAddRecipe) btnAddRecipe.addEventListener('click', () => this.openDrinkSalesRecipeModal());
+    if (btnAddRecipe && !btnAddRecipe._bound) {
+      btnAddRecipe._bound = true;
+      btnAddRecipe.addEventListener('click', () => this.openDrinkSalesRecipeModal());
+    }
 
     // Bind calculate button
     const btnCalc = document.getElementById('btnDrinkSalesCalculate');
-    if (btnCalc) btnCalc.addEventListener('click', () => this.calculateDrinkSalesProfit());
+    if (btnCalc && !btnCalc._bound) {
+      btnCalc._bound = true;
+      btnCalc.addEventListener('click', () => this.calculateDrinkSalesProfit());
+    }
+
+    // Bind save log button
+    const btnSave = document.getElementById('btnSaveDrinkSalesLog');
+    if (btnSave && !btnSave._bound) {
+      btnSave._bound = true;
+      btnSave.addEventListener('click', () => this.saveDrinkSalesLog());
+    }
+
+    this.renderDrinkSalesHistory();
   }
 
   populateDrinkSalesRecipes() {
@@ -10765,6 +10786,42 @@ const quickRestockForm = document.getElementById('quickRestockForm');
 
     const profitColor = totalProfit >= 0 ? '#16a34a' : '#dc2626';
 
+    const p10 = parseFloat(document.getElementById('dsCupPrice10')?.value) || 0;
+    const b10 = parseInt(document.getElementById('dsCupBefore10')?.value) || 0;
+    const a10 = parseInt(document.getElementById('dsCupAfter10')?.value) || 0;
+    const s10 = Math.max(0, b10 - a10);
+
+    const p16 = parseFloat(document.getElementById('dsCupPrice16')?.value) || 0;
+    const b16 = parseInt(document.getElementById('dsCupBefore16')?.value) || 0;
+    const a16 = parseInt(document.getElementById('dsCupAfter16')?.value) || 0;
+    const s16 = Math.max(0, b16 - a16);
+
+    const p28 = parseFloat(document.getElementById('dsCupPrice28')?.value) || 0;
+    const b28 = parseInt(document.getElementById('dsCupBefore28')?.value) || 0;
+    const a28 = parseInt(document.getElementById('dsCupAfter28')?.value) || 0;
+    const s28 = Math.max(0, b28 - a28);
+
+    this.lastDrinkSalesCalc = {
+      totalSold,
+      totalRevenue,
+      avgCostPerCup,
+      totalCost,
+      totalProfit,
+      profitPerCup,
+      cups: {
+        cup10: { size: '10 oz', price: p10, before: b10, after: a10, sold: s10, revenue: s10 * p10 },
+        cup16: { size: '16 oz', price: p16, before: b16, after: a16, sold: s16, revenue: s16 * p16 },
+        cup28: { size: '28 oz', price: p28, before: b28, after: a28, sold: s28, revenue: s28 * p28 }
+      },
+      recipes: (this.drinkSalesSelectedRecipes || []).map(r => ({
+        id: r.id,
+        name: r.name,
+        totalCost: r.totalCost,
+        costPerCup: r.costPerCup,
+        cupsPerBatch: r.cupsPerBatch
+      }))
+    };
+
     document.getElementById('dsResultContent').innerHTML = `
       <div class="pack-sell-result-grid">
         <div class="pack-sell-result-card cost-card">
@@ -10806,6 +10863,120 @@ const quickRestockForm = document.getElementById('quickRestockForm');
       </div>
     `;
     this.refreshLucide();
+  }
+
+  saveDrinkSalesLog() {
+    if (!this.lastDrinkSalesCalc || this.lastDrinkSalesCalc.totalSold <= 0) {
+      this.showToast('กรุณากรอกจำนวนแก้วและคำนวณกำไรก่อนบันทึกประวัติ', 'warning');
+      return;
+    }
+
+    if (!Array.isArray(this.data.drinkSalesLogs)) {
+      this.data.drinkSalesLogs = [];
+    }
+
+    const calc = this.lastDrinkSalesCalc;
+    const now = new Date();
+    const newLog = {
+      id: 'dsl_' + Date.now() + Math.random().toString(36).substring(2, 5),
+      date: this.formatDate(now),
+      time: now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
+      timestamp: Date.now(),
+      cups: calc.cups,
+      totalSold: calc.totalSold,
+      totalRevenue: calc.totalRevenue,
+      avgCostPerCup: calc.avgCostPerCup,
+      totalCost: calc.totalCost,
+      totalProfit: calc.totalProfit,
+      profitPerCup: calc.profitPerCup,
+      recipes: calc.recipes
+    };
+
+    this.data.drinkSalesLogs.unshift(newLog);
+    this.saveData();
+    this.renderDrinkSalesHistory();
+    this.showToast('✅ บันทึกประวัติยอดขายน้ำชงเรียบร้อยแล้ว!', 'success');
+  }
+
+  renderDrinkSalesHistory() {
+    const listContainer = document.getElementById('drinkSalesHistoryList');
+    const badge = document.getElementById('drinkSalesHistoryCount');
+    if (!listContainer) return;
+
+    if (!Array.isArray(this.data.drinkSalesLogs)) {
+      this.data.drinkSalesLogs = [];
+    }
+    const logs = this.data.drinkSalesLogs;
+    if (badge) badge.textContent = `${logs.length} รายการ`;
+
+    if (logs.length === 0) {
+      listContainer.innerHTML = `
+        <div class="figma-tx-empty" style="padding:1.5rem 1rem;">
+          <div class="figma-tx-empty-icon"><i data-lucide="inbox"></i></div>
+          <div class="figma-tx-empty-title">ยังไม่มีประวัติการบันทึกยอดขายน้ำชง</div>
+          <div class="figma-tx-empty-desc">เมื่อคำนวณกำไรเสร็จแล้ว กดปุ่ม "บันทึกประวัติยอดขายน้ำ" เพื่อบันทึกประวัติไว้ที่นี่</div>
+        </div>
+      `;
+      this.refreshLucide();
+      return;
+    }
+
+    listContainer.innerHTML = logs.map(log => {
+      const recNames = (log.recipes || []).map(r => r.name).join(', ') || 'ไม่ระบุสูตร';
+      const profitClass = log.totalProfit >= 0 ? 'color:#16a34a;' : 'color:#dc2626;';
+      const profitSign = log.totalProfit >= 0 ? '+' : '';
+
+      return `
+        <div class="drink-sales-history-card">
+          <div class="dsh-header">
+            <div class="dsh-date">
+              <i data-lucide="calendar" style="width:14px;height:14px;"></i>
+              <span>${this.formatThaiDate(log.date)} เวลา ${log.time || ''} น.</span>
+            </div>
+            <button type="button" class="icon-btn text-danger" title="ลบรายการนี้" onclick="app.deleteDrinkSalesLog('${log.id}')" style="width:28px;height:28px;color:#ef4444;">
+              <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
+            </button>
+          </div>
+          <div class="dsh-cups-row">
+            <span class="dsh-cup-badge">10 oz: <b>${log.cups?.cup10?.sold ?? 0}</b> แก้ว</span>
+            <span class="dsh-cup-badge">16 oz: <b>${log.cups?.cup16?.sold ?? 0}</b> แก้ว</span>
+            <span class="dsh-cup-badge">28 oz: <b>${log.cups?.cup28?.sold ?? 0}</b> แก้ว</span>
+            <span class="dsh-cup-total">รวม <b>${log.totalSold}</b> แก้ว</span>
+          </div>
+          <div class="dsh-recipes-row">
+            <span class="dsh-recipes-label">🏺 สูตรน้ำ:</span>
+            <span>${this.escapeHtml(recNames)} (ทุนเฉลี่ย ฿${Number(log.avgCostPerCup || 0).toFixed(2)}/แก้ว)</span>
+          </div>
+          <div class="dsh-finance-grid">
+            <div class="dsh-fin-item">
+              <span class="dsh-fin-lbl">รายรับรวม</span>
+              <span class="dsh-fin-val text-primary">฿${Number(log.totalRevenue || 0).toLocaleString()}</span>
+            </div>
+            <div class="dsh-fin-item">
+              <span class="dsh-fin-lbl">ต้นทุนรวม</span>
+              <span class="dsh-fin-val" style="color:#dc2626;">฿${Number(log.totalCost || 0).toFixed(2)}</span>
+            </div>
+            <div class="dsh-fin-item highlight">
+              <span class="dsh-fin-lbl">กำไรสุทธิ</span>
+              <span class="dsh-fin-val" style="${profitClass}">
+                ${profitSign}฿${Number(log.totalProfit || 0).toFixed(2)}
+              </span>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    this.refreshLucide();
+  }
+
+  deleteDrinkSalesLog(logId) {
+    if (!confirm('คุณแน่ใจหรือไม่ว่าต้องการลบรายการประวัตินี้?')) return;
+    if (!Array.isArray(this.data.drinkSalesLogs)) return;
+    this.data.drinkSalesLogs = this.data.drinkSalesLogs.filter(l => l.id !== logId);
+    this.saveData();
+    this.renderDrinkSalesHistory();
+    this.showToast('ลบรายการประวัติยอดขายน้ำเรียบร้อย', 'info');
   }
 
   escapeHtml(str) {

@@ -8673,3 +8673,105 @@ body {
     width: 65px !important;
   }
 }
+
+
+/* Drink Sales History Cards */
+.drink-sales-history-card {
+  background: #ffffff;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: var(--radius-md, 10px);
+  padding: 0.85rem 1rem;
+  margin-bottom: 0.75rem;
+  transition: all 0.2s ease;
+}
+
+.drink-sales-history-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.dsh-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.dsh-date {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.82rem;
+  color: var(--text-muted, #64748b);
+  font-weight: 600;
+}
+
+.dsh-cups-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.45rem;
+  align-items: center;
+}
+
+.dsh-cup-badge {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  padding: 0.15rem 0.45rem;
+  color: #334155;
+}
+
+.dsh-cup-total {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  padding: 0.15rem 0.5rem;
+  color: #1d4ed8;
+  font-weight: 700;
+}
+
+.dsh-recipes-row {
+  font-size: 0.78rem;
+  color: #64748b;
+  margin-bottom: 0.6rem;
+  line-height: 1.4;
+}
+
+.dsh-recipes-label {
+  font-weight: 600;
+  color: #475569;
+}
+
+.dsh-finance-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.2fr;
+  gap: 0.5rem;
+  background: #f8fafc;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+.dsh-fin-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.dsh-fin-lbl {
+  font-size: 0.7rem;
+  color: #64748b;
+}
+
+.dsh-fin-val {
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.dsh-fin-item.highlight .dsh-fin-val {
+  font-size: 0.95rem;
+}
