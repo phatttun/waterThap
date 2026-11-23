@@ -2141,30 +2141,39 @@ class WaterFlowApp {
 
     if (statBestDay) statBestDay.textContent = bestDayStr;
 
-    // Render Top 3 Most Used Stock Items (เฉพาะสินค้าสำเร็จรูป/น้ำยกลัง)
+    // Render Top 5 Most Used Stock Items (เฉพาะน้ำขายในตู้ FRIDGE_DRINK)
     const topStockListElem = document.getElementById('dashTopStockItemsList');
     if (topStockListElem) {
       const logs = this.data.stockLogs || [];
       const stockItems = this.data.stockItems || [];
       const usageMap = {};
 
-      // Helper to check if item is a crate/boxed bottled drink
-      const isCaseDrink = (name) => {
+      // Helper to check if item is a fridge drink (น้ำขายในตู้)
+      const isFridgeDrink = (name) => {
         const lower = (name || '').toLowerCase();
-        const found = stockItems.find(s => s.name.toLowerCase() === lower);
-        if (found && found.category === 'STOCK') return true;
-        return lower.includes('ลัง') || lower.includes('ขวด') || lower.includes('ยกลัง') || lower.includes('สำเร็จรูป');
+        const found = stockItems.find(s => s.name && s.name.toLowerCase() === lower);
+        if (found && found.category === 'FRIDGE_DRINK') return true;
+        return lower.includes('น้ำ') || lower.includes('นม') || lower.includes('ชา') || lower.includes('กาแฟ') ||
+               lower.includes('โค้ก') || lower.includes('แฟนต้า') || lower.includes('สไปรท์') || lower.includes('เครื่องดื่ม') ||
+               lower.includes('ลัง') || lower.includes('ขวด') || lower.includes('ยกลัง') || lower.includes('สำเร็จรูป');
       };
 
-      // 1. Tally from actual logs if available
+      // Tally from actual logs
       logs.forEach(log => {
-        if (log.actionType === 'USE' && log.changeQty < 0 && isCaseDrink(log.itemName)) {
+        if (log.actionType === 'USE' && log.changeQty < 0 && isFridgeDrink(log.itemName)) {
           const name = log.itemName;
           const qty = Math.abs(log.changeQty);
           if (!usageMap[name]) {
-            usageMap[name] = { name: name, qty: 0, unit: log.unit || 'ลัง' };
+            usageMap[name] = { name: name, qty: 0, unit: log.unit || 'ขวด', revenue: 0, profit: 0 };
           }
           usageMap[name].qty += qty;
+
+          // ดึงยอดขายและกำไรจาก log
+          const parsed = this.parseProfitInfoFromLog(log);
+          if (parsed) {
+            usageMap[name].revenue += parsed.revenue || 0;
+            usageMap[name].profit += parsed.profit || 0;
+          }
         }
       });
 
@@ -2173,24 +2182,32 @@ class WaterFlowApp {
       if (topItems.length === 0) {
         topStockListElem.innerHTML = `
           <div class="text-center text-muted py-3" style="font-size:0.8rem; background:#f8fafc; border:1px dashed var(--border-color); border-radius:var(--radius-sm);">
-            ยังไม่มีประวัติการเบิกขายน้ำยกลังในเดือนนี้
+            ยังไม่มีประวัติการเบิกขายน้ำในตู้
           </div>
         `;
         return;
       }
 
-      const top3 = topItems.slice(0, 3);
+      const top5 = topItems.slice(0, 5);
 
-      topStockListElem.innerHTML = top3.map((item, idx) => {
-        const rankBadge = ['🥇', '🥈', '🥉'][idx] || `#${idx + 1}`;
+      topStockListElem.innerHTML = top5.map((item, idx) => {
+        const rankBadge = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣'][idx] || `#${idx + 1}`;
+        const isProfit = item.profit >= 0;
+        const profitSign = isProfit ? '+' : '';
 
         return `
-          <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:0.45rem 0.65rem; font-size:0.825rem;">
-            <div style="display:flex; align-items:center; gap:0.45rem; overflow:hidden;">
-              <span style="font-size:0.9rem;">${rankBadge}</span>
-              <span class="font-bold text-main" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${this.escapeHtml(item.name)}</span>
+          <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:0.5rem 0.65rem; font-size:0.825rem;">
+            <div style="display:flex; align-items:center; gap:0.45rem; overflow:hidden; flex:1; min-width:0;">
+              <span style="font-size:0.95rem; flex-shrink:0;">${rankBadge}</span>
+              <div style="overflow:hidden;">
+                <div class="font-bold text-main" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${this.escapeHtml(item.name)}</div>
+                <div style="display:flex; gap:0.5rem; font-size:0.72rem; color:#64748b; margin-top:1px;">
+                  <span>ขาย ${this.formatCurrency(item.revenue)}</span>
+                  <span style="color:${isProfit ? '#16a34a' : '#dc2626'}; font-weight:700;">${profitSign}${this.formatCurrency(item.profit)}</span>
+                </div>
+              </div>
             </div>
-            <div style="text-align:right; flex-shrink:0;">
+            <div style="text-align:right; flex-shrink:0; margin-left:0.5rem;">
               <b class="text-primary">${item.qty}</b> <span class="text-xs text-muted">${this.escapeHtml(item.unit)}</span>
             </div>
           </div>
