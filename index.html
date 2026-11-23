@@ -2453,7 +2453,6 @@
               id="quickRestockItemSub">เชื่อมโยงรายจ่ายและคำนวณต้นทุนเฉลี่ยให้อัตโนมัติ</span>
           </div>
         </div>
-        <button class="close-modal-btn" data-close="quickRestockModal">&times;</button>
       </div>
       <form id="quickRestockForm" class="modal-body">
         <input type="hidden" id="quickRestockItemId">
@@ -2484,7 +2483,7 @@
           </div>
           <div class="form-group">
             <label class="form-label font-bold" for="quickRestockNewPrice">
-              💰 ราคาซื้อรอบนี้ (ต่อหน่วย)
+              💰 ราคารวมซื้อรอบนี้ (บาท)
             </label>
             <div class="input-with-affix">
               <span class="affix-left">฿</span>
@@ -2518,24 +2517,6 @@
           </div>
         </div>
 
-        <!-- Formula & Example Box (Moving Average Cost) -->
-        <div class="mb-3"
-          style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:var(--radius-sm); padding:0.75rem 0.9rem; font-size:0.78rem; color:#1e3a8a; line-height:1.5;">
-          <div
-            style="font-weight:700; margin-bottom:0.25rem; display:flex; align-items:center; gap:0.35rem; color:#1d4ed8;">
-            <i data-lucide="info" style="width:14px; height:14px;"></i>
-            <span>หลักการคำนวณ: ต้นทุนเฉลี่ยถ่วงน้ำหนัก (Moving Average Cost)</span>
-          </div>
-          <div
-            style="background:#ffffff; border:1px dashed #93c5fd; border-radius:4px; padding:0.4rem 0.6rem; font-family:monospace; margin-bottom:0.4rem; color:#1e40af; font-size:0.75rem;">
-            ต้นทุนเฉลี่ยใหม่ = [(ของเดิม × ราคาเดิม) + (ของใหม่ × ราคาใหม่)] ÷ จำนวนรวมทั้งหมด
-          </div>
-          <div style="color:#3b82f6; font-size:0.73rem;">
-            💡 <b>ตัวอย่าง:</b> เดิมเหลือ 2 ชิ้น (ทุน 100บ. = 200บ.) + ซื้อใหม่ 3 ชิ้น (ทุน 150บ. = 450บ.) รวม 5 ชิ้น
-            (650บ.) → <b>ทุนเฉลี่ยใหม่จะเป็น 130 บ./ชิ้น</b><br>
-            ✨ <b>ข้อดี:</b> กำไรต่อแก้วและมูลค่าสต๊อกในร้านจะไม่แกว่ง ไม่เพี้ยน และสะท้อนความเป็นจริงที่สุด
-          </div>
-        </div>
 
         <div class="form-group mb-3">
           <label class="form-label" for="quickRestockDate">📅 วันที่ซื้อของเข้า</label>

@@ -1345,7 +1345,7 @@ class WaterFlowApp {
       backdrop.addEventListener('click', (e) => {
         if (e.target === backdrop) {
           // ป้องกันไม่ให้คลิกด้านนอกแล้ว modal ปิดเองโดยไม่ได้ตั้งใจ (ต้องกดยกเลิก หรือบันทึกข้อมูลเท่านั้น)
-          if (backdrop.id === 'recipeModal' || backdrop.id === 'expenseModal' || backdrop.id === 'stockItemModal') {
+          if (backdrop.id === 'recipeModal' || backdrop.id === 'expenseModal' || backdrop.id === 'stockItemModal' || backdrop.id === 'quickRestockModal') {
             return;
           }
           backdrop.classList.remove('active');
@@ -8212,23 +8212,26 @@ const quickRestockForm = document.getElementById('quickRestockForm');
     const supInput = document.getElementById('quickRestockSupplier');
 
     if (addInput) addInput.value = defaultAddQty;
-    if (priceInput) priceInput.value = currentUnitCost;
+    const defaultTotalExpense = parseFloat((defaultAddQty * currentUnitCost).toFixed(2));
+    if (priceInput) priceInput.value = defaultTotalExpense;
     if (dateInput) dateInput.value = this.formatDate(new Date());
     if (supInput) supInput.value = item.supplier || '';
 
     // ฟังก์ชันคำนวณสด
     const updatePreview = () => {
       const addQty = parseFloat(addInput?.value) || 0;
-      const newPrice = parseFloat(priceInput?.value) || 0;
-      const expenseAmount = addQty * newPrice;
+      const expenseAmount = parseFloat(priceInput?.value) || 0;
       const totalQty = currentQty + addQty;
 
+      // ต้นทุนต่อหน่วยของการซื้อรอบนี้ = ยอดเงินรวม / จำนวนที่ซื้อ
+      const unitCostThisRound = addQty > 0 ? (expenseAmount / addQty) : 0;
+
       // สูตรต้นทุนเฉลี่ยถ่วงน้ำหนัก (Moving Average Cost)
-      // ((จำนวนเดิม * ทุนเดิม) + (จำนวนใหม่ * ทุนใหม่)) / จำนวนรวม
+      // ((จำนวนเดิม * ทุนเดิม) + ยอดเงินรวมรอบนี้) / จำนวนรวม
       let weightedAvgCost = currentUnitCost;
       if (totalQty > 0) {
-        const totalCostSum = (currentQty * currentUnitCost) + (addQty * newPrice);
-        weightedAvgCost = parseFloat((totalCostSum / totalQty).toFixed(2));
+        const totalCostSum = (currentQty * currentUnitCost) + expenseAmount;
+        weightedAvgCost = parseFloat((totalCostSum / totalQty).toFixed(4));
       }
 
       const expEl = document.getElementById('quickRestockTotalExpensePreview');
@@ -8246,10 +8249,10 @@ const quickRestockForm = document.getElementById('quickRestockForm');
         }
       }
 
-      const diffVal = parseFloat((weightedAvgCost - currentUnitCost).toFixed(2));
+      const diffVal = parseFloat((weightedAvgCost - currentUnitCost).toFixed(4));
 
       if (avgEl) {
-        avgEl.textContent = `${this.formatCurrency(weightedAvgCost)} / ${unit}`;
+        avgEl.textContent = `฿${this.formatUnitCost(weightedAvgCost)} / ${unit}`;
         if (diffVal > 0) {
           avgEl.style.color = '#ef4444'; // ราคาเฉลี่ยแพงขึ้น
         } else if (diffVal < 0) {
@@ -8260,14 +8263,15 @@ const quickRestockForm = document.getElementById('quickRestockForm');
       }
 
       if (diffEl) {
+        const unitCostText = addQty > 0 ? ` (เฉลี่ย ฿${this.formatUnitCost(unitCostThisRound)}/${unit})` : '';
         if (diffVal > 0) {
-          diffEl.textContent = `🔺 แพงขึ้น +฿${diffVal.toFixed(2)} จากทุนเดิม (฿${currentUnitCost.toFixed(2)})`;
+          diffEl.textContent = `🔺 แพงขึ้น +฿${this.formatUnitCost(diffVal)} จากทุนเดิม (฿${this.formatUnitCost(currentUnitCost)})${unitCostText}`;
           diffEl.style.color = '#ef4444';
         } else if (diffVal < 0) {
-          diffEl.textContent = `🔻 ถูกลง -฿${Math.abs(diffVal).toFixed(2)} จากทุนเดิม (฿${currentUnitCost.toFixed(2)})`;
+          diffEl.textContent = `🔻 ถูกลง -฿${this.formatUnitCost(Math.abs(diffVal))} จากทุนเดิม (฿${this.formatUnitCost(currentUnitCost)})${unitCostText}`;
           diffEl.style.color = '#10b981';
         } else {
-          diffEl.textContent = `⚖️ เท่ากับราคาเดิม (฿${currentUnitCost.toFixed(2)})`;
+          diffEl.textContent = `⚖️ เท่ากับราคาเดิม (฿${this.formatUnitCost(currentUnitCost)})${unitCostText}`;
           diffEl.style.color = 'var(--text-muted)';
         }
       }
@@ -8294,7 +8298,7 @@ const quickRestockForm = document.getElementById('quickRestockForm');
     if (!item) return;
 
     const addQty = parseFloat(document.getElementById('quickRestockAddQty')?.value) || 0;
-    const newPrice = parseFloat(document.getElementById('quickRestockNewPrice')?.value) || 0;
+    const totalExpense = parseFloat(document.getElementById('quickRestockNewPrice')?.value) || 0;
     const purchaseDate = document.getElementById('quickRestockDate')?.value || this.formatDate(new Date());
     const supplier = document.getElementById('quickRestockSupplier')?.value.trim() || item.supplier || '';
 
@@ -8306,13 +8310,13 @@ const quickRestockForm = document.getElementById('quickRestockForm');
     const currentQty = Number(item.qty) || 0;
     const currentUnitCost = Number(item.unitCost) || 0;
     const totalQty = currentQty + addQty;
-    const totalExpense = parseFloat((addQty * newPrice).toFixed(2));
+    const unitPriceThisRound = addQty > 0 ? (totalExpense / addQty) : 0;
 
     // คำนวณต้นทุนเฉลี่ยถ่วงน้ำหนัก (Moving Average Cost)
     let newAvgCost = currentUnitCost;
     if (totalQty > 0) {
-      const sumValue = (currentQty * currentUnitCost) + (addQty * newPrice);
-      newAvgCost = parseFloat((sumValue / totalQty).toFixed(2));
+      const sumValue = (currentQty * currentUnitCost) + totalExpense;
+      newAvgCost = parseFloat((sumValue / totalQty).toFixed(4));
     }
 
     // 1. อัปเดตสต๊อกสินค้า
@@ -8336,21 +8340,21 @@ const quickRestockForm = document.getElementById('quickRestockForm');
       category: item.category || 'INGREDIENT',
       amount: totalExpense,
       qtyDesc: isBulk
-        ? `${addQty} ${item.unit || 'หน่วย'} (~${(addQty / crateBottles).toFixed(2).replace(/\.?0+$/, '')} ${rawUnit}) @ ฿${newPrice}/${item.unit || 'หน่วย'}`
-        : `${addQty} ${item.unit || 'หน่วย'} (ราคา ฿${newPrice}/${item.unit || 'หน่วย'})`,
+        ? `${addQty} ${item.unit || 'หน่วย'} (~${(addQty / crateBottles).toFixed(2).replace(/\.?0+$/, '')} ${rawUnit}) @ ฿${this.formatUnitCost(unitPriceThisRound)}/${item.unit || 'หน่วย'}`
+        : `${addQty} ${item.unit || 'หน่วย'} (รวม ฿${totalExpense} เฉลี่ย ฿${this.formatUnitCost(unitPriceThisRound)}/${item.unit || 'หน่วย'})`,
       packSize: isBulk ? parseFloat((addQty / crateBottles).toFixed(2)) : addQty,
       packUnit: isBulk ? rawUnit : (item.unit || 'หน่วย'),
       crateBottles: isBulk ? crateBottles : null,
       minQty: item.minQty,
       supplier: supplier,
-      note: `เติมสต๊อกด่วน: ทุนเดิม ฿${currentUnitCost} → ทุนเฉลี่ยใหม่ ฿${newAvgCost}/${item.unit || 'หน่วย'}`,
+      note: `เติมสต๊อกด่วน: ทุนเดิม ฿${this.formatUnitCost(currentUnitCost)} → ทุนเฉลี่ยใหม่ ฿${this.formatUnitCost(newAvgCost)}/${item.unit || 'หน่วย'}`,
       stockItemId: item.id
     };
     this.data.expenses.unshift(newExpense);
 
     // 3. บันทึก Stock Log
     const crateSub = isBulk ? ` (~${(addQty / crateBottles).toFixed(2).replace(/\.?0+$/, '')} ${rawUnit})` : '';
-    const logNote = `ซื้อเพิ่ม +${addQty} ${item.unit || ''}${crateSub} (ราคา ฿${newPrice}) บันทึกรายจ่าย ฿${totalExpense} ทุนเฉลี่ยปรับเป็น ฿${newAvgCost}`;
+    const logNote = `ซื้อเพิ่ม +${addQty} ${item.unit || ''}${crateSub} (ราคารวม ฿${totalExpense} เฉลี่ย ฿${this.formatUnitCost(unitPriceThisRound)}/${item.unit || ''}) บันทึกรายจ่าย ฿${totalExpense} ทุนเฉลี่ยปรับเป็น ฿${this.formatUnitCost(newAvgCost)}`;
     this.logStockAction(item.name, 'RESTOCK', addQty, totalQty, item.unit || '', logNote);
 
     // 4. บันทึกและรีเฟรชทุกหน้าจอ
