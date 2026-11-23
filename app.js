@@ -1667,7 +1667,6 @@ class WaterFlowApp {
       this.populatePackSellDropdowns();
     } else if (cleanTabId === 'drink-sales') {
       this.initDrinkSales();
-      this.populateDrinkSalesRecipes();
       this.calculateDrinkSalesCups();
       this.renderDrinkSalesHistory();
     } else if (cleanTabId === 'stock-history') {
@@ -10590,18 +10589,36 @@ const quickRestockForm = document.getElementById('quickRestockForm');
   // 💰 DRINK SALES - คำนวณการขายน้ำชง
   // =========================================================================
 
+  populateDrinkSalesRecipes() {
+    this.renderDsInlineRecipes();
+  }
+
   initDrinkSales() {
+    // Cup size config: oz -> default ml, default selling price
+    this.dsCupSizes = [
+      { oz: 10, mlDefault: 150, priceDefault: 5 },
+      { oz: 16, mlDefault: 250, priceDefault: 10 },
+      { oz: 28, mlDefault: 400, priceDefault: 20 }
+    ];
+    // Packaging config per size
+    if (!this.dsPackagingConfig) {
+      this.dsPackagingConfig = {};
+      this.dsCupSizes.forEach(s => {
+        this.dsPackagingConfig[s.oz] = { bundled: false, bundledExpId: '', cupExpId: '', lidExpId: '', strawExpId: '', mlPerCup: s.mlDefault };
+      });
+    }
+    // Selected recipe IDs
+    if (!this.drinkSalesSelectedRecipeIds) this.drinkSalesSelectedRecipeIds = new Set();
+
+    // Render cup size config cards
+    this.renderDsCupSizeCards();
+    // Render inline recipe list
+    this.renderDsInlineRecipes();
+
     // Bind cup count inputs
     document.querySelectorAll('.drink-sales-cup-before, .drink-sales-cup-after').forEach(input => {
       input.addEventListener('input', () => this.calculateDrinkSalesCups());
     });
-
-    // Bind add-recipe button
-    const btnAddRecipe = document.getElementById('btnDrinkSalesAddRecipe');
-    if (btnAddRecipe && !btnAddRecipe._bound) {
-      btnAddRecipe._bound = true;
-      btnAddRecipe.addEventListener('click', () => this.openDrinkSalesRecipeModal());
-    }
 
     // Bind calculate button
     const btnCalc = document.getElementById('btnDrinkSalesCalculate');
@@ -10620,48 +10637,205 @@ const quickRestockForm = document.getElementById('quickRestockForm');
     this.renderDrinkSalesHistory();
   }
 
-  populateDrinkSalesRecipes() {
-    const select = document.getElementById('drinkSalesRecipeSelect');
-    if (!select) return;
+  // ═══ Get PACKAGING expenses for dropdown options ═══
+  getDsPackagingOptions() {
+    return (this.data.expenses || []).filter(e => e.category === 'PACKAGING').map(exp => {
+      const pricing = this.getExpenseUnitPricing(exp);
+      const costPerPiece = pricing ? pricing.costPerPiece : (Number(exp.amount) || 0);
+      return { id: exp.id, title: exp.title || 'ไม่ระบุ', costPerPiece, pricingLabel: pricing ? pricing.badgeSpec : `฿${costPerPiece.toFixed(2)}` };
+    });
+  }
 
-    // Get jar/pitcher recipes (🏺 ต่อ 1 โหล type: mode !== 'cup')
+  // ═══ Render cup size config cards (packaging, ml per cup) ═══
+  renderDsCupSizeCards() {
+    const container = document.getElementById('dsCupSizeCards');
+    if (!container) return;
+    const pkgOptions = this.getDsPackagingOptions();
+
+    const makeSelect = (sizeOz, field, selectedId, label) => {
+      let opts = `<option value="">-- เลือก${label} --</option>`;
+      pkgOptions.forEach(o => {
+        const sel = String(o.id) === String(selectedId) ? ' selected' : '';
+        opts += `<option value="${o.id}"${sel}>${this.escapeHtml(o.title)} (${o.pricingLabel})</option>`;
+      });
+      return `<select class="form-input ds-pkg-select" data-size="${sizeOz}" data-field="${field}" style="height:36px; font-size:0.8rem;">${opts}</select>`;
+    };
+
+    container.innerHTML = this.dsCupSizes.map(s => {
+      const cfg = this.dsPackagingConfig[s.oz];
+      const bundledChecked = cfg.bundled ? ' checked' : '';
+      return `
+        <div class="ds-cup-config-card" data-oz="${s.oz}">
+          <div class="ds-cup-config-header">
+            <span class="ds-cup-config-size">${s.oz} oz</span>
+            <div class="ds-cup-config-ml">
+              <label style="font-size:0.75rem; color:#64748b;">น้ำ/แก้ว</label>
+              <div class="input-with-affix" style="width:90px;">
+                <input type="number" class="form-input ds-ml-input" data-size="${s.oz}" value="${cfg.mlPerCup}" min="0" step="10" style="height:32px; text-align:center; font-size:0.82rem; font-weight:600;">
+                <span class="affix-right" style="font-size:0.7rem;">ml</span>
+              </div>
+            </div>
+          </div>
+          <div class="ds-cup-pkg-section">
+            <label class="ds-bundled-toggle">
+              <input type="checkbox" class="ds-bundled-cb" data-size="${s.oz}"${bundledChecked}>
+              <span>รวมแก้ว+ฝา+หลอดแล้ว (ชุดเดียว)</span>
+            </label>
+            <div class="ds-pkg-fields" id="dsPkgFields${s.oz}">
+              ${cfg.bundled ? `
+                <div class="form-group mb-1">
+                  <label class="form-label" style="font-size:0.75rem;">📦 เลือกชุดบรรจุภัณฑ์</label>
+                  ${makeSelect(s.oz, 'bundledExpId', cfg.bundledExpId, 'ชุดบรรจุภัณฑ์')}
+                </div>
+              ` : `
+                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.4rem;">
+                  <div class="form-group mb-1">
+                    <label class="form-label" style="font-size:0.72rem;">🥤 แก้ว</label>
+                    ${makeSelect(s.oz, 'cupExpId', cfg.cupExpId, 'แก้ว')}
+                  </div>
+                  <div class="form-group mb-1">
+                    <label class="form-label" style="font-size:0.72rem;">🔵 ฝา</label>
+                    ${makeSelect(s.oz, 'lidExpId', cfg.lidExpId, 'ฝา')}
+                  </div>
+                  <div class="form-group mb-1">
+                    <label class="form-label" style="font-size:0.72rem;">🥢 หลอด</label>
+                    ${makeSelect(s.oz, 'strawExpId', cfg.strawExpId, 'หลอด')}
+                  </div>
+                </div>
+              `}
+            </div>
+          </div>
+          <div class="ds-cup-pkg-cost" id="dsPkgCost${s.oz}" style="font-size:0.78rem; color:#64748b; padding:0.3rem 0.5rem; margin-top:0.3rem;"></div>
+        </div>
+      `;
+    }).join('');
+
+    // Bind events
+    container.querySelectorAll('.ds-ml-input').forEach(inp => {
+      inp.addEventListener('input', (e) => {
+        const sz = parseInt(e.target.dataset.size);
+        this.dsPackagingConfig[sz].mlPerCup = parseFloat(e.target.value) || 0;
+        this.updateDsPkgCostDisplay(sz);
+      });
+    });
+    container.querySelectorAll('.ds-bundled-cb').forEach(cb => {
+      cb.addEventListener('change', (e) => {
+        const sz = parseInt(e.target.dataset.size);
+        this.dsPackagingConfig[sz].bundled = e.target.checked;
+        this.renderDsCupSizeCards();
+      });
+    });
+    container.querySelectorAll('.ds-pkg-select').forEach(sel => {
+      sel.addEventListener('change', (e) => {
+        const sz = parseInt(e.target.dataset.size);
+        const field = e.target.dataset.field;
+        this.dsPackagingConfig[sz][field] = e.target.value;
+        this.updateDsPkgCostDisplay(sz);
+      });
+    });
+
+    // Show cost per cup for each size
+    this.dsCupSizes.forEach(s => this.updateDsPkgCostDisplay(s.oz));
+  }
+
+  // ═══ Calculate & display packaging cost per cup for a size ═══
+  getDsPackagingCostPerCup(sizeOz) {
+    const cfg = this.dsPackagingConfig[sizeOz];
+    if (!cfg) return 0;
+    const pkgOptions = this.getDsPackagingOptions();
+    const findCost = (expId) => {
+      if (!expId) return 0;
+      const opt = pkgOptions.find(o => String(o.id) === String(expId));
+      return opt ? opt.costPerPiece : 0;
+    };
+    if (cfg.bundled) {
+      return findCost(cfg.bundledExpId);
+    } else {
+      return findCost(cfg.cupExpId) + findCost(cfg.lidExpId) + findCost(cfg.strawExpId);
+    }
+  }
+
+  updateDsPkgCostDisplay(sizeOz) {
+    const el = document.getElementById(`dsPkgCost${sizeOz}`);
+    if (!el) return;
+    const cost = this.getDsPackagingCostPerCup(sizeOz);
+    const cfg = this.dsPackagingConfig[sizeOz];
+    if (cost > 0) {
+      el.innerHTML = `📦 ต้นทุนบรรจุภัณฑ์/แก้ว: <strong style="color:#dc2626;">฿${cost.toFixed(2)}</strong> | น้ำ/แก้ว: <strong>${cfg.mlPerCup} ml</strong>`;
+    } else {
+      el.innerHTML = `<span style="color:#94a3b8;">ยังไม่ได้เลือกบรรจุภัณฑ์</span> | น้ำ/แก้ว: <strong>${cfg.mlPerCup} ml</strong>`;
+    }
+  }
+
+  // ═══ Render inline clickable recipe cards ═══
+  renderDsInlineRecipes() {
+    const container = document.getElementById('dsRecipeInlineList');
+    if (!container) return;
+
     const recipes = (this.data.recipes || []).filter(r => {
       const mode = r.mode || (r.yieldCups === 1 && (!r.jarLiters || r.jarLiters <= 0.5) ? 'cup' : 'jar');
       return mode !== 'cup';
     });
 
-    select.innerHTML = '<option value="">-- เลือกสูตรน้ำ --</option>';
-    recipes.forEach(recipe => {
-      const totalCost = this.calculateRecipeJarCost(recipe);
+    if (recipes.length === 0) {
+      container.innerHTML = '<div style="text-align:center; color:#94a3b8; padding:1rem; font-size:0.85rem;">ไม่พบสูตรน้ำประเภทโหล/ถัง กรุณาเพิ่มสูตรน้ำในหน้า "สูตรชงน้ำ" ก่อน</div>';
+      return;
+    }
+
+    container.innerHTML = recipes.map(recipe => {
+      const jarCost = this.calculateRecipeJarCost(recipe);
       const unitCost = this.calculateRecipeUnitCost(recipe);
+      const jarL = parseFloat(recipe.jarLiters) || 5;
       const yieldCups = parseInt(recipe.yieldCups) || 24;
-      const opt = document.createElement('option');
-      opt.value = recipe.id;
-      opt.textContent = `${recipe.name || 'ไม่ระบุ'} (ทุนโหล ฿${totalCost.toFixed(1)} | ตก ฿${unitCost.toFixed(2)}/แก้ว)`;
-      select.appendChild(opt);
-    });
+      const isSelected = this.drinkSalesSelectedRecipeIds && this.drinkSalesSelectedRecipeIds.has(String(recipe.id));
+      const selectedClass = isSelected ? ' ds-recipe-card-selected' : '';
+      return `
+        <div class="ds-recipe-card${selectedClass}" data-recipe-id="${recipe.id}" onclick="app.toggleDsRecipe('${recipe.id}')">
+          <div class="ds-recipe-card-check">${isSelected ? '✅' : '⬜'}</div>
+          <div class="ds-recipe-card-info">
+            <div class="ds-recipe-card-name">${this.escapeHtml(recipe.name || 'ไม่ระบุ')}</div>
+            <div class="ds-recipe-card-detail">
+              ทุน ฿${jarCost.toFixed(1)}/โหล (${jarL}L) → ฿${unitCost.toFixed(2)}/แก้ว (${yieldCups} แก้ว)
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
   }
 
+  toggleDsRecipe(recipeId) {
+    if (!this.drinkSalesSelectedRecipeIds) this.drinkSalesSelectedRecipeIds = new Set();
+    const rid = String(recipeId);
+    if (this.drinkSalesSelectedRecipeIds.has(rid)) {
+      this.drinkSalesSelectedRecipeIds.delete(rid);
+    } else {
+      this.drinkSalesSelectedRecipeIds.add(rid);
+    }
+    this.renderDsInlineRecipes();
+  }
+
+  // ═══ Calculate cups sold (unchanged logic, just recalc) ═══
   calculateDrinkSalesCups() {
     const sizes = ['10', '16', '28'];
     let totalSold = 0;
     let totalRevenue = 0;
+    const cupData = {};
 
     sizes.forEach(size => {
       const before = parseInt(document.getElementById(`dsCupBefore${size}`)?.value) || 0;
       const after = parseInt(document.getElementById(`dsCupAfter${size}`)?.value) || 0;
       const sold = Math.max(0, before - after);
-      const priceEl = document.getElementById(`dsCupPrice${size}`);
-      const price = parseFloat(priceEl?.value) || 0;
+      const price = parseFloat(document.getElementById(`dsCupPrice${size}`)?.value) || 0;
       const soldEl = document.getElementById(`dsCupSold${size}`);
       if (soldEl) soldEl.textContent = `${sold} แก้ว`;
 
-      const revEl = document.getElementById(`dsCupRev${size}`);
       const rev = sold * price;
+      const revEl = document.getElementById(`dsCupRev${size}`);
       if (revEl) revEl.textContent = `฿${rev.toFixed(0)}`;
 
       totalSold += sold;
       totalRevenue += rev;
+      cupData[`cup${size}`] = { size: `${size} oz`, price, before, after, sold, revenue: rev };
     });
 
     const totalSoldEl = document.getElementById('dsTotalCupsSold');
@@ -10669,163 +10843,154 @@ const quickRestockForm = document.getElementById('quickRestockForm');
     if (totalSoldEl) totalSoldEl.textContent = `${totalSold} แก้ว`;
     if (totalRevEl) totalRevEl.textContent = `฿${totalRevenue.toFixed(0)}`;
 
-    this.drinkSalesData = { totalSold, totalRevenue };
+    this.drinkSalesData = { totalSold, totalRevenue, cupData };
   }
 
-  openDrinkSalesRecipeModal() {
-    this.populateDrinkSalesRecipes();
-    const modal = document.getElementById('drinkSalesRecipeModal');
-    if (modal) modal.classList.add('active');
-    this.refreshLucide();
-  }
-
-  closeDrinkSalesRecipeModal() {
-    const modal = document.getElementById('drinkSalesRecipeModal');
-    if (modal) modal.classList.remove('active');
-  }
-
-  addDrinkSalesRecipe() {
-    const select = document.getElementById('drinkSalesRecipeSelect');
-    if (!select || !select.value) { this.showToast('กรุณาเลือกสูตรน้ำก่อน', 'error'); return; }
-
-    const recipe = (this.data.recipes || []).find(r => String(r.id) === String(select.value));
-    if (!recipe) return;
-
-    if (!this.drinkSalesSelectedRecipes) this.drinkSalesSelectedRecipes = [];
-
-    // Check duplicate
-    if (this.drinkSalesSelectedRecipes.find(r => String(r.id) === String(recipe.id))) {
-      this.showToast('สูตรน้ำนี้เลือกไปแล้ว', 'warning');
-      return;
-    }
-
-    const totalCost = this.calculateRecipeJarCost(recipe);
-    const costPerCup = this.calculateRecipeUnitCost(recipe);
-    const cupsPerBatch = parseInt(recipe.yieldCups) || 24;
-
-    this.drinkSalesSelectedRecipes.push({
-      id: recipe.id,
-      name: recipe.name,
-      totalCost,
-      cupsPerBatch,
-      costPerCup
-    });
-
-    this.closeDrinkSalesRecipeModal();
-    this.renderDrinkSalesSelectedRecipes();
-    this.showToast(`เพิ่มสูตร "${recipe.name}" แล้ว`, 'success');
-  }
-
-  removeDrinkSalesRecipe(recipeId) {
-    if (!this.drinkSalesSelectedRecipes) return;
-    this.drinkSalesSelectedRecipes = this.drinkSalesSelectedRecipes.filter(r => String(r.id) !== String(recipeId));
-    this.renderDrinkSalesSelectedRecipes();
-  }
-
-  renderDrinkSalesSelectedRecipes() {
-    const container = document.getElementById('drinkSalesSelectedRecipesList');
-    if (!container) return;
-
-    if (!this.drinkSalesSelectedRecipes || this.drinkSalesSelectedRecipes.length === 0) {
-      container.innerHTML = `<div style="text-align:center; color:#94a3b8; padding:1rem; font-size:0.85rem;">ยังไม่ได้เลือกสูตรน้ำ กดปุ่ม "+ เพิ่มสูตรน้ำ" ด้านบน</div>`;
-      return;
-    }
-
-    container.innerHTML = this.drinkSalesSelectedRecipes.map(r => `
-      <div style="display:flex; align-items:center; justify-content:space-between; padding:0.5rem 0.75rem; background:#f8fafc; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:0.4rem;">
-        <div>
-          <div style="font-weight:600; font-size:0.85rem;">${this.escapeHtml(r.name)}</div>
-          <div style="font-size:0.75rem; color:#64748b;">ต้นทุน ฿${r.totalCost.toFixed(2)}/ถัง → ฿${r.costPerCup.toFixed(2)}/แก้ว (${r.cupsPerBatch} แก้ว/ถัง)</div>
-        </div>
-        <button type="button" class="icon-btn" style="color:#ef4444; width:28px; height:28px;" onclick="app.removeDrinkSalesRecipe('${r.id}')">
-          <i data-lucide="x" style="width:14px;height:14px;"></i>
-        </button>
-      </div>
-    `).join('');
-    this.refreshLucide();
-  }
-
+  // ═══ MAIN: Calculate drink sales profit ═══
   calculateDrinkSalesProfit() {
+    // Recalculate cups first
+    this.calculateDrinkSalesCups();
+
     if (!this.drinkSalesData || this.drinkSalesData.totalSold === 0) {
       this.showToast('กรุณากรอกจำนวนแก้วก่อน-หลังขายก่อน', 'error');
       return;
     }
-    if (!this.drinkSalesSelectedRecipes || this.drinkSalesSelectedRecipes.length === 0) {
+    if (!this.drinkSalesSelectedRecipeIds || this.drinkSalesSelectedRecipeIds.size === 0) {
       this.showToast('กรุณาเลือกสูตรน้ำอย่างน้อย 1 สูตร', 'error');
       return;
     }
 
+    const cupData = this.drinkSalesData.cupData || {};
     const totalSold = this.drinkSalesData.totalSold;
     const totalRevenue = this.drinkSalesData.totalRevenue;
 
-    // Average cost per cup from selected recipes
-    const avgCostPerCup = this.drinkSalesSelectedRecipes.reduce((sum, r) => sum + r.costPerCup, 0) / this.drinkSalesSelectedRecipes.length;
+    // ─── Get selected recipes ───
+    const selectedRecipes = (this.data.recipes || []).filter(r => this.drinkSalesSelectedRecipeIds.has(String(r.id)));
 
-    const totalCost = avgCostPerCup * totalSold;
-    const totalProfit = totalRevenue - totalCost;
-    const profitPerCup = totalSold > 0 ? (totalProfit / totalSold) : 0;
+    // ─── Average water cost per ml across selected recipes ───
+    // Each recipe: cost per jar / jar liters in ml = cost per ml
+    let totalCostPerMl = 0;
+    const recipeDetails = selectedRecipes.map(recipe => {
+      const jarCost = this.calculateRecipeJarCost(recipe);
+      const jarLiters = parseFloat(recipe.jarLiters) || 5;
+      const jarMl = jarLiters * 1000;
+      const costPerMl = jarMl > 0 ? (jarCost / jarMl) : 0;
+      const yieldCups = parseInt(recipe.yieldCups) || 24;
+      totalCostPerMl += costPerMl;
+      return { id: recipe.id, name: recipe.name, jarCost, jarLiters, jarMl, costPerMl, yieldCups };
+    });
+    const avgCostPerMl = recipeDetails.length > 0 ? (totalCostPerMl / recipeDetails.length) : 0;
 
-    const resultSection = document.getElementById('drinkSalesResultSection');
-    if (resultSection) resultSection.style.display = 'block';
+    // ─── Total water needed by cups sold ───
+    let totalWaterNeededMl = 0;
+    const sizes = ['10', '16', '28'];
+    const perSizeBreakdown = sizes.map(size => {
+      const sizeOz = parseInt(size);
+      const cfg = this.dsPackagingConfig[sizeOz] || {};
+      const mlPerCup = cfg.mlPerCup || 0;
+      const sold = cupData[`cup${size}`]?.sold || 0;
+      const price = cupData[`cup${size}`]?.price || 0;
+      const revenue = sold * price;
 
-    // Per-recipe breakdown
-    let recipeBreakdownHtml = this.drinkSalesSelectedRecipes.map(r => {
-      const cost = r.costPerCup * totalSold;
-      const profit = totalRevenue - cost;
-      return `
-        <div style="padding:0.5rem 0.75rem; background:#f8fafc; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:0.4rem;">
-          <div style="font-weight:600; font-size:0.85rem;">${this.escapeHtml(r.name)}</div>
-          <div style="font-size:0.8rem; color:#64748b; display:flex; gap:1rem; flex-wrap:wrap; margin-top:0.2rem;">
-            <span>ทุน/แก้ว: <strong style="color:#dc2626;">฿${r.costPerCup.toFixed(2)}</strong></span>
-            <span>ทุนรวม: <strong>฿${cost.toFixed(2)}</strong></span>
-            <span>กำไร: <strong style="color:${profit >= 0 ? '#16a34a' : '#dc2626'};">฿${profit.toFixed(2)}</strong></span>
-          </div>
-        </div>
-      `;
-    }).join('');
+      // Water cost per cup
+      const waterCostPerCup = avgCostPerMl * mlPerCup;
 
-    const profitColor = totalProfit >= 0 ? '#16a34a' : '#dc2626';
+      // Packaging cost per cup
+      const pkgCostPerCup = this.getDsPackagingCostPerCup(sizeOz);
 
-    const p10 = parseFloat(document.getElementById('dsCupPrice10')?.value) || 0;
-    const b10 = parseInt(document.getElementById('dsCupBefore10')?.value) || 0;
-    const a10 = parseInt(document.getElementById('dsCupAfter10')?.value) || 0;
-    const s10 = Math.max(0, b10 - a10);
+      // Total cost per cup
+      const totalCostPerCup = waterCostPerCup + pkgCostPerCup;
 
-    const p16 = parseFloat(document.getElementById('dsCupPrice16')?.value) || 0;
-    const b16 = parseInt(document.getElementById('dsCupBefore16')?.value) || 0;
-    const a16 = parseInt(document.getElementById('dsCupAfter16')?.value) || 0;
-    const s16 = Math.max(0, b16 - a16);
+      // Totals for this size
+      const totalWaterCost = waterCostPerCup * sold;
+      const totalPkgCost = pkgCostPerCup * sold;
+      const totalCostSize = totalCostPerCup * sold;
+      const profitSize = revenue - totalCostSize;
 
-    const p28 = parseFloat(document.getElementById('dsCupPrice28')?.value) || 0;
-    const b28 = parseInt(document.getElementById('dsCupBefore28')?.value) || 0;
-    const a28 = parseInt(document.getElementById('dsCupAfter28')?.value) || 0;
-    const s28 = Math.max(0, b28 - a28);
+      totalWaterNeededMl += mlPerCup * sold;
 
+      return { sizeOz, mlPerCup, sold, price, revenue, waterCostPerCup, pkgCostPerCup, totalCostPerCup, totalWaterCost, totalPkgCost, totalCostSize, profitSize };
+    });
+
+    // ─── Batch tracking (Auto-calculated from cups sold & recipe jar size) ───
+    const totalWaterNeededLiters = totalWaterNeededMl / 1000;
+    const avgJarLiters = recipeDetails.length > 0 ? (recipeDetails.reduce((s, r) => s + r.jarLiters, 0) / recipeDetails.length) : 5;
+    const batchCount = totalWaterNeededLiters > 0 ? Math.ceil(totalWaterNeededLiters / avgJarLiters) : 0;
+    const totalPreparedLiters = batchCount * avgJarLiters;
+    const batchLeftover = totalWaterNeededLiters > 0 ? Math.max(0, totalPreparedLiters - totalWaterNeededLiters) : 0;
+    const actualUsedLiters = totalWaterNeededLiters;
+
+    // ─── Grand totals ───
+    const grandTotalCost = perSizeBreakdown.reduce((s, b) => s + b.totalCostSize, 0);
+    const grandTotalWaterCost = perSizeBreakdown.reduce((s, b) => s + b.totalWaterCost, 0);
+    const grandTotalPkgCost = perSizeBreakdown.reduce((s, b) => s + b.totalPkgCost, 0);
+    const grandProfit = totalRevenue - grandTotalCost;
+    const profitPerCup = totalSold > 0 ? grandProfit / totalSold : 0;
+    const avgCostPerCup = totalSold > 0 ? grandTotalCost / totalSold : 0;
+
+    // ─── Store for saving ───
     this.lastDrinkSalesCalc = {
       totalSold,
       totalRevenue,
       avgCostPerCup,
-      totalCost,
-      totalProfit,
+      avgCostPerMl,
+      grandTotalCost,
+      grandTotalWaterCost,
+      grandTotalPkgCost,
+      grandProfit,
       profitPerCup,
+      totalCost: grandTotalCost,
+      totalProfit: grandProfit,
+      batchCount,
+      batchLeftover,
+      totalPreparedLiters,
+      actualUsedLiters,
+      totalWaterNeededMl,
       cups: {
-        cup10: { size: '10 oz', price: p10, before: b10, after: a10, sold: s10, revenue: s10 * p10 },
-        cup16: { size: '16 oz', price: p16, before: b16, after: a16, sold: s16, revenue: s16 * p16 },
-        cup28: { size: '28 oz', price: p28, before: b28, after: a28, sold: s28, revenue: s28 * p28 }
+        cup10: cupData.cup10 || {},
+        cup16: cupData.cup16 || {},
+        cup28: cupData.cup28 || {}
       },
-      recipes: (this.drinkSalesSelectedRecipes || []).map(r => ({
-        id: r.id,
-        name: r.name,
-        totalCost: r.totalCost,
-        costPerCup: r.costPerCup,
-        cupsPerBatch: r.cupsPerBatch
+      perSizeBreakdown,
+      recipes: recipeDetails.map(r => ({
+        id: r.id, name: r.name, jarCost: r.jarCost, jarLiters: r.jarLiters, costPerMl: r.costPerMl, yieldCups: r.yieldCups
       }))
     };
+
+    // ─── Render results ───
+    const resultSection = document.getElementById('drinkSalesResultSection');
+    if (resultSection) resultSection.style.display = 'block';
+
+    const profitColor = grandProfit >= 0 ? '#16a34a' : '#dc2626';
+
+    // Per-size breakdown HTML
+    const sizeBreakdownHtml = perSizeBreakdown.filter(b => b.sold > 0).map(b => `
+      <div style="padding:0.5rem 0.75rem; background:#f8fafc; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:0.4rem;">
+        <div style="font-weight:600; font-size:0.85rem;">${b.sizeOz} oz — ขาย ${b.sold} แก้ว × ฿${b.price}</div>
+        <div style="font-size:0.78rem; color:#64748b; display:flex; gap:0.8rem; flex-wrap:wrap; margin-top:0.2rem;">
+          <span>น้ำ/แก้ว: ฿${b.waterCostPerCup.toFixed(2)} (${b.mlPerCup}ml)</span>
+          <span>📦 บรรจุภัณฑ์/แก้ว: ฿${b.pkgCostPerCup.toFixed(2)}</span>
+          <span>ทุนรวม/แก้ว: <strong style="color:#dc2626;">฿${b.totalCostPerCup.toFixed(2)}</strong></span>
+        </div>
+        <div style="font-size:0.78rem; display:flex; gap:0.8rem; margin-top:0.15rem;">
+          <span>รายรับ: <strong class="text-primary">฿${b.revenue.toFixed(0)}</strong></span>
+          <span>ทุนรวม: <strong style="color:#dc2626;">฿${b.totalCostSize.toFixed(2)}</strong></span>
+          <span>กำไร: <strong style="color:${b.profitSize >= 0 ? '#16a34a' : '#dc2626'};">฿${b.profitSize.toFixed(2)}</strong></span>
+        </div>
+      </div>
+    `).join('');
+
+    // Recipe breakdown HTML
+    const recipeBreakdownHtml = recipeDetails.map(r => `
+      <div style="padding:0.4rem 0.75rem; background:#fefce8; border-radius:8px; border:1px solid #fde68a; margin-bottom:0.3rem; font-size:0.8rem;">
+        <strong>${this.escapeHtml(r.name)}</strong> — ทุนโหล ฿${r.jarCost.toFixed(1)} (${r.jarLiters}L) | ฿${r.costPerMl.toFixed(4)}/ml
+      </div>
+    `).join('');
 
     document.getElementById('dsResultContent').innerHTML = `
       <div class="pack-sell-result-grid">
         <div class="pack-sell-result-card cost-card">
-          <div class="pack-sell-result-title">📊 สรุปยอดขาย</div>
+          <div class="pack-sell-result-title">📊 สรุปยอดขาย & ต้นทุน</div>
           <div class="pack-sell-result-row">
             <span>จำนวนแก้วที่ขายได้</span>
             <strong>${totalSold} แก้ว</strong>
@@ -10835,12 +11000,20 @@ const quickRestockForm = document.getElementById('quickRestockForm');
             <strong class="text-primary">฿${totalRevenue.toFixed(2)}</strong>
           </div>
           <div class="pack-sell-result-row">
-            <span>ต้นทุนเฉลี่ยต่อแก้ว</span>
-            <strong style="color:#dc2626;">฿${avgCostPerCup.toFixed(2)}</strong>
+            <span>💧 ต้นทุนน้ำรวม</span>
+            <strong style="color:#dc2626;">฿${grandTotalWaterCost.toFixed(2)}</strong>
+          </div>
+          <div class="pack-sell-result-row">
+            <span>📦 ต้นทุนบรรจุภัณฑ์รวม</span>
+            <strong style="color:#dc2626;">฿${grandTotalPkgCost.toFixed(2)}</strong>
           </div>
           <div class="pack-sell-result-row highlight">
-            <span>ต้นทุนรวม (เฉลี่ย)</span>
-            <strong style="color:#dc2626;">฿${totalCost.toFixed(2)}</strong>
+            <span>ต้นทุนรวมทั้งหมด</span>
+            <strong style="color:#dc2626;">฿${grandTotalCost.toFixed(2)}</strong>
+          </div>
+          <div class="pack-sell-result-row">
+            <span>ต้นทุนเฉลี่ย/แก้ว</span>
+            <strong style="color:#dc2626;">฿${avgCostPerCup.toFixed(2)}</strong>
           </div>
         </div>
 
@@ -10852,14 +11025,26 @@ const quickRestockForm = document.getElementById('quickRestockForm');
           </div>
           <div class="pack-sell-result-row highlight-total">
             <span>🎯 กำไรรวมทั้งหมด</span>
-            <strong style="color:${profitColor}; font-size:1.1rem;">฿${totalProfit.toFixed(2)}</strong>
+            <strong style="color:${profitColor}; font-size:1.1rem;">฿${grandProfit.toFixed(2)}</strong>
           </div>
         </div>
       </div>
 
       <div style="margin-top:0.75rem;">
-        <div style="font-weight:700; font-size:0.9rem; margin-bottom:0.4rem;">📋 แยกตามสูตรน้ำ (${this.drinkSalesSelectedRecipes.length} สูตร)</div>
+        <div style="font-weight:700; font-size:0.9rem; margin-bottom:0.4rem;">📋 แยกตามขนาดแก้ว</div>
+        ${sizeBreakdownHtml}
+      </div>
+
+      <div style="margin-top:0.75rem;">
+        <div style="font-weight:700; font-size:0.9rem; margin-bottom:0.4rem;">🏺 สูตรน้ำที่เลือก (${recipeDetails.length} สูตร) — เฉลี่ย ฿${avgCostPerMl.toFixed(4)}/ml</div>
         ${recipeBreakdownHtml}
+      </div>
+
+      <div style="margin-top:0.75rem; padding:0.6rem 0.8rem; background:#f0fdf4; border-radius:8px; border:1px solid #bbf7d0; font-size:0.82rem; line-height:1.5;">
+        🫙 <strong>การใช้น้ำ & โหลที่ชง (คำนวณอัตโนมัติ):</strong><br>
+        • ใช้น้ำตามจำนวนแก้วที่ขายได้: <strong>${totalWaterNeededLiters.toFixed(2)} ลิตร</strong> (${totalWaterNeededMl.toLocaleString()} ml)<br>
+        • เทียบเท่ากับโหลที่ต้องชง: <strong>${batchCount} โหล</strong> (${totalPreparedLiters.toFixed(1)} ลิตร, โหลละ ${avgJarLiters}L)<br>
+        • ปริมาณน้ำเหลือคงค้างในโหล: <strong>${batchLeftover.toFixed(2)} ลิตร</strong> (${(batchLeftover * 1000).toFixed(0)} ml) สามารถขายต่อรอบถัดไปได้
       </div>
     `;
     this.refreshLucide();
@@ -10889,6 +11074,13 @@ const quickRestockForm = document.getElementById('quickRestockForm');
       totalCost: calc.totalCost,
       totalProfit: calc.totalProfit,
       profitPerCup: calc.profitPerCup,
+      grandTotalWaterCost: calc.grandTotalWaterCost,
+      grandTotalPkgCost: calc.grandTotalPkgCost,
+      batchCount: calc.batchCount,
+      batchLeftover: calc.batchLeftover,
+      totalPreparedLiters: calc.totalPreparedLiters,
+      actualUsedLiters: calc.actualUsedLiters,
+      perSizeBreakdown: calc.perSizeBreakdown,
       recipes: calc.recipes
     };
 
@@ -10926,6 +11118,20 @@ const quickRestockForm = document.getElementById('quickRestockForm');
       const profitClass = log.totalProfit >= 0 ? 'color:#16a34a;' : 'color:#dc2626;';
       const profitSign = log.totalProfit >= 0 ? '+' : '';
 
+      // Per-size detail
+      let perSizeHtml = '';
+      if (log.perSizeBreakdown) {
+        perSizeHtml = log.perSizeBreakdown.filter(b => b.sold > 0).map(b =>
+          `<span class="dsh-cup-badge">${b.sizeOz}oz: <b>${b.sold}</b>×฿${b.price} (ทุน฿${b.totalCostPerCup.toFixed(1)})</span>`
+        ).join('');
+      } else {
+        perSizeHtml = `
+          <span class="dsh-cup-badge">10 oz: <b>${log.cups?.cup10?.sold ?? 0}</b> แก้ว</span>
+          <span class="dsh-cup-badge">16 oz: <b>${log.cups?.cup16?.sold ?? 0}</b> แก้ว</span>
+          <span class="dsh-cup-badge">28 oz: <b>${log.cups?.cup28?.sold ?? 0}</b> แก้ว</span>
+        `;
+      }
+
       return `
         <div class="drink-sales-history-card">
           <div class="dsh-header">
@@ -10938,15 +11144,14 @@ const quickRestockForm = document.getElementById('quickRestockForm');
             </button>
           </div>
           <div class="dsh-cups-row">
-            <span class="dsh-cup-badge">10 oz: <b>${log.cups?.cup10?.sold ?? 0}</b> แก้ว</span>
-            <span class="dsh-cup-badge">16 oz: <b>${log.cups?.cup16?.sold ?? 0}</b> แก้ว</span>
-            <span class="dsh-cup-badge">28 oz: <b>${log.cups?.cup28?.sold ?? 0}</b> แก้ว</span>
+            ${perSizeHtml}
             <span class="dsh-cup-total">รวม <b>${log.totalSold}</b> แก้ว</span>
           </div>
           <div class="dsh-recipes-row">
             <span class="dsh-recipes-label">🏺 สูตรน้ำ:</span>
-            <span>${this.escapeHtml(recNames)} (ทุนเฉลี่ย ฿${Number(log.avgCostPerCup || 0).toFixed(2)}/แก้ว)</span>
+            <span>${this.escapeHtml(recNames)}</span>
           </div>
+          ${log.batchCount ? `<div style="font-size:0.75rem; color:#92400e; padding:0.2rem 0;">🫙 ${log.batchCount} โหล (${Number(log.totalPreparedLiters||0).toFixed(1)}L) → ใช้ ${Number(log.actualUsedLiters||0).toFixed(1)}L เหลือ ${Number(log.batchLeftover||0).toFixed(1)}L</div>` : ''}
           <div class="dsh-finance-grid">
             <div class="dsh-fin-item">
               <span class="dsh-fin-lbl">รายรับรวม</span>

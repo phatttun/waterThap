@@ -8775,3 +8775,98 @@ body {
 .dsh-fin-item.highlight .dsh-fin-val {
   font-size: 0.95rem;
 }
+
+
+/* ═══ Drink Sales Redesign ═══ */
+.ds-cup-config-card {
+  padding: 0.75rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+.ds-cup-config-card:last-child {
+  border-bottom: none;
+}
+.ds-cup-config-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+.ds-cup-config-size {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--primary);
+  background: var(--blue-50, #eff6ff);
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+}
+.ds-cup-config-ml {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.ds-cup-pkg-section {
+  margin-top: 0.3rem;
+}
+.ds-bundled-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: #475569;
+  cursor: pointer;
+  margin-bottom: 0.4rem;
+}
+.ds-bundled-toggle input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary);
+}
+.ds-pkg-fields select {
+  font-size: 0.78rem !important;
+}
+
+/* Inline recipe cards */
+.ds-recipe-inline-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.ds-recipe-card {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.75rem;
+  background: #f8fafc;
+  border-radius: 10px;
+  border: 2px solid #e2e8f0;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+.ds-recipe-card:hover {
+  border-color: var(--primary);
+  background: #eff6ff;
+}
+.ds-recipe-card-selected {
+  border-color: var(--primary) !important;
+  background: #dbeafe !important;
+  box-shadow: 0 0 0 1px var(--primary);
+}
+.ds-recipe-card-check {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+.ds-recipe-card-info {
+  flex: 1;
+  min-width: 0;
+}
+.ds-recipe-card-name {
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: #1e293b;
+}
+.ds-recipe-card-detail {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-top: 0.1rem;
+}
