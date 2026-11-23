@@ -8052,7 +8052,15 @@ const quickRestockForm = document.getElementById('quickRestockForm');
     item.qty = parsed;
 
     const actionType = diff > 0 ? 'RESTOCK' : 'USE';
-    const isSellable = item.category === 'STOCK' || item.category === 'FRIDGE_DRINK' || (Number(item.sellingPrice) || 0) > 0 || (item.unit || '').includes('ลัง');
+    const lowerName = (item.name || '').toLowerCase();
+    const isPackaging = item.category === 'PACKAGING' || lowerName.includes('แก้ว') || lowerName.includes('ฝา') || lowerName.includes('หลอด') || lowerName.includes('ถุงแก้ว') || lowerName.includes('ถุงหิ้ว');
+    const isIngredient = item.category === 'INGREDIENT';
+    const isOther = item.category === 'OTHER';
+
+    // คำนวณกำไรเฉพาะ น้ำขายในตู้ (FRIDGE_DRINK) และ ของแพ็คขาย (PACK_SELL) หรือ สำเร็จรูป (STOCK) เท่านั้น
+    // ส่วน บรรจุภัณฑ์ (PACKAGING) และ วัตถุดิบ (INGREDIENT) หากปรับยอด (+ / -) ต้องไม่นำมาคิดกำไรจากการเบิกขายเด็ดขาด
+    const isSellable = !isPackaging && !isIngredient && !isOther && 
+                       (item.category === 'FRIDGE_DRINK' || item.category === 'PACK_SELL' || item.category === 'STOCK');
     const useQty = Math.abs(diff);
     const unitCost = Number(item.unitCost) || 0;
     let sellPrice = Number(item.sellingPrice) || 0;
@@ -8398,6 +8406,11 @@ const quickRestockForm = document.getElementById('quickRestockForm');
     const item = (this.data.stockItems || []).find(x => x.id === itemId);
     if (!item) return;
 
+    if (item.category === 'PACKAGING' || item.category === 'INGREDIENT' || item.category === 'OTHER') {
+      this.showToast('รายการนี้เป็นบรรจุภัณฑ์/วัตถุดิบ ไม่ใช่สินค้าสำหรับเบิกขายคิดกำไร', 'warning');
+      return;
+    }
+
     const modal = document.getElementById('stockUseProfitModal');
     const form = document.getElementById('stockUseProfitForm');
     if (!modal || !form) return;
@@ -8552,6 +8565,11 @@ const quickRestockForm = document.getElementById('quickRestockForm');
     const item = (this.data.stockItems || []).find(x => x.id === itemId);
     if (!item) return;
 
+    if (item.category === 'PACKAGING' || item.category === 'INGREDIENT' || item.category === 'OTHER') {
+      this.showToast('รายการนี้เป็นบรรจุภัณฑ์/วัตถุดิบ ไม่ใช่สินค้าสำหรับเบิกขายคิดกำไร', 'warning');
+      return;
+    }
+
     const useQty = parseFloat(document.getElementById('stockUseProfitQty')?.value) || 0;
     const sellPrice = parseFloat(document.getElementById('stockUseProfitSellingPrice')?.value) || 0;
     const saleDate = document.getElementById('stockUseProfitDate')?.value || this.formatDate(new Date());
@@ -8695,6 +8713,19 @@ const quickRestockForm = document.getElementById('quickRestockForm');
     const saleItems = [];
 
     dateLogs.forEach(log => {
+      // กรองออก: บรรจุภัณฑ์ (PACKAGING), วัตถุดิบ (INGREDIENT), อื่นๆ (OTHER) ต้องไม่นำมาคิดกำไรจากการเบิกขาย
+      if (log.category === 'PACKAGING' || log.category === 'INGREDIENT' || log.category === 'OTHER') return;
+      if (log.itemId) {
+        const matchItem = (this.data.stockItems || []).find(x => x.id === log.itemId);
+        if (matchItem && (matchItem.category === 'PACKAGING' || matchItem.category === 'INGREDIENT' || matchItem.category === 'OTHER')) return;
+      }
+      if (log.itemName) {
+        const matchItem = (this.data.stockItems || []).find(x => x.name === log.itemName);
+        if (matchItem && (matchItem.category === 'PACKAGING' || matchItem.category === 'INGREDIENT' || matchItem.category === 'OTHER')) return;
+        const lName = log.itemName.toLowerCase();
+        if (lName.includes('แก้ว') || lName.includes('ฝา') || lName.includes('หลอด') || lName.includes('ถุงแก้ว') || lName.includes('ถุงหิ้ว')) return;
+      }
+
       if (!log.id) {
         log.id = 'log_' + Date.now() + Math.random().toString(36).substring(2, 5);
       }
@@ -8884,8 +8915,8 @@ const quickRestockForm = document.getElementById('quickRestockForm');
         listEl.innerHTML = `
           <div class="text-center text-muted py-3 px-2" style="font-size:0.8rem; background:#f8fafc; border:1px dashed #cbd5e1; border-radius:var(--radius-sm); line-height:1.5;">
             <i data-lucide="package-search" style="width:20px; height:20px; color:#94a3b8; display:block; margin:0 auto 4px;"></i>
-            ไม่มีรายการเบิกขายสำเร็จรูปในวันที่เลือก<br>
-            <span style="font-size:0.75rem; color:#64748b;">(เมื่อกดปุ่ม <b>-</b> ที่สินค้าสำเร็จรูป/ลัง ระบบจะคิดกำไรและบันทึกรายการให้อัตโนมัติ)</span>
+            ไม่มีรายการเบิกขายน้ำในตู้/ของแพ็คขายในวันที่เลือก<br>
+            <span style="font-size:0.75rem; color:#64748b;">(คิดกำไรเฉพาะ <b>น้ำขายในตู้</b> และ <b>ของแพ็คขาย/สำเร็จรูป</b> ไม่รวมบรรจุภัณฑ์และวัตถุดิบ)</span>
           </div>
         `;
       } else {
@@ -8962,6 +8993,19 @@ const quickRestockForm = document.getElementById('quickRestockForm');
 
     logs.forEach(log => {
       if (log.actionType === 'USE') {
+        // กรองออก: บรรจุภัณฑ์ (PACKAGING), วัตถุดิบ (INGREDIENT), อื่นๆ (OTHER)
+        if (log.category === 'PACKAGING' || log.category === 'INGREDIENT' || log.category === 'OTHER') return;
+        if (log.itemId) {
+          const matchItem = (this.data.stockItems || []).find(x => x.id === log.itemId);
+          if (matchItem && (matchItem.category === 'PACKAGING' || matchItem.category === 'INGREDIENT' || matchItem.category === 'OTHER')) return;
+        }
+        if (log.itemName) {
+          const matchItem = (this.data.stockItems || []).find(x => x.name === log.itemName);
+          if (matchItem && (matchItem.category === 'PACKAGING' || matchItem.category === 'INGREDIENT' || matchItem.category === 'OTHER')) return;
+          const lName = log.itemName.toLowerCase();
+          if (lName.includes('แก้ว') || lName.includes('ฝา') || lName.includes('หลอด') || lName.includes('ถุงแก้ว') || lName.includes('ถุงหิ้ว')) return;
+        }
+
         const parsed = this.parseProfitInfoFromLog(log);
         if (parsed !== null) {
           this._stockProfitRawLogs.push({
