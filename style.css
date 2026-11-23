@@ -4107,7 +4107,7 @@ body {
 
 .feh-breakdown-row {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 0.5rem;
   background: rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-sm);

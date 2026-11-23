@@ -108,31 +108,32 @@ class WaterFlowApp {
       if (!Array.isArray(parsed.stockItems)) {
         parsed.stockItems = [];
       }
-      // ตรวจสอบและแปลงหน่วยสต๊อกเดิมที่อาจบันทึกเป็นหน่วยยกลัง ให้กลายเป็นหน่วยขวด/ชิ้น พร้อมคำนวณจำนวนคงเหลือและต้นทุนต่อขวด
-      if (Array.isArray(parsed.stockItems) && Array.isArray(parsed.expenses)) {
+      // Migration: แปลงสต๊อกที่เคยบันทึกเป็นชิ้นย่อย กลับเป็นหน่วยบรรจุเดิม (ลัง/แพ็ค/กล่อง)
+      if (Array.isArray(parsed.stockItems)) {
         parsed.stockItems.forEach(stk => {
           if (!stk) return;
-          const isCrateUnit = (stk.unit || '').includes('ลัง') || (stk.unit || '').toLowerCase() === 'crate';
-          if (isCrateUnit) {
-            const matchedExp = parsed.expenses.find(e => (e.stockItemId && String(e.stockItemId) === String(stk.id)) || (e.title && String(e.title).toLowerCase() === String(stk.name).toLowerCase()));
-            const crateBottles = Number(stk.crateBottles) || (matchedExp && Number(matchedExp.crateBottles)) || 12;
-            if (crateBottles > 1) {
+          if (stk._migratedToBulk) return; // ข้ามถ้า migrate แล้ว
+          const crateBottles = Number(stk.crateBottles) || 0;
+          const rawUnit = (stk.rawUnit || '').trim();
+          const isBulkRawUnit = rawUnit.includes('ลัง') || rawUnit.includes('แพ็ค') || rawUnit.includes('กล่อง') ||
+                                rawUnit.toLowerCase() === 'crate' || rawUnit.toLowerCase() === 'pack' || rawUnit.toLowerCase() === 'box';
+          // ตรวจว่าเป็นสินค้ายกลังที่ถูกแปลงเป็นชิ้นย่อยไว้ก่อนหน้า
+          if (crateBottles > 1 && isBulkRawUnit) {
+            const currentUnit = (stk.unit || '').trim();
+            const isAlreadyBulk = currentUnit.includes('ลัง') || currentUnit.includes('แพ็ค') || currentUnit.includes('กล่อง') ||
+                                  currentUnit.toLowerCase() === 'crate' || currentUnit.toLowerCase() === 'pack' || currentUnit.toLowerCase() === 'box';
+            if (!isAlreadyBulk) {
+              // แปลงจำนวนกลับจากชิ้น -> หน่วยบรรจุ
               const oldQty = Number(stk.qty) || 0;
-              stk.qty = Math.round(oldQty * crateBottles * 100) / 100;
-              stk.crateBottles = crateBottles;
-              stk.rawUnit = stk.unit;
-              let pieceName = 'ขวด';
-              const nameLower = String(stk.name || '').toLowerCase();
-              if (nameLower.includes('กระป๋อง') || nameLower.includes('กป')) pieceName = 'กระป๋อง';
-              else if (nameLower.includes('แก้ว') || nameLower.includes('ฝา') || nameLower.includes('หลอด')) pieceName = 'ใบ';
-              else if (nameLower.includes('ถุง') || nameLower.includes('ห่อ')) pieceName = 'ถุง';
-              stk.unit = pieceName;
+              stk.qty = Math.round((oldQty / crateBottles) * 100) / 100;
+              stk.unit = rawUnit;
               if (Number(stk.unitCost) > 0) {
-                stk.unitCost = parseFloat((Number(stk.unitCost) / crateBottles).toFixed(4));
+                stk.unitCost = parseFloat((Number(stk.unitCost) * crateBottles).toFixed(4));
               }
               if (stk.minQty > 0) {
-                stk.minQty = Math.round(stk.minQty * crateBottles);
+                stk.minQty = Math.max(1, Math.round(stk.minQty / crateBottles));
               }
+              stk._migratedToBulk = true;
             }
           }
         });
@@ -1833,6 +1834,13 @@ class WaterFlowApp {
     const filteredExpenses = this.data.expenses.filter(period.matchExpense);
     const materialCost = filteredExpenses.reduce((acc, exp) => acc + (Number(exp.amount) || 0), 0);
 
+    // แยกค่าใช้จ่ายตามหมวด
+    const catIngredient = filteredExpenses.filter(e => e.category === 'INGREDIENT').reduce((a, b) => a + (Number(b.amount) || 0), 0);
+    const catPackaging = filteredExpenses.filter(e => e.category === 'PACKAGING').reduce((a, b) => a + (Number(b.amount) || 0), 0);
+    const catStock = filteredExpenses.filter(e => e.category === 'STOCK').reduce((a, b) => a + (Number(b.amount) || 0), 0);
+    const catFridgeDrink = filteredExpenses.filter(e => e.category === 'FRIDGE_DRINK').reduce((a, b) => a + (Number(b.amount) || 0), 0);
+    const catOther = filteredExpenses.filter(e => e.category === 'OTHER').reduce((a, b) => a + (Number(b.amount) || 0), 0);
+
     // Total Combined Cost = Material Cost in Period + Total Rent for all months in Period
     const totalCombinedCost = materialCost + totalRentForPeriod;
 
@@ -1986,7 +1994,7 @@ class WaterFlowApp {
     this.renderDashboardPerformance(filteredDailySales, totalRevenue, netProfit);
 
     // Charts
-    this.renderDashboardCharts(filteredDailySales, totalRevenue, materialCost, totalRentForPeriod, netProfit, period);
+    this.renderDashboardCharts(filteredDailySales, totalRevenue, materialCost, totalRentForPeriod, netProfit, period, { catIngredient, catPackaging, catStock, catFridgeDrink, catOther });
   }
 
   renderDashboardRecentSales(monthDailySales) {
@@ -2191,7 +2199,7 @@ class WaterFlowApp {
     }
   }
 
-  renderDashboardCharts(filteredDailySales = null, totalRevenue = 0, totalCost = 0, totalRent = 10000, netProfit = 0, period = null) {
+  renderDashboardCharts(filteredDailySales = null, totalRevenue = 0, totalCost = 0, totalRent = 10000, netProfit = 0, period = null, catBreakdown = {}) {
     if (!window.Chart) return;
 
     if (!period) {
@@ -2331,44 +2339,72 @@ class WaterFlowApp {
       });
     }
 
-    // 2. Breakdown Doughnut
-    const ctxDoughnut = document.getElementById('costBreakdownChart');
-    if (ctxDoughnut) {
+    // 2. Horizontal Percentage Breakdown Bars (แทน Doughnut Chart)
+    const breakdownWrap = document.getElementById('costBreakdownChart');
+    if (breakdownWrap) {
+      // ทำลาย Chart.js canvas เดิม (ถ้ามี) แล้วใช้ HTML แทน
       if (this.charts.breakdown) {
         this.charts.breakdown.destroy();
+        this.charts.breakdown = null;
       }
 
       const safeProfit = Math.max(0, netProfit);
-      this.charts.breakdown = new Chart(ctxDoughnut, {
-        type: 'doughnut',
-        data: {
-          labels: ['ต้นทุนของที่ใช้ไป', 'ค่าเช่าร้าน', 'กำไรสุทธิคงเหลือ'],
-          datasets: [{
-            data: [totalCost, totalRent, safeProfit],
-            backgroundColor: ['#f59e0b', '#8b5cf6', '#10b981'],
-            borderWidth: 2,
-            borderColor: '#ffffff'
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              position: 'bottom',
-              labels: { font: { family: 'Sarabun', size: 12 }, boxWidth: 12 }
-            },
-            tooltip: {
-              titleFont: { family: 'Sarabun' },
-              bodyFont: { family: 'Sarabun' },
-              callbacks: {
-                label: (ctx) => ` ${ctx.label}: ฿${ctx.parsed.toLocaleString()}`
-              }
-            }
-          },
-          cutout: '65%'
-        }
-      });
+      const { catIngredient = 0, catPackaging = 0, catStock = 0, catFridgeDrink = 0, catOther = 0 } = catBreakdown;
+
+      // รายการสัดส่วนค่าใช้จ่าย & กำไร (ไม่นำขาดทุนมารวมเป็นค่าใช้จ่าย)
+      const items = [
+        { label: '🧪 วัตถุดิบ', value: catIngredient, color: '#f59e0b', bg: '#fffbeb' },
+        { label: '📦 บรรจุภัณฑ์', value: catPackaging, color: '#3b82f6', bg: '#eff6ff' },
+        { label: '🧃 ยกลัง', value: catStock, color: '#8b5cf6', bg: '#f5f3ff' },
+        { label: '🧊 น้ำในตู้', value: catFridgeDrink, color: '#06b6d4', bg: '#ecfeff' },
+        { label: '🛠️ ค่าใช้จ่ายอื่นๆ', value: catOther, color: '#ec4899', bg: '#fdf2f8' },
+        { label: '🏠 ค่าเช่าร้าน', value: totalRent, color: '#a855f7', bg: '#faf5ff' },
+        { label: '💰 กำไรสุทธิ', value: safeProfit, color: '#10b981', bg: '#ecfdf5' }
+      ];
+
+      // ฐานคิดเปอร์เซ็นต์: หากมียอดขายให้คิดสัดส่วนเทียบกับยอดขาย (หรือยอดรวมรายการถ้าไม่มี/มากกว่ายอดขาย)
+      const totalAllocated = items.reduce((s, i) => s + i.value, 0);
+      const grandTotal = Math.max(totalRevenue, totalAllocated);
+
+      // Replace canvas with a div container
+      const parentEl = breakdownWrap.parentElement;
+      let barContainer = document.getElementById('costBreakdownBars');
+      if (!barContainer) {
+        barContainer = document.createElement('div');
+        barContainer.id = 'costBreakdownBars';
+        parentEl.replaceChild(barContainer, breakdownWrap);
+      }
+      barContainer.style.cssText = 'padding:0.25rem 0;';
+
+      // Stacked bar at top
+      const stackedItems = items.filter(i => i.value > 0);
+      const stackedBarHtml = stackedItems.length > 0 ? `
+        <div style="display:flex; height:28px; border-radius:6px; overflow:hidden; margin-bottom:0.75rem; box-shadow:inset 0 1px 3px rgba(0,0,0,0.08);">
+          ${stackedItems.map(item => {
+            const pct = grandTotal > 0 ? (item.value / grandTotal * 100) : 0;
+            return `<div style="width:${pct}%; background:${item.color}; min-width:${pct > 2 ? '0' : '3px'}; transition:width 0.3s;" title="${item.label} ${pct.toFixed(1)}%"></div>`;
+          }).join('')}
+        </div>
+      ` : '';
+
+      barContainer.innerHTML = stackedBarHtml + items.map(item => {
+        const pct = grandTotal > 0 ? (item.value / grandTotal * 100) : 0;
+        if (item.value === 0 && pct === 0) return '';
+        return `
+          <div style="margin-bottom:0.5rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px;">
+              <span style="font-size:0.8rem; font-weight:600; color:#334155;">${item.label}</span>
+              <div style="display:flex; align-items:center; gap:0.5rem;">
+                <span style="font-size:0.8rem; font-weight:700; color:${item.color};">${this.formatCurrency(item.value)}</span>
+                <span style="font-size:0.72rem; font-weight:700; color:#64748b; background:#f1f5f9; padding:1px 6px; border-radius:4px;">${pct.toFixed(1)}%</span>
+              </div>
+            </div>
+            <div style="height:10px; background:#f1f5f9; border-radius:5px; overflow:hidden;">
+              <div style="height:100%; width:${pct}%; background:${item.color}; border-radius:5px; transition:width 0.4s ease;"></div>
+            </div>
+          </div>
+        `;
+      }).join('');
     }
   }
 
@@ -2783,10 +2819,45 @@ class WaterFlowApp {
   renderDailyHistoryTable() {
     const feedWrap = document.getElementById('todaySalesMobileCards');
     const countBadge = document.getElementById('todayBillCountBadge');
+    const summaryWrap = document.getElementById('salesHistorySummary');
 
     const sortEl = document.getElementById('dailySalesSortOrder');
     const sortOrder = sortEl?.dataset?.order || sortEl?.value || 'newest';
-    const list = [...this.data.dailySales].sort((a, b) => {
+
+    // Search & Filter
+    const searchQuery = (document.getElementById('salesHistorySearch')?.value || '').toLowerCase().trim();
+    const filterVal = document.getElementById('salesHistoryFilter')?.value || 'ALL';
+
+    let list = [...this.data.dailySales];
+
+    // Apply filter
+    if (filterVal === 'PROFIT') {
+      list = list.filter(d => d.profit >= 0);
+    } else if (filterVal === 'LOSS') {
+      list = list.filter(d => d.profit < 0);
+    } else if (filterVal === 'SCHOOL') {
+      list = list.filter(d => this.isSchoolOpenDay(d.date));
+    } else if (filterVal === 'HOLIDAY') {
+      list = list.filter(d => !this.isSchoolOpenDay(d.date));
+    }
+
+    // Apply search
+    if (searchQuery) {
+      list = list.filter(d => {
+        const thaiDate = this.formatThaiDate(d.date).toLowerCase();
+        const dateRaw = (d.date || '').toLowerCase();
+        const note = (d.note || '').toLowerCase();
+        const revenue = String(d.revenue || 0);
+        const profit = String(d.profit || 0);
+        const cost = String(d.cost || 0);
+        return thaiDate.includes(searchQuery) || dateRaw.includes(searchQuery) ||
+               note.includes(searchQuery) || revenue.includes(searchQuery) ||
+               profit.includes(searchQuery) || cost.includes(searchQuery);
+      });
+    }
+
+    // Sort
+    list.sort((a, b) => {
       const dateCmp = (a.date || '').localeCompare(b.date || '');
       const idA = String(a.id || '');
       const idB = String(b.id || '');
@@ -2798,6 +2869,44 @@ class WaterFlowApp {
     });
 
     if (countBadge) countBadge.textContent = `${list.length} วัน`;
+
+    // Render Summary Stats
+    if (summaryWrap) {
+      const totalRevenue = list.reduce((s, d) => s + (Number(d.revenue) || 0), 0);
+      const totalCost = list.reduce((s, d) => s + (Number(d.cost) || 0), 0);
+      const totalProfit = list.reduce((s, d) => s + (Number(d.profit) || 0), 0);
+      const profitDays = list.filter(d => d.profit >= 0).length;
+      const lossDays = list.filter(d => d.profit < 0).length;
+      const avgProfit = list.length > 0 ? totalProfit / list.length : 0;
+      const isNetProfit = totalProfit >= 0;
+
+      summaryWrap.innerHTML = `
+        <div style="background:#f0fdf4; border-radius:var(--radius-sm); padding:0.5rem 0.75rem; text-align:center; border:1px solid #bbf7d0;">
+          <div style="font-size:0.7rem; color:#16a34a; font-weight:600;">💰 ยอดขายรวม</div>
+          <div style="font-size:1rem; font-weight:800; color:#15803d;">${this.formatCurrency(totalRevenue)}</div>
+        </div>
+        <div style="background:#fef2f2; border-radius:var(--radius-sm); padding:0.5rem 0.75rem; text-align:center; border:1px solid #fecaca;">
+          <div style="font-size:0.7rem; color:#dc2626; font-weight:600;">📉 ต้นทุนรวม</div>
+          <div style="font-size:1rem; font-weight:800; color:#b91c1c;">${this.formatCurrency(totalCost)}</div>
+        </div>
+        <div style="background:${isNetProfit ? '#f0fdf4' : '#fef2f2'}; border-radius:var(--radius-sm); padding:0.5rem 0.75rem; text-align:center; border:1px solid ${isNetProfit ? '#bbf7d0' : '#fecaca'};">
+          <div style="font-size:0.7rem; color:${isNetProfit ? '#16a34a' : '#dc2626'}; font-weight:600;">📊 กำไรสุทธิรวม</div>
+          <div style="font-size:1rem; font-weight:800; color:${isNetProfit ? '#15803d' : '#b91c1c'};">${isNetProfit ? '+' : ''}${this.formatCurrency(totalProfit)}</div>
+        </div>
+        <div style="background:#eff6ff; border-radius:var(--radius-sm); padding:0.5rem 0.75rem; text-align:center; border:1px solid #bfdbfe;">
+          <div style="font-size:0.7rem; color:#2563eb; font-weight:600;">📈 กำไรเฉลี่ย/วัน</div>
+          <div style="font-size:1rem; font-weight:800; color:#1d4ed8;">${avgProfit >= 0 ? '+' : ''}${this.formatCurrency(avgProfit)}</div>
+        </div>
+        <div style="background:#f0fdf4; border-radius:var(--radius-sm); padding:0.5rem 0.75rem; text-align:center; border:1px solid #bbf7d0;">
+          <div style="font-size:0.7rem; color:#16a34a; font-weight:600;">🟢 วันกำไร</div>
+          <div style="font-size:1rem; font-weight:800; color:#15803d;">${profitDays} วัน</div>
+        </div>
+        <div style="background:#fef2f2; border-radius:var(--radius-sm); padding:0.5rem 0.75rem; text-align:center; border:1px solid #fecaca;">
+          <div style="font-size:0.7rem; color:#dc2626; font-weight:600;">🔴 วันขาดทุน</div>
+          <div style="font-size:1rem; font-weight:800; color:#b91c1c;">${lossDays} วัน</div>
+        </div>
+      `;
+    }
 
     if (list.length === 0) {
       if (feedWrap) {
@@ -2950,6 +3059,7 @@ class WaterFlowApp {
     const catPackaging = this.data.expenses.filter(e => e.category === 'PACKAGING').reduce((a, b) => a + (Number(b.amount) || 0), 0);
     const catFridgeDrink = this.data.expenses.filter(e => e.category === 'FRIDGE_DRINK').reduce((a, b) => a + (Number(b.amount) || 0), 0);
     const catStock = this.data.expenses.filter(e => e.category === 'STOCK').reduce((a, b) => a + (Number(b.amount) || 0), 0);
+    const catOther = this.data.expenses.filter(e => e.category === 'OTHER').reduce((a, b) => a + (Number(b.amount) || 0), 0);
 
     const totalEl = document.getElementById('expCategoryTotal');
     if (totalEl) totalEl.textContent = this.formatCurrency(totalAllExpenses);
@@ -2960,6 +3070,7 @@ class WaterFlowApp {
     const packEl = document.getElementById('expCategoryPackaging'); if (packEl) packEl.textContent = this.formatCurrency(catPackaging);
     const stockEl = document.getElementById('expCategoryStock'); if (stockEl) stockEl.textContent = this.formatCurrency(catStock);
     const fridgeEl = document.getElementById('expCategoryFridgeDrink'); if (fridgeEl) fridgeEl.textContent = this.formatCurrency(catFridgeDrink);
+    const otherEl = document.getElementById('expCategoryOther'); if (otherEl) otherEl.textContent = this.formatCurrency(catOther);
 
     const tbody = document.getElementById('expenseTableBody');
     const feedWrap = document.getElementById('expenseCardsFeed');
@@ -4902,22 +5013,23 @@ class WaterFlowApp {
         netWeight: netWeightVal,
         netUnit: netUnitVal
       });
-      const newPieces = currentPricing ? currentPricing.totalPieces : packSize;
-      const pieceUnit = currentPricing ? currentPricing.pieceName : (matched ? matched.unit : unit);
-      const costPerPiece = currentPricing ? currentPricing.costPerPiece : (packSize > 0 ? amount / packSize : 0);
+      const newPieces = currentPricing ? currentPricing.rawPackSize : packSize;
+      const isBulkUnit = currentPricing ? currentPricing.isBulk : false;
+      const pieceUnit = isBulkUnit ? (unit || (currentPricing ? currentPricing.rawUnit : 'แพ็ค')) : (currentPricing ? currentPricing.pieceName : (matched ? matched.unit : unit));
+      const costPerUnit = isBulkUnit ? (currentPricing ? currentPricing.costPerPack : (packSize > 0 ? amount / packSize : 0)) : (currentPricing ? currentPricing.costPerPiece : (packSize > 0 ? amount / packSize : 0));
 
       if (editId) {
         const oldExp = (this.data.expenses || []).find(e => e && String(e.id) === String(editId));
         const oldPricing = this.getExpenseUnitPricing(oldExp);
-        const oldPieces = oldPricing ? oldPricing.totalPieces : (Number(oldExp ? oldExp.packSize : 1) || 1);
+        const oldPieces = oldPricing ? oldPricing.rawPackSize : (Number(oldExp ? oldExp.packSize : 1) || 1);
         const diffPieces = newPieces - oldPieces;
         const diffStr = diffPieces > 0 ? `+${diffPieces}` : `${diffPieces}`;
 
         if (matched) {
           const currentQty = Number(matched.qty) || 0;
           const afterQty = Math.max(0, currentQty + diffPieces);
-          const crateSub = (isBulk && bottlesPerCrate > 1) ? ` (~${(afterQty / bottlesPerCrate).toFixed(2).replace(/\.?0+$/, '')} ${unit})` : '';
-          syncStatusEl.textContent = `🔄 อัปเดตสต๊อกเดิม "${matched.name}" (คงเหลือ ${currentQty} -> เป็น ${afterQty} ${matched.unit || pieceUnit}${crateSub} [${diffStr}])`;
+          const crateSub = (isBulk && bottlesPerCrate > 1) ? ` (บรรจุ ${bottlesPerCrate} ชิ้น/${unit})` : '';
+          syncStatusEl.textContent = `🔄 อัปเดตสต๊อกเดิม "${matched.name}" (คงเหลือ ${currentQty} -> เป็น ${afterQty} ${pieceUnit}${crateSub} [${diffStr}])`;
           syncStatusEl.className = 'pill-tag blue-tag';
         } else {
           syncStatusEl.textContent = `🔄 อัปเดตและสร้างสต๊อกใหม่ "${titleVal || 'สินค้านี้'}" (${newPieces} ${pieceUnit})`;
@@ -4928,24 +5040,24 @@ class WaterFlowApp {
           if (matched) {
             const currentQty = Number(matched.qty) || 0;
             const newQty = currentQty + newPieces;
-            const crateSub = bottlesPerCrate > 1 ? ` (~${(newQty / bottlesPerCrate).toFixed(2).replace(/\.?0+$/, '')} ${unit})` : '';
-            syncStatusEl.textContent = `📦 เติมสต๊อกเดิม (ปัจจุบันมี ${currentQty} -> รับเพิ่ม +${newPieces} ${matched.unit || pieceUnit} [${packSize} ${unit}] เป็น ${newQty} ${matched.unit || pieceUnit}${crateSub})`;
+            const crateSub = bottlesPerCrate > 1 ? ` (บรรจุ ${bottlesPerCrate} ชิ้น/${unit})` : '';
+            syncStatusEl.textContent = `📦 เติมสต๊อกเดิม (ปัจจุบันมี ${currentQty} -> รับเพิ่ม +${newPieces} ${pieceUnit} เป็น ${newQty} ${pieceUnit}${crateSub})`;
             syncStatusEl.className = 'pill-tag blue-tag';
           } else if (titleVal) {
-            syncStatusEl.textContent = `✨ สร้างเป็นสต๊อกใหม่ (+${newPieces} ${pieceUnit} [${packSize} ${unit}] @ ฿${this.formatUnitCost(costPerPiece)}/${pieceUnit})`;
+            syncStatusEl.textContent = `✨ สร้างเป็นสต๊อกใหม่ (+${newPieces} ${pieceUnit} @ ฿${this.formatUnitCost(costPerUnit)}/${pieceUnit})`;
             syncStatusEl.className = 'pill-tag green-tag';
           } else {
-            syncStatusEl.textContent = `พร้อมรับเข้าคลัง ${newPieces} ${pieceUnit} (${packSize} ${unit}) อัตโนมัติ`;
+            syncStatusEl.textContent = `พร้อมรับเข้าคลัง ${newPieces} ${pieceUnit} อัตโนมัติ`;
             syncStatusEl.className = 'pill-tag green-tag';
           }
         } else {
           if (matched) {
             const currentQty = Number(matched.qty) || 0;
             const newQty = currentQty + newPieces;
-            syncStatusEl.textContent = `📦 เติมสต๊อกเดิม (ปัจจุบันมี ${currentQty} -> เป็น ${newQty} ${matched.unit || pieceUnit})`;
+            syncStatusEl.textContent = `📦 เติมสต๊อกเดิม (ปัจจุบันมี ${currentQty} -> เป็น ${newQty} ${pieceUnit})`;
             syncStatusEl.className = 'pill-tag blue-tag';
           } else if (titleVal) {
-            syncStatusEl.textContent = `✨ สร้างเป็นสินค้าคงคลังใหม่ในสต๊อก (+${newPieces} ${pieceUnit} @ ฿${this.formatUnitCost(costPerPiece)}/${pieceUnit})`;
+            syncStatusEl.textContent = `✨ สร้างเป็นสินค้าคงคลังใหม่ในสต๊อก (+${newPieces} ${pieceUnit} @ ฿${this.formatUnitCost(costPerUnit)}/${pieceUnit})`;
             syncStatusEl.className = 'pill-tag green-tag';
           } else {
             syncStatusEl.textContent = 'พร้อมซิงค์เข้าคลังอัตโนมัติ';
@@ -7299,7 +7411,7 @@ class WaterFlowApp {
         this.data.expenses.unshift(newExp);
         const pricing = this.getExpenseUnitPricing(newExp);
         const syncDesc = (pricing && pricing.isBulk && pricing.itemsPerBulk > 1)
-          ? `+${pricing.totalPieces} ${pricing.pieceName} (${newExp.packSize} ${newExp.packUnit})`
+          ? `+${pricing.rawPackSize} ${pricing.rawUnit} (บรรจุ ${pricing.itemsPerBulk} ${pricing.pieceName}/${pricing.rawUnit})`
           : `+${newExp.packSize} ${newExp.packUnit}`;
         this.showToast(`บันทึกรายจ่าย & เติมเข้าสต๊อก "${title}" (${syncDesc}) เรียบร้อย!`, 'success');
       }
@@ -7589,6 +7701,9 @@ const quickRestockForm = document.getElementById('quickRestockForm');
     if (tabFilterAllText) tabFilterAllText.textContent = `มีสต๊อก (${activeList.length})`;
     if (tabFilterLowText) tabFilterLowText.textContent = `⚠️ เตือนซื้อ (${lowCount})`;
 
+    // อัปเดตสรุปยอดจ่ายรวมแยกตามหมวดหมู่ในหน้าสต๊อก
+    this.renderStockExpenseSummary();
+
     // Render Daily Stock Profit Card
     this.renderStockProfitCard();
 
@@ -7704,7 +7819,7 @@ const quickRestockForm = document.getElementById('quickRestockForm');
           }
           return `<span class="pill-tag orange-tag" style="font-size:0.7rem; padding:0.1rem 0.45rem;">🛒 ${this.escapeHtml(item.supplier)}</span>`;
         })()}
-                  ${item.note ? `<span class="text-xs text-muted">📍 ${this.escapeHtml(item.note)}</span>` : ''}
+                  
                 </div>
               </div>
             </div>
@@ -7734,14 +7849,7 @@ const quickRestockForm = document.getElementById('quickRestockForm');
               </div>
             </div>
           </td>
-          <td>
-            <div style="font-size:0.875rem;">
-              ${isNoAlert
-          ? `<span class="text-muted" title="ของใช้/ตกแต่งร้าน (ไม่ต้องเตือนสั่งซื้อ)">- (ไม่เตือน)</span>`
-          : `<b style="color:${isLow ? 'var(--danger)' : 'var(--text-main)'};">${minQty}</b> <span class="text-xs text-muted">${this.escapeHtml(unit)}</span>`
-        }
-            </div>
-          </td>
+          
           <td>
             <div class="font-bold text-main" style="font-size:0.9rem;">${this.formatCurrency(unitCost)}</div>
           </td>
@@ -7762,6 +7870,26 @@ const quickRestockForm = document.getElementById('quickRestockForm');
 
     this.applyStockFilter();
     this.refreshLucide();
+  }
+
+  // อัปเดตสรุปยอดจ่ายรวมแยกตามหมวดหมู่สินค้าในหน้าสต๊อก
+  renderStockExpenseSummary() {
+    const expenses = this.data.expenses || [];
+    const totalAll = expenses.reduce((a, b) => a + (Number(b.amount) || 0), 0);
+    const catIng = expenses.filter(e => e.category === 'INGREDIENT').reduce((a, b) => a + (Number(b.amount) || 0), 0);
+    const catPack = expenses.filter(e => e.category === 'PACKAGING').reduce((a, b) => a + (Number(b.amount) || 0), 0);
+    const catStock = expenses.filter(e => e.category === 'STOCK').reduce((a, b) => a + (Number(b.amount) || 0), 0);
+    const catFridge = expenses.filter(e => e.category === 'FRIDGE_DRINK').reduce((a, b) => a + (Number(b.amount) || 0), 0);
+    const catOther = expenses.filter(e => e.category === 'OTHER').reduce((a, b) => a + (Number(b.amount) || 0), 0);
+
+    const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    setEl('stockExpCategoryTotal', this.formatCurrency(totalAll));
+    setEl('stockExpTotalCount', `${expenses.length} รายการ`);
+    setEl('stockExpCatIngredients', this.formatCurrency(catIng));
+    setEl('stockExpCatPackaging', this.formatCurrency(catPack));
+    setEl('stockExpCatStock', this.formatCurrency(catStock));
+    setEl('stockExpCatFridgeDrink', this.formatCurrency(catFridge));
+    setEl('stockExpCatOther', this.formatCurrency(catOther));
   }
 
   setStockFilter(type) {
@@ -8784,39 +8912,110 @@ const quickRestockForm = document.getElementById('quickRestockForm');
   // เปิด Modal ดูประวัติสรุปกำไรย้อนหลังทั้งหมดแยกรายวัน
   openStockProfitHistoryModal() {
     const modal = document.getElementById('stockProfitHistoryModal');
-    const tbody = document.getElementById('stockProfitHistoryTableBody');
-    if (!modal || !tbody) return;
+    if (!modal) return;
 
+    // Build raw logs with parsed profit info
     const logs = this.data.stockLogs || [];
-    const dateMap = {};
+    this._stockProfitRawLogs = [];
 
     logs.forEach(log => {
       if (log.actionType === 'USE') {
         const parsed = this.parseProfitInfoFromLog(log);
         if (parsed !== null) {
-          const dStr = log.date;
-          if (!dateMap[dStr]) {
-            dateMap[dStr] = {
-              date: dStr,
-              totalProfit: 0,
-              totalRevenue: 0,
-              totalCost: 0,
-              totalQty: 0,
-              itemsCount: 0
-            };
-          }
-          dateMap[dStr].totalProfit += parsed.profit;
-          dateMap[dStr].totalRevenue += parsed.revenue;
-          dateMap[dStr].totalCost += parsed.cost;
-          dateMap[dStr].totalQty += Math.abs(Number(log.changeQty) || 0);
-          dateMap[dStr].itemsCount++;
+          this._stockProfitRawLogs.push({
+            date: log.date,
+            itemName: log.itemName || '',
+            profit: parsed.profit,
+            revenue: parsed.revenue,
+            cost: parsed.cost,
+            qty: Math.abs(Number(log.changeQty) || 0),
+            unit: log.unit || '',
+            note: log.note || ''
+          });
         }
       }
     });
 
+    // Reset search/filter
+    const searchEl = document.getElementById('stockProfitHistorySearch');
+    const filterEl = document.getElementById('stockProfitHistoryFilter');
+    if (searchEl) searchEl.value = '';
+    if (filterEl) filterEl.value = 'ALL';
+
+    this.filterStockProfitHistory();
+    modal.classList.add('active');
+    this.refreshLucide();
+  }
+
+  filterStockProfitHistory() {
+    if (!this._stockProfitRawLogs) return;
+    const searchQuery = (document.getElementById('stockProfitHistorySearch')?.value || '').toLowerCase().trim();
+    const filterVal = document.getElementById('stockProfitHistoryFilter')?.value || 'ALL';
+
+    let filtered = [...this._stockProfitRawLogs];
+
+    // Search by item name, date, note, amounts
+    if (searchQuery) {
+      filtered = filtered.filter(r => {
+        const itemName = (r.itemName || '').toLowerCase();
+        const thaiDate = this.formatThaiDate(r.date).toLowerCase();
+        const dateRaw = (r.date || '').toLowerCase();
+        const note = (r.note || '').toLowerCase();
+        const revenue = String(r.revenue || 0);
+        const profit = String(r.profit || 0);
+        const cost = String(r.cost || 0);
+        return itemName.includes(searchQuery) || thaiDate.includes(searchQuery) ||
+               dateRaw.includes(searchQuery) || note.includes(searchQuery) ||
+               revenue.includes(searchQuery) || profit.includes(searchQuery) ||
+               cost.includes(searchQuery);
+      });
+    }
+
+    // Filter by profit/loss
+    if (filterVal === 'PROFIT') {
+      filtered = filtered.filter(r => r.profit >= 0);
+    } else if (filterVal === 'LOSS') {
+      filtered = filtered.filter(r => r.profit < 0);
+    }
+
+    // Aggregate by date
+    const dateMap = {};
+    filtered.forEach(r => {
+      if (!dateMap[r.date]) {
+        dateMap[r.date] = { date: r.date, totalProfit: 0, totalRevenue: 0, totalCost: 0, totalQty: 0, itemsCount: 0, items: [] };
+      }
+      dateMap[r.date].totalProfit += r.profit;
+      dateMap[r.date].totalRevenue += r.revenue;
+      dateMap[r.date].totalCost += r.cost;
+      dateMap[r.date].totalQty += r.qty;
+      dateMap[r.date].itemsCount++;
+      dateMap[r.date].items.push(r);
+    });
     const datesList = Object.values(dateMap).sort((a, b) => b.date.localeCompare(a.date));
 
-    // Summary All-Time
+    // Aggregate by item (for search summary)
+    const itemMap = {};
+    filtered.forEach(r => {
+      const key = (r.itemName || 'ไม่ระบุชื่อ').trim();
+      if (!itemMap[key]) {
+        itemMap[key] = { name: key, totalProfit: 0, totalRevenue: 0, totalCost: 0, totalQty: 0, count: 0 };
+      }
+      itemMap[key].totalProfit += r.profit;
+      itemMap[key].totalRevenue += r.revenue;
+      itemMap[key].totalCost += r.cost;
+      itemMap[key].totalQty += r.qty;
+      itemMap[key].count++;
+    });
+    const itemsList = Object.values(itemMap).sort((a, b) => b.totalProfit - a.totalProfit);
+
+    this.renderStockProfitHistoryTable(datesList, itemsList, searchQuery);
+  }
+
+  renderStockProfitHistoryTable(datesList, itemsList, searchQuery) {
+    const tbody = document.getElementById('stockProfitHistoryTableBody');
+    if (!tbody) return;
+
+    // Summary totals
     let allTimeProfit = 0;
     let allTimeRevenue = 0;
     datesList.forEach(d => {
@@ -8829,22 +9028,58 @@ const quickRestockForm = document.getElementById('quickRestockForm');
     const allDaysEl = document.getElementById('stockProfitHistTotalDays');
 
     if (allProfitEl) {
-      allProfitEl.textContent = `+${this.formatCurrency(allTimeProfit)}`;
+      allProfitEl.textContent = `${allTimeProfit >= 0 ? '+' : ''}${this.formatCurrency(allTimeProfit)}`;
       allProfitEl.style.color = allTimeProfit >= 0 ? '#15803d' : '#dc2626';
     }
     if (allRevEl) allRevEl.textContent = this.formatCurrency(allTimeRevenue);
     if (allDaysEl) allDaysEl.textContent = `${datesList.length} วัน`;
 
+    // Item profit summary (show when searching or always if items exist)
+    let itemSummaryHtml = '';
+    if (itemsList && itemsList.length > 0) {
+      itemSummaryHtml = `
+        <tr>
+          <td colspan="6" style="padding:0; border:none;">
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:var(--radius-sm); padding:0.75rem; margin-bottom:0.5rem;">
+              <div style="font-weight:700; font-size:0.85rem; color:#334155; margin-bottom:0.5rem; display:flex; align-items:center; gap:0.35rem;">
+                <span>📦</span>
+                <span>สรุปกำไรแยกตามสินค้า${searchQuery ? ' (ผลค้นหา)' : ''}</span>
+                <span class="pill-tag" style="font-size:0.7rem; background:#e2e8f0; color:#475569;">${itemsList.length} รายการ</span>
+              </div>
+              <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:0.5rem;">
+                ${itemsList.map(item => {
+                  const isProfit = item.totalProfit >= 0;
+                  return `
+                    <div style="background:${isProfit ? '#f0fdf4' : '#fef2f2'}; border:1px solid ${isProfit ? '#bbf7d0' : '#fecaca'}; border-radius:var(--radius-sm); padding:0.5rem 0.65rem;">
+                      <div style="font-weight:700; font-size:0.82rem; color:#1e293b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${this.escapeHtml(item.name)}">${this.escapeHtml(item.name)}</div>
+                      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.25rem;">
+                        <span style="font-size:0.75rem; color:#64748b;">${item.count} ครั้ง · ${item.totalQty} ชิ้น</span>
+                        <span style="font-weight:800; font-size:0.9rem; color:${isProfit ? '#15803d' : '#dc2626'};">${isProfit ? '+' : ''}${this.formatCurrency(item.totalProfit)}</span>
+                      </div>
+                      <div style="display:flex; justify-content:space-between; font-size:0.7rem; color:#94a3b8; margin-top:2px;">
+                        <span>ขาย ${this.formatCurrency(item.totalRevenue)}</span>
+                        <span>ทุน ${this.formatCurrency(item.totalCost)}</span>
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+          </td>
+        </tr>
+      `;
+    }
+
     if (datesList.length === 0) {
       tbody.innerHTML = `
         <tr>
           <td colspan="6" class="text-center text-muted py-4">
-            ยังไม่มีประวัติการเบิกขายสำเร็จรูปในระบบ (เมื่อเริ่มมีการตัดสต๊อกสำเร็จรูป/ลัง ระบบจะสรุปแยกวันให้อัตโนมัติ)
+            ${this._stockProfitRawLogs && this._stockProfitRawLogs.length > 0 ? 'ไม่พบรายการที่ตรงกับการค้นหา' : 'ยังไม่มีประวัติการเบิกขายสำเร็จรูปในระบบ (เมื่อเริ่มมีการตัดสต๊อกสำเร็จรูป/ลัง ระบบจะสรุปแยกวันให้อัตโนมัติ)'}
           </td>
         </tr>
       `;
     } else {
-      tbody.innerHTML = datesList.map(row => {
+      tbody.innerHTML = itemSummaryHtml + datesList.map(row => {
         const isCurrentSelected = (row.date === this.selectedStockProfitDate);
         const profitColor = row.totalProfit >= 0 ? '#15803d' : '#dc2626';
         const profitSign = row.totalProfit >= 0 ? '+' : '';
@@ -8877,7 +9112,6 @@ const quickRestockForm = document.getElementById('quickRestockForm');
       }).join('');
     }
 
-    modal.classList.add('active');
     this.refreshLucide();
   }
 
@@ -9325,13 +9559,14 @@ const quickRestockForm = document.getElementById('quickRestockForm');
     const isBulk = pricing ? pricing.isBulk : false;
     const rawPackSize = pricing ? pricing.rawPackSize : (Number(exp.packSize) || 1);
     const crateBottles = pricing ? pricing.itemsPerBulk : 1;
-    const stockQty = pricing ? pricing.totalPieces : rawPackSize;
-    const stockUnit = pricing ? pricing.pieceName : (exp.packUnit || 'หน่วย');
-    const unitCost = pricing ? pricing.costPerPiece : (stockQty > 0 ? (Number(exp.amount) / stockQty) : Number(exp.amount));
+    // เก็บสต๊อกเป็นหน่วยบรรจุเดิม (แพ็ค/ลัง/กล่อง) ไม่แปลงเป็นชิ้นย่อย
+    const stockQty = rawPackSize;
+    const stockUnit = isBulk ? (exp.packUnit || (pricing ? pricing.rawUnit : 'แพ็ค')) : (pricing ? pricing.pieceName : (exp.packUnit || 'หน่วย'));
+    const unitCost = isBulk ? (pricing ? pricing.costPerPack : (rawPackSize > 0 ? (Number(exp.amount) / rawPackSize) : Number(exp.amount))) : (pricing ? pricing.costPerPiece : (rawPackSize > 0 ? (Number(exp.amount) / rawPackSize) : Number(exp.amount)));
 
     const minThreshold = (exp.minQty !== undefined && exp.minQty !== null && exp.minQty !== '')
       ? Number(exp.minQty)
-      : (isBulk ? Math.max(1, Math.round(stockQty * 0.25)) : Math.max(1, Math.round(rawPackSize * 0.25)));
+      : Math.max(1, Math.round(rawPackSize * 0.25));
 
     if (match) {
       // มีสินค้าอยู่แล้ว -> เติมจำนวนคงเหลือเพิ่มขึ้น และอัปเดตราคาต้นทุนเฉลี่ย
@@ -9359,7 +9594,7 @@ const quickRestockForm = document.getElementById('quickRestockForm');
 
       const supText = exp.supplier ? ` [ซื้อจาก: ${exp.supplier}]` : '';
       const logNote = (isBulk && crateBottles > 1)
-        ? `รับเข้าของ ${rawPackSize} ${exp.packUnit || 'ลัง'} (บรรจุ ${crateBottles} ${stockUnit}/${exp.packUnit || 'ลัง'} = +${stockQty} ${stockUnit}) จากบิลซื้อ (${this.formatThaiDate(exp.date)})${supText}`
+        ? `รับเข้าของ ${rawPackSize} ${stockUnit} (บรรจุ ${crateBottles} ${pricing ? pricing.pieceName : 'ชิ้น'}/${stockUnit}) จากบิลซื้อ (${this.formatThaiDate(exp.date)})${supText}`
         : `รับเข้าของ +${stockQty} ${stockUnit} จากบิลซื้อ (${this.formatThaiDate(exp.date)})${supText}`;
       this.logStockAction(match.name, 'RESTOCK', stockQty, newQty, match.unit || '', logNote);
       exp.stockItemId = match.id;
@@ -9380,7 +9615,7 @@ const quickRestockForm = document.getElementById('quickRestockForm');
         netWeight: exp.netWeight || null,
         netUnit: exp.netUnit || null,
         note: (isBulk && crateBottles > 1)
-          ? `รับเข้า ${rawPackSize} ${exp.packUnit || 'ลัง'} (บรรจุ ${crateBottles} ${stockUnit}/${exp.packUnit || 'ลัง'} = ${stockQty} ${stockUnit}) จากบิลซื้อ (${this.formatThaiDate(exp.date)})`
+          ? `รับเข้า ${rawPackSize} ${stockUnit} (บรรจุ ${crateBottles} ${pricing ? pricing.pieceName : 'ชิ้น'}/${stockUnit}) จากบิลซื้อ (${this.formatThaiDate(exp.date)})`
           : `รับเข้าจากบิลซื้อ (${this.formatThaiDate(exp.date)})`
       };
       this.data.stockItems.unshift(newItem);
@@ -9431,16 +9666,17 @@ const quickRestockForm = document.getElementById('quickRestockForm');
     const oldPricing = this.getExpenseUnitPricing(oldExp);
     const newPricing = this.getExpenseUnitPricing(updatedExp);
 
-    const oldTotalPieces = oldPricing ? oldPricing.totalPieces : (Number(oldExp ? oldExp.packSize : 1) || 1);
-    const newTotalPieces = newPricing ? newPricing.totalPieces : (Number(updatedExp ? updatedExp.packSize : 1) || 1);
-    const diffQty = newTotalPieces - oldTotalPieces;
+    // ใช้หน่วยบรรจุเดิม (แพ็ค/ลัง) ไม่แปลงเป็นชิ้น
+    const oldRawPackSize = oldPricing ? oldPricing.rawPackSize : (Number(oldExp ? oldExp.packSize : 1) || 1);
+    const newRawPackSize = newPricing ? newPricing.rawPackSize : (Number(updatedExp ? updatedExp.packSize : 1) || 1);
+    const diffQty = newRawPackSize - oldRawPackSize;
 
     const isBulk = newPricing ? newPricing.isBulk : false;
-    const stockUnit = newPricing ? newPricing.pieceName : (updatedExp.packUnit || match.unit || 'หน่วย');
-    const unitCost = newPricing ? newPricing.costPerPiece : (newTotalPieces > 0 ? (Number(updatedExp.amount) / newTotalPieces) : Number(updatedExp.amount));
+    const stockUnit = isBulk ? (updatedExp.packUnit || (newPricing ? newPricing.rawUnit : 'แพ็ค')) : (newPricing ? newPricing.pieceName : (updatedExp.packUnit || match.unit || 'หน่วย'));
+    const unitCost = isBulk ? (newPricing ? newPricing.costPerPack : (newRawPackSize > 0 ? (Number(updatedExp.amount) / newRawPackSize) : Number(updatedExp.amount))) : (newPricing ? newPricing.costPerPiece : (newRawPackSize > 0 ? (Number(updatedExp.amount) / newRawPackSize) : Number(updatedExp.amount)));
     const minThreshold = (updatedExp.minQty !== undefined && updatedExp.minQty !== null && updatedExp.minQty !== '')
       ? Number(updatedExp.minQty)
-      : (isBulk ? Math.max(1, Math.round(newTotalPieces * 0.25)) : Math.max(1, Math.round((Number(updatedExp.packSize) || 1) * 0.25)));
+      : Math.max(1, Math.round(newRawPackSize * 0.25));
 
     // ตรวจสอบว่ามีการเปลี่ยนชื่อไปตรงกับสต๊อกรายการอื่นหรือไม่
     const newTitleClean = String(updatedExp.title || '').split('(')[0].trim().toLowerCase();
@@ -9455,11 +9691,11 @@ const quickRestockForm = document.getElementById('quickRestockForm');
     if (anotherMatch) {
       // ผู้ใช้เปลี่ยนชื่อบิลไปตรงกับสินค้าตัวอื่นที่มีอยู่แล้ว -> ตัดยอดออกจากตัวเดิม แล้วย้ายไปบวกที่ตัวใหม่
       const prevQty = Number(match.qty) || 0;
-      match.qty = Math.max(0, prevQty - oldTotalPieces);
-      this.logStockAction(match.name, 'ADJUST', -oldTotalPieces, match.qty, match.unit || '', `ปรับแก้บิลซื้อ ย้ายรายการไปที่ "${anotherMatch.name}"`);
+      match.qty = Math.max(0, prevQty - oldRawPackSize);
+      this.logStockAction(match.name, 'ADJUST', -oldRawPackSize, match.qty, match.unit || '', `ปรับแก้บิลซื้อ ย้ายรายการไปที่ "${anotherMatch.name}"`);
 
       const anotherPrevQty = Number(anotherMatch.qty) || 0;
-      const anotherNewQty = anotherPrevQty + newTotalPieces;
+      const anotherNewQty = anotherPrevQty + newRawPackSize;
       anotherMatch.qty = anotherNewQty;
       anotherMatch.unitCost = parseFloat(unitCost.toFixed(4));
       anotherMatch.minQty = minThreshold;
@@ -9471,7 +9707,7 @@ const quickRestockForm = document.getElementById('quickRestockForm');
       if (updatedExp.supplier) anotherMatch.supplier = updatedExp.supplier;
       if (updatedExp.category) anotherMatch.category = updatedExp.category;
 
-      this.logStockAction(anotherMatch.name, 'RESTOCK', newTotalPieces, anotherNewQty, anotherMatch.unit || '', `รับเข้าจากการแก้ไขบิลซื้อ (${this.formatThaiDate(updatedExp.date)})`);
+      this.logStockAction(anotherMatch.name, 'RESTOCK', newRawPackSize, anotherNewQty, anotherMatch.unit || '', `รับเข้าจากการแก้ไขบิลซื้อ (${this.formatThaiDate(updatedExp.date)})`);
       updatedExp.stockItemId = anotherMatch.id;
     } else {
       // รายการเดิม -> อัปเดตข้อมูลทั้งหมดตามที่แก้ไข
@@ -9506,7 +9742,7 @@ const quickRestockForm = document.getElementById('quickRestockForm');
   removeExpenseFromStock(exp) {
     if (!Array.isArray(this.data.stockItems) || !exp) return;
     const pricing = this.getExpenseUnitPricing(exp);
-    const piecesToRemove = pricing ? pricing.totalPieces : (Number(exp.packSize) || 1);
+    const qtyToRemove = pricing ? pricing.rawPackSize : (Number(exp.packSize) || 1);
     let match = null;
     if (exp.stockItemId) {
       match = this.data.stockItems.find(s => s && String(s.id) === String(exp.stockItemId));
@@ -9524,9 +9760,9 @@ const quickRestockForm = document.getElementById('quickRestockForm');
 
     if (match) {
       const oldQty = Number(match.qty) || 0;
-      const newQty = Math.max(0, oldQty - piecesToRemove);
+      const newQty = Math.max(0, oldQty - qtyToRemove);
       match.qty = newQty;
-      this.logStockAction(match.name, 'ADJUST', -piecesToRemove, newQty, match.unit || '', `หักสต๊อกจากลบบิลซื้อ -${piecesToRemove} ${match.unit} (${this.formatThaiDate(exp.date)})`);
+      this.logStockAction(match.name, 'ADJUST', -qtyToRemove, newQty, match.unit || '', `หักสต๊อกจากลบบิลซื้อ -${qtyToRemove} ${match.unit} (${this.formatThaiDate(exp.date)})`);
     }
   }
 
@@ -9553,14 +9789,16 @@ const quickRestockForm = document.getElementById('quickRestockForm');
 
       const pricing = this.getExpenseUnitPricing(exp);
       const isBulk = pricing ? pricing.isBulk : false;
-      const stockQty = pricing ? pricing.totalPieces : (Number(exp.packSize) || 1);
-      const stockUnit = pricing ? pricing.pieceName : (exp.packUnit || 'หน่วย');
-      const unitCost = pricing ? pricing.costPerPiece : (stockQty > 0 ? (Number(exp.amount) / stockQty) : Number(exp.amount));
+      const rawPackSize = pricing ? pricing.rawPackSize : (Number(exp.packSize) || 1);
+      // ใช้หน่วยบรรจุเดิม (แพ็ค/ลัง) ไม่แปลงเป็นชิ้น
+      const stockQty = rawPackSize;
+      const stockUnit = isBulk ? (exp.packUnit || (pricing ? pricing.rawUnit : 'แพ็ค')) : (pricing ? pricing.pieceName : (exp.packUnit || 'หน่วย'));
+      const unitCost = isBulk ? (pricing ? pricing.costPerPack : (rawPackSize > 0 ? (Number(exp.amount) / rawPackSize) : Number(exp.amount))) : (pricing ? pricing.costPerPiece : (rawPackSize > 0 ? (Number(exp.amount) / rawPackSize) : Number(exp.amount)));
       const crateBottles = pricing ? pricing.itemsPerBulk : 1;
 
       const effectiveMin = (exp.minQty !== undefined && exp.minQty !== null && exp.minQty !== '')
         ? Number(exp.minQty)
-        : (isBulk ? Math.max(1, Math.round(stockQty * 0.25)) : Math.max(1, Math.round((Number(exp.packSize) || 1) * 0.25)));
+        : Math.max(1, Math.round(rawPackSize * 0.25));
 
       if (match) {
         match.unitCost = parseFloat(unitCost.toFixed(4));
@@ -9576,6 +9814,7 @@ const quickRestockForm = document.getElementById('quickRestockForm');
         if (!exp.stockItemId) exp.stockItemId = match.id;
         syncedCount++;
       } else {
+        const pieceName = pricing ? pricing.pieceName : (exp.packUnit || 'ชิ้น');
         const newItem = {
           id: 'stk_' + Date.now() + Math.random().toString(36).substring(2, 5),
           name: exp.title,
@@ -9587,11 +9826,11 @@ const quickRestockForm = document.getElementById('quickRestockForm');
           supplier: exp.supplier || '',
           crateBottles: (isBulk && crateBottles > 1) ? crateBottles : 1,
           rawUnit: exp.packUnit || '',
-          rawPackSize: Number(exp.packSize) || 1,
+          rawPackSize: rawPackSize,
           netWeight: exp.netWeight || null,
           netUnit: exp.netUnit || null,
           note: (isBulk && crateBottles > 1) 
-            ? `ซิงค์อัตโนมัติจากบิลซื้อ ${exp.packSize} ${exp.packUnit} (บรรจุ ${crateBottles} ${stockUnit}/${exp.packUnit} = ${stockQty} ${stockUnit})` 
+            ? `ซิงค์อัตโนมัติจากบิลซื้อ ${rawPackSize} ${stockUnit} (บรรจุ ${crateBottles} ${pieceName}/${stockUnit})` 
             : `ซิงค์อัตโนมัติจากบิลซื้อ (${this.formatThaiDate(exp.date)})`
         };
         this.data.stockItems.push(newItem);
@@ -9947,7 +10186,7 @@ const quickRestockForm = document.getElementById('quickRestockForm');
               </div>
               <div style="display:flex; flex-direction:column; gap:2px; margin-top:0.4rem; font-size:0.75rem;">
                 ${supplierInfoInBox}
-                ${item.note ? `<div style="color: #64748b; font-size: 0.72rem;">📍 ${this.escapeHtml(item.note)}</div>` : ''}
+                
               </div>
             </div>
           </div>

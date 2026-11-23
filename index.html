@@ -322,12 +322,12 @@
           <div class="figma-pos-card mb-3">
             <div class="figma-card-header mb-2">
               <div class="figma-card-title">
-                <i data-lucide="pie-chart"></i>
+                <i data-lucide="bar-chart-horizontal"></i>
                 <span>สัดส่วนค่าใช้จ่าย & กำไร</span>
               </div>
             </div>
-            <div class="chart-container doughnut-wrapper" style="height: 220px; position:relative;">
-              <canvas id="costBreakdownChart"></canvas>
+            <div id="costBreakdownChart" style="padding:0.5rem 0.75rem;">
+              <!-- Rendered via JS as horizontal bars -->
             </div>
           </div>
 
@@ -535,6 +535,31 @@
             </button>
           </div>
 
+          <!-- Search & Filter Bar -->
+          <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; margin-bottom:0.75rem;">
+            <div style="flex:1; min-width:180px; position:relative;">
+              <i data-lucide="search" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); width:16px; height:16px; color:#94a3b8; pointer-events:none;"></i>
+              <input type="text" id="salesHistorySearch" class="form-input"
+                placeholder="ค้นหาวันที่ / โน้ต / ยอดเงิน..."
+                style="padding-left:34px; font-size:0.85rem; height:38px;"
+                oninput="app.renderDailyHistoryTable()">
+            </div>
+            <select id="salesHistoryFilter" class="form-input"
+              style="width:auto; min-width:120px; font-size:0.85rem; height:38px;"
+              onchange="app.renderDailyHistoryTable()">
+              <option value="ALL">ทั้งหมด</option>
+              <option value="PROFIT">🟢 กำไร</option>
+              <option value="LOSS">🔴 ขาดทุน</option>
+              <option value="SCHOOL">🏫 วันเปิดเรียน</option>
+              <option value="HOLIDAY">🌴 วันหยุด</option>
+            </select>
+          </div>
+
+          <!-- Profit Summary Mini Stats -->
+          <div id="salesHistorySummary" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:0.5rem; margin-bottom:0.75rem;">
+            <!-- Rendered via JS -->
+          </div>
+
           <!-- Transaction History Stream (Unified Cards Feed, No Old Columns Table) -->
           <div class="daily-tx-feed mb-4" id="todaySalesMobileCards">
             <!-- Rendered via JS -->
@@ -587,6 +612,11 @@
                 <span class="pill-dot" style="background:#0284c7;"></span>
                 <span class="pill-lbl">น้ำในตู้</span>
                 <span class="pill-val" style="color:#0284c7;" id="expCategoryFridgeDrink">฿0</span>
+              </div>
+              <div class="feh-stat-pill" onclick="app.setExpenseCategory('OTHER')">
+                <span class="pill-dot" style="background:#64748b;"></span>
+                <span class="pill-lbl">🛠️ อื่นๆ</span>
+                <span class="pill-val" style="color:#64748b;" id="expCategoryOther">฿0</span>
               </div>
             </div>
           </div>
@@ -1165,6 +1195,47 @@
           </div>
         </div>
 
+        <!-- สรุปยอดจ่ายรวมแยกตามหมวดหมู่ (ซิงค์จากบิลซื้อของ) -->
+        <div class="figma-expense-hero-card mb-4" style="background:linear-gradient(135deg, #1e293b 0%, #334155 100%); border:1.5px solid #475569;">
+          <div class="feh-top">
+            <div class="feh-label">
+              <i data-lucide="receipt"></i>
+              <span>ยอดจ่ายรวมทั้งหมด (จากบิลซื้อของเข้าสต๊อก)</span>
+            </div>
+            <span class="feh-count-badge" id="stockExpTotalCount">0 รายการ</span>
+          </div>
+          <div class="feh-amount-wrap">
+            <span class="feh-amount" id="stockExpCategoryTotal">฿0</span>
+          </div>
+          <div class="feh-breakdown-row">
+            <div class="feh-stat-pill" onclick="app.setStockFilter('INGREDIENT')">
+              <span class="pill-dot amber"></span>
+              <span class="pill-lbl">วัตถุดิบ</span>
+              <span class="pill-val text-amber" id="stockExpCatIngredients">฿0</span>
+            </div>
+            <div class="feh-stat-pill" onclick="app.setStockFilter('PACKAGING')">
+              <span class="pill-dot blue"></span>
+              <span class="pill-lbl">บรรจุภัณฑ์</span>
+              <span class="pill-val text-primary" id="stockExpCatPackaging">฿0</span>
+            </div>
+            <div class="feh-stat-pill" onclick="app.setStockFilter('STOCK')">
+              <span class="pill-dot purple"></span>
+              <span class="pill-lbl">ยกลัง</span>
+              <span class="pill-val text-purple" id="stockExpCatStock">฿0</span>
+            </div>
+            <div class="feh-stat-pill" onclick="app.setStockFilter('FRIDGE_DRINK')">
+              <span class="pill-dot" style="background:#0284c7;"></span>
+              <span class="pill-lbl">น้ำในตู้</span>
+              <span class="pill-val" style="color:#0284c7;" id="stockExpCatFridgeDrink">฿0</span>
+            </div>
+            <div class="feh-stat-pill" onclick="app.setStockFilter('OTHER')">
+              <span class="pill-dot" style="background:#64748b;"></span>
+              <span class="pill-lbl">🛠️ อื่นๆ</span>
+              <span class="pill-val" style="color:#64748b;" id="stockExpCatOther">฿0</span>
+            </div>
+          </div>
+        </div>
+
         <!-- Daily Stock Profit Summary Card (รวมยอดกำไรจากการเบิกขายสำเร็จรูป/ลัง รายวัน & ดูประวัติย้อนหลัง) -->
         <div class="card mb-4" id="stockProfitDailyCard"
           style="border:1.5px solid #86efac; background:linear-gradient(180deg, #f0fdf4 0%, #ffffff 80px); box-shadow:0 4px 18px rgba(16,185,129,0.08);">
@@ -1299,6 +1370,10 @@
                   <input type="radio" name="stockSubFilter" value="STOCK">
                   <span>📦 สำเร็จรูป/ลัง</span>
                 </label>
+                <label class="radio-tab">
+                  <input type="radio" name="stockSubFilter" value="OTHER">
+                  <span>🛠️ อื่นๆ</span>
+                </label>
               </div>
             </div>
 
@@ -1345,7 +1420,7 @@
                     <th>รายการสินค้า / วัตถุดิบ</th>
                     <th style="width: 130px;">หมวดหมู่</th>
                     <th style="width: 180px; text-align: center;">ปรับยอดคงเหลือ (+ / -)</th>
-                    <th style="width: 140px;">เกณฑ์เตือนสั่ง</th>
+
                     <th style="width: 120px;">ต้นทุน/หน่วย</th>
                     <th style="width: 130px;">มูลค่าคงคลัง</th>
                     <th class="text-center" style="width: 100px;">จัดการ</th>
@@ -2622,6 +2697,24 @@
         <button class="close-modal-btn" data-close="stockProfitHistoryModal">&times;</button>
       </div>
       <div class="modal-body">
+        <!-- Search & Filter Bar -->
+        <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; margin-bottom:0.75rem;">
+          <div style="flex:1; min-width:180px; position:relative;">
+            <i data-lucide="search" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); width:16px; height:16px; color:#94a3b8; pointer-events:none;"></i>
+            <input type="text" id="stockProfitHistorySearch" class="form-input"
+              placeholder="ค้นหาวันที่ / ยอดเงิน..."
+              style="padding-left:34px; font-size:0.85rem; height:38px;"
+              oninput="app.filterStockProfitHistory()">
+          </div>
+          <select id="stockProfitHistoryFilter" class="form-input"
+            style="width:auto; min-width:120px; font-size:0.85rem; height:38px;"
+            onchange="app.filterStockProfitHistory()">
+            <option value="ALL">ทั้งหมด</option>
+            <option value="PROFIT">🟢 กำไร</option>
+            <option value="LOSS">🔴 ขาดทุน</option>
+          </select>
+        </div>
+
         <!-- All-Time Profit Summary Cards -->
         <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:0.75rem; margin-bottom:1rem;"
           class="stock-profit-modal-summary-grid">
