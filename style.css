@@ -8475,3 +8475,201 @@ body {
     gap: 0.5rem !important;
   }
 }
+
+
+/* ============================================================
+   📦 แพ็คขาย (Pack Sell) — คำนวณการขาย
+   ============================================================ */
+
+.pack-sell-info-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-md, 8px);
+  padding: 0.65rem 0.85rem;
+  margin-top: 0.4rem;
+}
+
+.pack-sell-confirmed-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: var(--radius-md, 8px);
+  padding: 0.5rem 0.85rem;
+  margin-top: 0.4rem;
+  font-size: 0.85rem;
+  color: #166534;
+  font-weight: 600;
+}
+
+.pack-sell-change-btn {
+  background: none;
+  border: none;
+  color: var(--primary, #2563eb);
+  cursor: pointer;
+  font-size: 0.8rem;
+  text-decoration: underline;
+  font-weight: 500;
+  margin-left: auto;
+}
+
+.pack-sell-result-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+@media (max-width: 640px) {
+  .pack-sell-result-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pack-sell-result-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-md, 8px);
+  padding: 0.85rem;
+}
+
+.pack-sell-result-card.cost-card {
+  border-left: 3px solid #f59e0b;
+}
+
+.pack-sell-result-card.profit-card {
+  border-left: 3px solid #16a34a;
+}
+
+.pack-sell-result-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-main, #1e293b);
+  margin-bottom: 0.5rem;
+}
+
+.pack-sell-result-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.3rem 0;
+  font-size: 0.82rem;
+  border-bottom: 1px dashed #e2e8f0;
+}
+
+.pack-sell-result-row:last-child {
+  border-bottom: none;
+}
+
+.pack-sell-result-row span {
+  color: var(--text-muted, #64748b);
+}
+
+.pack-sell-result-row strong {
+  color: var(--text-main, #1e293b);
+  font-weight: 700;
+}
+
+.pack-sell-result-row.highlight {
+  background: #fffbeb;
+  border-radius: 4px;
+  padding: 0.4rem 0.5rem;
+  margin: 0.15rem -0.3rem;
+  border-bottom: none;
+}
+
+.pack-sell-result-row.highlight-total {
+  background: #f0f9ff;
+  border-radius: 4px;
+  padding: 0.5rem 0.5rem;
+  margin: 0.15rem -0.3rem;
+  border-bottom: none;
+  font-size: 0.9rem;
+}
+
+.pack-sell-summary-banner {
+  margin-top: 0.75rem;
+}
+
+.pack-sell-summary-inner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-radius: var(--radius-md, 8px);
+  padding: 0.85rem 1rem;
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.pack-sell-summary-inner.profit {
+  background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+  border: 1px solid #86efac;
+  color: #14532d;
+}
+
+.pack-sell-summary-inner.loss {
+  background: linear-gradient(135deg, #fef2f2, #fee2e2);
+  border: 1px solid #fca5a5;
+  color: #7f1d1d;
+}
+
+.pack-sell-summary-icon {
+  font-size: 1.8rem;
+  flex-shrink: 0;
+}
+
+.pack-sell-summary-text {
+  flex: 1;
+}
+
+
+/* ============================================================
+   💰 น้ำชง (Drink Sales) — คำนวณการขายน้ำชง
+   ============================================================ */
+
+.drink-sales-cup-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 0.3rem;
+}
+
+.drink-sales-cup-row td {
+  padding: 0.4rem 0.3rem;
+  vertical-align: middle;
+  text-align: center;
+}
+
+.drink-sales-cup-row td:first-child {
+  text-align: left;
+  white-space: nowrap;
+}
+
+.drink-sales-cup-row .form-input {
+  font-size: 0.85rem;
+  padding: 0.3rem 0.4rem;
+}
+
+.drink-sales-cup-row .input-with-affix {
+  display: inline-flex;
+  align-items: center;
+}
+
+@media (max-width: 480px) {
+  .drink-sales-cup-table thead th {
+    font-size: 0.7rem;
+    padding: 0.2rem;
+  }
+  .drink-sales-cup-row td {
+    padding: 0.3rem 0.15rem;
+    font-size: 0.8rem;
+  }
+  .drink-sales-cup-row .form-input {
+    width: 55px !important;
+    font-size: 0.8rem;
+    padding: 0.2rem 0.3rem;
+  }
+  .drink-sales-cup-row .input-with-affix {
+    width: 65px !important;
+  }
+}

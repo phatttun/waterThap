@@ -1574,6 +1574,8 @@ class WaterFlowApp {
     this.renderCalendar();
     this.renderRecipes();
     this.renderStock();
+    this.populatePackSellDropdowns();
+    this.initPackSell();
 
     // Restore active tab from URL hash or localStorage on page load/refresh (F5)
     let initialTab = 'dashboard';
@@ -1656,6 +1658,12 @@ class WaterFlowApp {
       const radioAll = document.querySelector('input[name="stockSubFilter"][value="all"]');
       if (radioAll) radioAll.checked = true;
       this.renderStock();
+    } else if (cleanTabId === 'pack-sell') {
+      this.populatePackSellDropdowns();
+    } else if (cleanTabId === 'drink-sales') {
+      this.initDrinkSales();
+      this.populateDrinkSalesRecipes();
+      this.calculateDrinkSalesCups();
     } else if (cleanTabId === 'stock-history') {
       this.renderStockHistory();
     } else if (cleanTabId === 'expenses') {
@@ -3055,7 +3063,8 @@ class WaterFlowApp {
           : exp.category === 'PACKAGING' ? 'บรรจุภัณฑ์ แก้ว ฝา หลอด'
           : exp.category === 'FRIDGE_DRINK' ? 'น้ำขายในตู้ เครื่องดื่ม แช่เย็น'
           : exp.category === 'STOCK' ? 'ยกลัง สำเร็จรูป ลัง'
-          : 'อื่นๆ น้ำแข็ง ทั่วไป';
+            : exp.category === 'PACK_SELL' ? 'ของแพ็คขาย แพ็คขาย'
+              : 'อื่นๆ น้ำแข็ง ทั่วไป';
         const dateStr = String(exp.date || '');
         const thaiDate = this.formatThaiDate(exp.date, true).toLowerCase();
         const unit = String(exp.packUnit || '').toLowerCase();
@@ -3077,6 +3086,7 @@ class WaterFlowApp {
     const catFridgeDrink = this.data.expenses.filter(e => e.category === 'FRIDGE_DRINK').reduce((a, b) => a + (Number(b.amount) || 0), 0);
     const catStock = this.data.expenses.filter(e => e.category === 'STOCK').reduce((a, b) => a + (Number(b.amount) || 0), 0);
     const catOther = this.data.expenses.filter(e => e.category === 'OTHER').reduce((a, b) => a + (Number(b.amount) || 0), 0);
+    const catPackSell = this.data.expenses.filter(e => e.category === 'PACK_SELL').reduce((a, b) => a + (Number(b.amount) || 0), 0);
 
     const totalEl = document.getElementById('expCategoryTotal');
     if (totalEl) totalEl.textContent = this.formatCurrency(totalAllExpenses);
@@ -3088,6 +3098,7 @@ class WaterFlowApp {
     const stockEl = document.getElementById('expCategoryStock'); if (stockEl) stockEl.textContent = this.formatCurrency(catStock);
     const fridgeEl = document.getElementById('expCategoryFridgeDrink'); if (fridgeEl) fridgeEl.textContent = this.formatCurrency(catFridgeDrink);
     const otherEl = document.getElementById('expCategoryOther'); if (otherEl) otherEl.textContent = this.formatCurrency(catOther);
+    const packSellEl = document.getElementById('expCategoryPackSell'); if (packSellEl) packSellEl.textContent = this.formatCurrency(catPackSell);
 
     const tbody = document.getElementById('expenseTableBody');
     const feedWrap = document.getElementById('expenseCardsFeed');
@@ -3160,6 +3171,11 @@ class WaterFlowApp {
           catName = 'อื่นๆ / น้ำแข็ง';
           avatarClass = 'cat-other';
           iconName = 'more-horizontal';
+        } else if (exp.category === 'PACK_SELL') {
+          badgeClass = 'stock';
+          catName = 'ของแพ็คขาย';
+          avatarClass = 'cat-stock';
+          iconName = 'package';
         }
 
         const pSize = Number(exp.packSize) || 0;
@@ -10281,6 +10297,515 @@ const quickRestockForm = document.getElementById('quickRestockForm');
     }).catch(() => {
       prompt('คัดลอกรายการสั่งซื้อ:', text);
     });
+  }
+
+
+  // =========================================================================
+  // 📦 PACK SELL - แพ็คขาย
+  // =========================================================================
+
+  initPackSell() {
+    const matSelect = document.getElementById('packSellMaterialSelect');
+    const pkgSelect = document.getElementById('packSellPackagingSelect');
+    const qtyInput = document.getElementById('packSellQty');
+    const priceInput = document.getElementById('packSellPrice');
+    const btnConfirmPkg = document.getElementById('btnPackSellConfirmPkg');
+    const btnCancelPkg = document.getElementById('btnPackSellCancelPkg');
+    const btnChangePkg = document.getElementById('btnPackSellChangePkg');
+    const btnSave = document.getElementById('btnSavePackSellToStock');
+
+    if (matSelect) matSelect.addEventListener('change', () => this.selectPackSellMaterial());
+    if (pkgSelect) pkgSelect.addEventListener('change', () => this.selectPackSellPackaging());
+    if (qtyInput) qtyInput.addEventListener('input', () => this.calculatePackSell());
+    if (priceInput) priceInput.addEventListener('input', () => this.calculatePackSell());
+
+    if (btnConfirmPkg) btnConfirmPkg.addEventListener('click', () => {
+      const sel = document.getElementById('packSellPackagingSelect');
+      if (!sel || !sel.value) { this.showToast('กรุณาเลือกบรรจุภัณฑ์ก่อน', 'error'); return; }
+      const name = sel.options[sel.selectedIndex]?.text || '';
+      const confirmedEl = document.getElementById('packSellPackagingConfirmed');
+      const confirmRow = document.getElementById('packSellPackagingConfirmRow');
+      const nameEl = document.getElementById('packSellPkgConfirmedName');
+      if (confirmedEl) confirmedEl.style.display = 'flex';
+      if (confirmRow) confirmRow.style.display = 'none';
+      if (nameEl) nameEl.textContent = name;
+      sel.disabled = true;
+      this.packSellPkgConfirmed = true;
+      this.calculatePackSell();
+    });
+
+    if (btnCancelPkg) btnCancelPkg.addEventListener('click', () => {
+      const sel = document.getElementById('packSellPackagingSelect');
+      if (sel) { sel.value = ''; sel.disabled = false; }
+      const infoBox = document.getElementById('packSellPackagingInfo');
+      const confirmRow = document.getElementById('packSellPackagingConfirmRow');
+      const confirmedEl = document.getElementById('packSellPackagingConfirmed');
+      if (infoBox) infoBox.style.display = 'none';
+      if (confirmRow) confirmRow.style.display = 'none';
+      if (confirmedEl) confirmedEl.style.display = 'none';
+      this.packSellPkgConfirmed = false;
+      this.selectedPackSellPkg = null;
+      this.calculatePackSell();
+    });
+
+    if (btnChangePkg) btnChangePkg.addEventListener('click', () => {
+      const sel = document.getElementById('packSellPackagingSelect');
+      if (sel) sel.disabled = false;
+      const confirmRow = document.getElementById('packSellPackagingConfirmRow');
+      const confirmedEl = document.getElementById('packSellPackagingConfirmed');
+      if (confirmRow) confirmRow.style.display = 'flex';
+      if (confirmedEl) confirmedEl.style.display = 'none';
+      this.packSellPkgConfirmed = false;
+    });
+
+    if (btnSave) btnSave.addEventListener('click', () => this.savePackSellToStock());
+  }
+
+  populatePackSellDropdowns() {
+    const matSelect = document.getElementById('packSellMaterialSelect');
+    const pkgSelect = document.getElementById('packSellPackagingSelect');
+    if (!matSelect || !pkgSelect) return;
+
+    // Material: only PACK_SELL category
+    const materials = (this.data.expenses || []).filter(e => e.category === 'PACK_SELL');
+    matSelect.innerHTML = '<option value="">-- เลือกวัตถุดิบที่ต้องการแพ็คขาย --</option>';
+    const seen = new Set();
+    materials.forEach(exp => {
+      const key = String(exp.title || '').toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      const pricing = this.getExpenseUnitPricing(exp);
+      const costInfo = pricing ? ` (ทุน ฿${pricing.costPerPiece.toFixed(2)}/${pricing.pieceName})` : ` (฿${Number(exp.amount).toFixed(0)})`;
+      const opt = document.createElement('option');
+      opt.value = exp.id;
+      opt.textContent = `${exp.title || 'ไม่ระบุ'}${costInfo}`;
+      matSelect.appendChild(opt);
+    });
+
+    // Packaging: PACKAGING category only
+    const packagings = (this.data.expenses || []).filter(e => e.category === 'PACKAGING');
+    pkgSelect.innerHTML = '<option value="">-- เลือกบรรจุภัณฑ์ --</option>';
+    const seenPkg = new Set();
+    packagings.forEach(exp => {
+      const key = String(exp.title || '').toLowerCase();
+      if (seenPkg.has(key)) return;
+      seenPkg.add(key);
+      const pricing = this.getExpenseUnitPricing(exp);
+      const costInfo = pricing ? ` (ทุน ฿${pricing.costPerPiece.toFixed(2)}/${pricing.pieceName})` : ` (฿${Number(exp.amount).toFixed(0)})`;
+      const opt = document.createElement('option');
+      opt.value = exp.id;
+      opt.textContent = `${exp.title || 'ไม่ระบุ'}${costInfo}`;
+      pkgSelect.appendChild(opt);
+    });
+  }
+
+  selectPackSellMaterial() {
+    const sel = document.getElementById('packSellMaterialSelect');
+    const infoBox = document.getElementById('packSellMaterialInfo');
+    if (!sel || !infoBox) return;
+
+    if (!sel.value) { infoBox.style.display = 'none'; this.selectedPackSellMat = null; this.calculatePackSell(); return; }
+
+    const exp = (this.data.expenses || []).find(e => String(e.id) === String(sel.value));
+    if (!exp) { infoBox.style.display = 'none'; return; }
+
+    const pricing = this.getExpenseUnitPricing(exp);
+    const totalCost = Number(exp.amount) || 0;
+    const pSize = Number(exp.packSize) || 1;
+    const pUnit = exp.packUnit || 'หน่วย';
+    const costPerPiece = pricing ? pricing.costPerPiece : (totalCost / pSize);
+    const pieceName = pricing ? pricing.pieceName : pUnit;
+
+    this.selectedPackSellMat = { exp, pricing, totalCost, costPerPiece, pieceName, pSize, pUnit };
+
+    infoBox.style.display = 'block';
+    infoBox.innerHTML = `
+      <div style="display:flex; align-items:center; gap:0.5rem; padding:0.6rem 0.8rem; background:#eff6ff; border-radius:8px; border:1px solid #bfdbfe;">
+        <i data-lucide="info" style="width:16px;height:16px;color:#3b82f6;flex-shrink:0;"></i>
+        <div style="font-size:0.85rem; line-height:1.5;">
+          <strong>${this.escapeHtml(exp.title)}</strong> — ${pSize} ${pUnit}<br>
+          ต้นทุนรวม: <strong>฿${totalCost.toFixed(2)}</strong> | ต้นทุนต่อ${pieceName}: <strong style="color:#dc2626;">฿${costPerPiece.toFixed(2)}</strong>
+        </div>
+      </div>
+    `;
+    this.refreshLucide();
+    this.calculatePackSell();
+  }
+
+  selectPackSellPackaging() {
+    const sel = document.getElementById('packSellPackagingSelect');
+    const infoBox = document.getElementById('packSellPackagingInfo');
+    const confirmRow = document.getElementById('packSellPackagingConfirmRow');
+    if (!sel || !infoBox) return;
+
+    if (!sel.value) { infoBox.style.display = 'none'; if (confirmRow) confirmRow.style.display = 'none'; this.selectedPackSellPkg = null; this.calculatePackSell(); return; }
+
+    const exp = (this.data.expenses || []).find(e => String(e.id) === String(sel.value));
+    if (!exp) { infoBox.style.display = 'none'; return; }
+
+    const pricing = this.getExpenseUnitPricing(exp);
+    const totalCost = Number(exp.amount) || 0;
+    const pSize = Number(exp.packSize) || 1;
+    const costPerPiece = pricing ? pricing.costPerPiece : (totalCost / pSize);
+    const pieceName = pricing ? pricing.pieceName : (exp.packUnit || 'ชิ้น');
+
+    this.selectedPackSellPkg = { exp, pricing, costPerPiece, pieceName };
+
+    infoBox.style.display = 'block';
+    infoBox.innerHTML = `
+      <div style="display:flex; align-items:center; gap:0.5rem; padding:0.6rem 0.8rem; background:#fefce8; border-radius:8px; border:1px solid #fde68a;">
+        <i data-lucide="box" style="width:16px;height:16px;color:#d97706;flex-shrink:0;"></i>
+        <div style="font-size:0.85rem; line-height:1.5;">
+          <strong>${this.escapeHtml(exp.title)}</strong><br>
+          ต้นทุนต่อชิ้น: <strong style="color:#d97706;">฿${costPerPiece.toFixed(2)}</strong>/${pieceName}
+        </div>
+      </div>
+    `;
+    if (confirmRow) confirmRow.style.display = 'flex';
+    this.refreshLucide();
+  }
+
+  calculatePackSell() {
+    const resultSection = document.getElementById('packSellResultSection');
+    const qty = parseInt(document.getElementById('packSellQty')?.value) || 0;
+    const price = parseFloat(document.getElementById('packSellPrice')?.value) || 0;
+
+    if (!this.selectedPackSellMat || qty <= 0 || price <= 0) {
+      if (resultSection) resultSection.style.display = 'none';
+      return;
+    }
+
+    const matCostPer = this.selectedPackSellMat.totalCost / qty;
+    const pkgCostPer = (this.selectedPackSellPkg && this.packSellPkgConfirmed) ? this.selectedPackSellPkg.costPerPiece : 0;
+    const totalCostPer = matCostPer + pkgCostPer;
+    const totalRevenue = price * qty;
+    const profitPer = price - totalCostPer;
+    const totalProfit = profitPer * qty;
+
+    if (resultSection) resultSection.style.display = 'block';
+
+    const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = `฿${val.toFixed(2)}`; };
+    setEl('psResMaterialCostPer', matCostPer);
+    setEl('psResPackagingCostPer', pkgCostPer);
+    setEl('psResTotalCostPer', totalCostPer);
+    setEl('psResSellPricePer', price);
+    setEl('psResTotalRevenue', totalRevenue);
+    setEl('psResProfitPer', profitPer);
+    setEl('psResTotalProfit', totalProfit);
+
+    // Summary banner
+    const banner = document.getElementById('packSellSummaryBanner');
+    if (banner) {
+      const matName = this.selectedPackSellMat.exp.title || 'วัตถุดิบ';
+      const pkgName = (this.selectedPackSellPkg && this.packSellPkgConfirmed) ? this.selectedPackSellPkg.exp.title : '-';
+      const profitClass = totalProfit >= 0 ? 'color:#16a34a;' : 'color:#dc2626;';
+      banner.innerHTML = `
+        <div style="padding:0.75rem 1rem; background:linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%); border-radius:10px; border:1px solid #bbf7d0; font-size:0.85rem; line-height:1.6;">
+          <div style="font-weight:700; margin-bottom:0.3rem;">📋 สรุป: ${this.escapeHtml(matName)} แพ็คใส่ ${this.escapeHtml(pkgName)}</div>
+          <div>จำนวน <strong>${qty}</strong> ชิ้น × ขายชิ้นละ <strong>฿${price.toFixed(2)}</strong></div>
+          <div>ต้นทุนรวมต่อชิ้น: <strong style="color:#dc2626;">฿${totalCostPer.toFixed(2)}</strong> | กำไรต่อชิ้น: <strong style="${profitClass}">฿${profitPer.toFixed(2)}</strong></div>
+          <div style="margin-top:0.3rem; font-weight:700; font-size:1rem; ${profitClass}">🎯 กำไรรวม: ฿${totalProfit.toFixed(2)}</div>
+        </div>
+      `;
+    }
+
+    // Store for save
+    this.packSellCalcResult = {
+      matName: this.selectedPackSellMat.exp.title || 'วัตถุดิบ',
+      pkgName: (this.selectedPackSellPkg && this.packSellPkgConfirmed) ? this.selectedPackSellPkg.exp.title : '',
+      qty, price, matCostPer, pkgCostPer, totalCostPer, totalRevenue, profitPer, totalProfit
+    };
+  }
+
+  savePackSellToStock() {
+    if (!this.packSellCalcResult || this.packSellCalcResult.qty <= 0) {
+      this.showToast('กรุณากรอกข้อมูลให้ครบก่อนบันทึก', 'error');
+      return;
+    }
+
+    const r = this.packSellCalcResult;
+    const productName = `${r.matName} (แพ็คขาย${r.pkgName ? ' ใส่' + r.pkgName : ''})`;
+
+    if (!Array.isArray(this.data.stockItems)) this.data.stockItems = [];
+    if (!Array.isArray(this.data.stockLogs)) this.data.stockLogs = [];
+
+    const existing = this.data.stockItems.find(s => s.name && s.name.toLowerCase() === productName.toLowerCase());
+
+    if (existing) {
+      const oldQty = Number(existing.qty) || 0;
+      existing.qty = oldQty + r.qty;
+      existing.unitCost = parseFloat(r.totalCostPer.toFixed(2));
+      existing.sellingPrice = r.price;
+      this.data.stockLogs.push({
+        id: 'sl_' + Date.now(),
+        date: this.formatDate(new Date()),
+        itemId: existing.id,
+        itemName: existing.name,
+        action: 'restock',
+        qtyChange: r.qty,
+        qtyBefore: oldQty,
+        qtyAfter: existing.qty,
+        note: `แพ็คขาย +${r.qty} ชิ้น ทุน ฿${r.totalCostPer.toFixed(2)} ขาย ฿${r.price}`
+      });
+      this.showToast(`อัพเดทสต๊อก "${productName}" +${r.qty} ชิ้น สำเร็จ!`, 'success');
+    } else {
+      const newItem = {
+        id: 'stk_' + Date.now() + Math.random().toString(36).substring(2, 5),
+        name: productName,
+        category: 'PACK_SELL',
+        unit: 'ชิ้น',
+        qty: r.qty,
+        minQty: Math.max(1, Math.round(r.qty * 0.25)),
+        unitCost: parseFloat(r.totalCostPer.toFixed(2)),
+        sellingPrice: r.price,
+        supplier: '',
+        note: `แพ็คจาก ${r.matName}${r.pkgName ? ' + ' + r.pkgName : ''}`
+      };
+      this.data.stockItems.push(newItem);
+      this.data.stockLogs.push({
+        id: 'sl_' + Date.now(),
+        date: this.formatDate(new Date()),
+        itemId: newItem.id,
+        itemName: newItem.name,
+        action: 'add',
+        qtyChange: r.qty,
+        qtyBefore: 0,
+        qtyAfter: r.qty,
+        note: `สร้างสินค้าแพ็คขายใหม่ ${r.qty} ชิ้น ทุน ฿${r.totalCostPer.toFixed(2)} ขาย ฿${r.price}`
+      });
+      this.showToast(`เพิ่มสินค้า "${productName}" ${r.qty} ชิ้น เข้าสต๊อกสำเร็จ!`, 'success');
+    }
+
+    this.saveData();
+    this.renderStock();
+  }
+
+  // =========================================================================
+  // 💰 DRINK SALES - คำนวณการขายน้ำชง
+  // =========================================================================
+
+  initDrinkSales() {
+    // Bind cup count inputs
+    document.querySelectorAll('.drink-sales-cup-before, .drink-sales-cup-after').forEach(input => {
+      input.addEventListener('input', () => this.calculateDrinkSalesCups());
+    });
+
+    // Bind add-recipe button
+    const btnAddRecipe = document.getElementById('btnDrinkSalesAddRecipe');
+    if (btnAddRecipe) btnAddRecipe.addEventListener('click', () => this.openDrinkSalesRecipeModal());
+
+    // Bind calculate button
+    const btnCalc = document.getElementById('btnDrinkSalesCalculate');
+    if (btnCalc) btnCalc.addEventListener('click', () => this.calculateDrinkSalesProfit());
+  }
+
+  populateDrinkSalesRecipes() {
+    const select = document.getElementById('drinkSalesRecipeSelect');
+    if (!select) return;
+
+    // Get jar/pitcher recipes (🏺 ต่อ 1 โหล type: mode !== 'cup')
+    const recipes = (this.data.recipes || []).filter(r => {
+      const mode = r.mode || (r.yieldCups === 1 && (!r.jarLiters || r.jarLiters <= 0.5) ? 'cup' : 'jar');
+      return mode !== 'cup';
+    });
+
+    select.innerHTML = '<option value="">-- เลือกสูตรน้ำ --</option>';
+    recipes.forEach(recipe => {
+      const totalCost = this.calculateRecipeJarCost(recipe);
+      const unitCost = this.calculateRecipeUnitCost(recipe);
+      const yieldCups = parseInt(recipe.yieldCups) || 24;
+      const opt = document.createElement('option');
+      opt.value = recipe.id;
+      opt.textContent = `${recipe.name || 'ไม่ระบุ'} (ทุนโหล ฿${totalCost.toFixed(1)} | ตก ฿${unitCost.toFixed(2)}/แก้ว)`;
+      select.appendChild(opt);
+    });
+  }
+
+  calculateDrinkSalesCups() {
+    const sizes = ['10', '16', '28'];
+    let totalSold = 0;
+    let totalRevenue = 0;
+
+    sizes.forEach(size => {
+      const before = parseInt(document.getElementById(`dsCupBefore${size}`)?.value) || 0;
+      const after = parseInt(document.getElementById(`dsCupAfter${size}`)?.value) || 0;
+      const sold = Math.max(0, before - after);
+      const priceEl = document.getElementById(`dsCupPrice${size}`);
+      const price = parseFloat(priceEl?.value) || 0;
+      const soldEl = document.getElementById(`dsCupSold${size}`);
+      if (soldEl) soldEl.textContent = `${sold} แก้ว`;
+
+      const revEl = document.getElementById(`dsCupRev${size}`);
+      const rev = sold * price;
+      if (revEl) revEl.textContent = `฿${rev.toFixed(0)}`;
+
+      totalSold += sold;
+      totalRevenue += rev;
+    });
+
+    const totalSoldEl = document.getElementById('dsTotalCupsSold');
+    const totalRevEl = document.getElementById('dsTotalRevenue');
+    if (totalSoldEl) totalSoldEl.textContent = `${totalSold} แก้ว`;
+    if (totalRevEl) totalRevEl.textContent = `฿${totalRevenue.toFixed(0)}`;
+
+    this.drinkSalesData = { totalSold, totalRevenue };
+  }
+
+  openDrinkSalesRecipeModal() {
+    this.populateDrinkSalesRecipes();
+    const modal = document.getElementById('drinkSalesRecipeModal');
+    if (modal) modal.classList.add('active');
+    this.refreshLucide();
+  }
+
+  closeDrinkSalesRecipeModal() {
+    const modal = document.getElementById('drinkSalesRecipeModal');
+    if (modal) modal.classList.remove('active');
+  }
+
+  addDrinkSalesRecipe() {
+    const select = document.getElementById('drinkSalesRecipeSelect');
+    if (!select || !select.value) { this.showToast('กรุณาเลือกสูตรน้ำก่อน', 'error'); return; }
+
+    const recipe = (this.data.recipes || []).find(r => String(r.id) === String(select.value));
+    if (!recipe) return;
+
+    if (!this.drinkSalesSelectedRecipes) this.drinkSalesSelectedRecipes = [];
+
+    // Check duplicate
+    if (this.drinkSalesSelectedRecipes.find(r => String(r.id) === String(recipe.id))) {
+      this.showToast('สูตรน้ำนี้เลือกไปแล้ว', 'warning');
+      return;
+    }
+
+    const totalCost = this.calculateRecipeJarCost(recipe);
+    const costPerCup = this.calculateRecipeUnitCost(recipe);
+    const cupsPerBatch = parseInt(recipe.yieldCups) || 24;
+
+    this.drinkSalesSelectedRecipes.push({
+      id: recipe.id,
+      name: recipe.name,
+      totalCost,
+      cupsPerBatch,
+      costPerCup
+    });
+
+    this.closeDrinkSalesRecipeModal();
+    this.renderDrinkSalesSelectedRecipes();
+    this.showToast(`เพิ่มสูตร "${recipe.name}" แล้ว`, 'success');
+  }
+
+  removeDrinkSalesRecipe(recipeId) {
+    if (!this.drinkSalesSelectedRecipes) return;
+    this.drinkSalesSelectedRecipes = this.drinkSalesSelectedRecipes.filter(r => String(r.id) !== String(recipeId));
+    this.renderDrinkSalesSelectedRecipes();
+  }
+
+  renderDrinkSalesSelectedRecipes() {
+    const container = document.getElementById('drinkSalesSelectedRecipesList');
+    if (!container) return;
+
+    if (!this.drinkSalesSelectedRecipes || this.drinkSalesSelectedRecipes.length === 0) {
+      container.innerHTML = `<div style="text-align:center; color:#94a3b8; padding:1rem; font-size:0.85rem;">ยังไม่ได้เลือกสูตรน้ำ กดปุ่ม "+ เพิ่มสูตรน้ำ" ด้านบน</div>`;
+      return;
+    }
+
+    container.innerHTML = this.drinkSalesSelectedRecipes.map(r => `
+      <div style="display:flex; align-items:center; justify-content:space-between; padding:0.5rem 0.75rem; background:#f8fafc; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:0.4rem;">
+        <div>
+          <div style="font-weight:600; font-size:0.85rem;">${this.escapeHtml(r.name)}</div>
+          <div style="font-size:0.75rem; color:#64748b;">ต้นทุน ฿${r.totalCost.toFixed(2)}/ถัง → ฿${r.costPerCup.toFixed(2)}/แก้ว (${r.cupsPerBatch} แก้ว/ถัง)</div>
+        </div>
+        <button type="button" class="icon-btn" style="color:#ef4444; width:28px; height:28px;" onclick="app.removeDrinkSalesRecipe('${r.id}')">
+          <i data-lucide="x" style="width:14px;height:14px;"></i>
+        </button>
+      </div>
+    `).join('');
+    this.refreshLucide();
+  }
+
+  calculateDrinkSalesProfit() {
+    if (!this.drinkSalesData || this.drinkSalesData.totalSold === 0) {
+      this.showToast('กรุณากรอกจำนวนแก้วก่อน-หลังขายก่อน', 'error');
+      return;
+    }
+    if (!this.drinkSalesSelectedRecipes || this.drinkSalesSelectedRecipes.length === 0) {
+      this.showToast('กรุณาเลือกสูตรน้ำอย่างน้อย 1 สูตร', 'error');
+      return;
+    }
+
+    const totalSold = this.drinkSalesData.totalSold;
+    const totalRevenue = this.drinkSalesData.totalRevenue;
+
+    // Average cost per cup from selected recipes
+    const avgCostPerCup = this.drinkSalesSelectedRecipes.reduce((sum, r) => sum + r.costPerCup, 0) / this.drinkSalesSelectedRecipes.length;
+
+    const totalCost = avgCostPerCup * totalSold;
+    const totalProfit = totalRevenue - totalCost;
+    const profitPerCup = totalSold > 0 ? (totalProfit / totalSold) : 0;
+
+    const resultSection = document.getElementById('drinkSalesResultSection');
+    if (resultSection) resultSection.style.display = 'block';
+
+    // Per-recipe breakdown
+    let recipeBreakdownHtml = this.drinkSalesSelectedRecipes.map(r => {
+      const cost = r.costPerCup * totalSold;
+      const profit = totalRevenue - cost;
+      return `
+        <div style="padding:0.5rem 0.75rem; background:#f8fafc; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:0.4rem;">
+          <div style="font-weight:600; font-size:0.85rem;">${this.escapeHtml(r.name)}</div>
+          <div style="font-size:0.8rem; color:#64748b; display:flex; gap:1rem; flex-wrap:wrap; margin-top:0.2rem;">
+            <span>ทุน/แก้ว: <strong style="color:#dc2626;">฿${r.costPerCup.toFixed(2)}</strong></span>
+            <span>ทุนรวม: <strong>฿${cost.toFixed(2)}</strong></span>
+            <span>กำไร: <strong style="color:${profit >= 0 ? '#16a34a' : '#dc2626'};">฿${profit.toFixed(2)}</strong></span>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    const profitColor = totalProfit >= 0 ? '#16a34a' : '#dc2626';
+
+    document.getElementById('dsResultContent').innerHTML = `
+      <div class="pack-sell-result-grid">
+        <div class="pack-sell-result-card cost-card">
+          <div class="pack-sell-result-title">📊 สรุปยอดขาย</div>
+          <div class="pack-sell-result-row">
+            <span>จำนวนแก้วที่ขายได้</span>
+            <strong>${totalSold} แก้ว</strong>
+          </div>
+          <div class="pack-sell-result-row">
+            <span>รายรับรวม</span>
+            <strong class="text-primary">฿${totalRevenue.toFixed(2)}</strong>
+          </div>
+          <div class="pack-sell-result-row">
+            <span>ต้นทุนเฉลี่ยต่อแก้ว</span>
+            <strong style="color:#dc2626;">฿${avgCostPerCup.toFixed(2)}</strong>
+          </div>
+          <div class="pack-sell-result-row highlight">
+            <span>ต้นทุนรวม (เฉลี่ย)</span>
+            <strong style="color:#dc2626;">฿${totalCost.toFixed(2)}</strong>
+          </div>
+        </div>
+
+        <div class="pack-sell-result-card profit-card">
+          <div class="pack-sell-result-title">💰 กำไร</div>
+          <div class="pack-sell-result-row">
+            <span>กำไรเฉลี่ยต่อแก้ว</span>
+            <strong style="color:${profitColor};">฿${profitPerCup.toFixed(2)}</strong>
+          </div>
+          <div class="pack-sell-result-row highlight-total">
+            <span>🎯 กำไรรวมทั้งหมด</span>
+            <strong style="color:${profitColor}; font-size:1.1rem;">฿${totalProfit.toFixed(2)}</strong>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:0.75rem;">
+        <div style="font-weight:700; font-size:0.9rem; margin-bottom:0.4rem;">📋 แยกตามสูตรน้ำ (${this.drinkSalesSelectedRecipes.length} สูตร)</div>
+        ${recipeBreakdownHtml}
+      </div>
+    `;
+    this.refreshLucide();
   }
 
   escapeHtml(str) {

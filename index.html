@@ -60,7 +60,7 @@
 
       <!-- Navigation Links -->
       <nav class="sidebar-nav">
-        <div class="nav-section-title">ภาพรวมระบบ</div>
+        <div class="nav-section-title">แดชบอร์ดภาพรวม</div>
         <button class="nav-item nav-item-main active" data-tab="dashboard">
           <i data-lucide="layout-dashboard"></i>
           <span>แดชบอร์ดภาพรวม</span>
@@ -94,7 +94,19 @@
           </button>
         </div>
 
-        <div class="nav-section-title mt-4">สต๊อกร้านค้า</div>
+        <div class="nav-section-title mt-4">คำนวณการขาย</div>
+        <div class="nav-sub-group">
+          <button class="nav-item nav-item-sub" data-tab="pack-sell">
+            <i data-lucide="package"></i>
+            <span>📦 แพ็คขาย</span>
+          </button>
+          <button class="nav-item nav-item-sub" data-tab="drink-sales">
+            <i data-lucide="coffee"></i>
+            <span>💰 น้ำชง</span>
+          </button>
+        </div>
+
+        <div class="nav-section-title mt-4">สต๊อกร้านค้า & วัตถุดิบ</div>
         <button class="nav-item nav-item-main" data-tab="stock">
           <i data-lucide="boxes"></i>
           <span>สต๊อกร้านค้า & วัตถุดิบ</span>
@@ -618,6 +630,11 @@
                 <span class="pill-lbl">🛠️ อื่นๆ</span>
                 <span class="pill-val" style="color:#64748b;" id="expCategoryOther">฿0</span>
               </div>
+              <div class="feh-stat-pill" onclick="app.setExpenseCategory('PACK_SELL')">
+                <span class="pill-dot" style="background:#ea580c;"></span>
+                <span class="pill-lbl">📦 แพ็คขาย</span>
+                <span class="pill-val" style="color:#ea580c;" id="expCategoryPackSell">฿0</span>
+              </div>
             </div>
           </div>
 
@@ -647,6 +664,10 @@
               <i data-lucide="more-horizontal"></i>
               <span>ค่าใช้จ่ายอื่นๆ</span>
             </button>
+            <button type="button" class="figma-pill-filter" data-cat="PACK_SELL">
+              <i data-lucide="package"></i>
+              <span>ของแพ็คขาย</span>
+            </button>
             <select id="expenseCategoryFilter" style="display:none;">
               <option value="ALL">ALL</option>
               <option value="INGREDIENT">INGREDIENT</option>
@@ -654,6 +675,7 @@
               <option value="FRIDGE_DRINK">FRIDGE_DRINK</option>
               <option value="STOCK">STOCK</option>
               <option value="OTHER">OTHER</option>
+              <option value="PACK_SELL">PACK_SELL</option>
             </select>
           </div>
 
@@ -1374,6 +1396,10 @@
                   <input type="radio" name="stockSubFilter" value="OTHER">
                   <span>🛠️ อื่นๆ</span>
                 </label>
+                <label class="radio-tab">
+                  <input type="radio" name="stockSubFilter" value="PACK_SELL">
+                  <span>📦 ของแพ็คขาย</span>
+                </label>
               </div>
             </div>
 
@@ -1599,6 +1625,307 @@
           </div>
         </div>
       </section>
+
+      <!-- TAB: PACK SELL (คำนวณการขาย / 📦 แพ็คขาย) -->
+      <section id="tab-pack-sell" class="tab-pane">
+        <div class="figma-mobile-container">
+
+          <div class="section-header mb-3">
+            <div>
+              <h2 class="page-title">📦 คำนวณการขาย</h2>
+              <p class="page-desc">คำนวณต้นทุนสินค้าที่นำมาแบ่งแพ็คเพื่อจำหน่าย โดยดึงข้อมูลจากหน้าบันทึกต้นทุน & วัตถุดิบ</p>
+            </div>
+          </div>
+
+          <!-- 📦 แพ็คขาย Section -->
+          <div class="card mb-3">
+            <div class="card-header">
+              <div class="card-header-title">
+                <i data-lucide="package"></i>
+                <span>📦 แพ็คขาย</span>
+              </div>
+            </div>
+            <div class="card-body">
+
+              <!-- Step 1: เลือกวัตถุดิบ -->
+              <div class="form-group mb-3">
+                <label class="form-label font-bold" style="display:flex; align-items:center; gap:0.3rem;">
+                  <span style="background:var(--primary); color:#fff; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:700;">1</span>
+                  เลือกวัตถุดิบ
+                </label>
+                <select id="packSellMaterialSelect" class="form-input" style="height:42px;">
+                  <option value="">-- เลือกวัตถุดิบที่ต้องการแพ็คขาย --</option>
+                </select>
+                <div id="packSellMaterialInfo" class="pack-sell-info-box" style="display:none;">
+                  <!-- จะแสดงข้อมูลวัตถุดิบที่เลือก -->
+                </div>
+              </div>
+
+              <!-- Step 2: เลือกบรรจุภัณฑ์ -->
+              <div class="form-group mb-3">
+                <label class="form-label font-bold" style="display:flex; align-items:center; gap:0.3rem;">
+                  <span style="background:var(--primary); color:#fff; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:700;">2</span>
+                  เลือกบรรจุภัณฑ์
+                </label>
+                <select id="packSellPackagingSelect" class="form-input" style="height:42px;">
+                  <option value="">-- เลือกบรรจุภัณฑ์ --</option>
+                </select>
+                <div id="packSellPackagingInfo" class="pack-sell-info-box" style="display:none;">
+                  <!-- จะแสดงข้อมูลบรรจุภัณฑ์ -->
+                </div>
+                <div id="packSellPackagingConfirmRow" style="display:none; margin-top:0.5rem; display:flex; gap:0.5rem;">
+                  <button type="button" class="btn-fastwork" id="btnPackSellConfirmPkg" style="font-size:0.85rem; padding:0.4rem 1rem;">
+                    <i data-lucide="check" style="width:14px;height:14px;"></i> ตกลง
+                  </button>
+                  <button type="button" class="btn-outline-fastwork" id="btnPackSellCancelPkg" style="font-size:0.85rem; padding:0.4rem 1rem;">
+                    <i data-lucide="x" style="width:14px;height:14px;"></i> ยกเลิก
+                  </button>
+                </div>
+                <div id="packSellPackagingConfirmed" class="pack-sell-confirmed-badge" style="display:none;">
+                  ✅ เลือกบรรจุภัณฑ์แล้ว: <span id="packSellPkgConfirmedName"></span>
+                  <button type="button" class="pack-sell-change-btn" id="btnPackSellChangePkg">เปลี่ยน</button>
+                </div>
+              </div>
+
+              <!-- Step 3: กรอกจำนวนแพ็ค -->
+              <div class="form-group mb-3">
+                <label class="form-label font-bold" style="display:flex; align-items:center; gap:0.3rem;">
+                  <span style="background:var(--primary); color:#fff; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:700;">3</span>
+                  กรอกจำนวนแพ็คและราคาขาย
+                </label>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem;">
+                  <div>
+                    <label class="form-label text-sm" for="packSellQty">จำนวนที่แพ็คได้ทั้งหมด (ชิ้น)</label>
+                    <input type="number" id="packSellQty" class="form-input" placeholder="เช่น 20" min="1" step="1" style="height:40px;">
+                  </div>
+                  <div>
+                    <label class="form-label text-sm" for="packSellPrice">ราคาขายต่อชิ้น (บาท)</label>
+                    <div class="input-with-affix">
+                      <span class="affix-left">฿</span>
+                      <input type="number" id="packSellPrice" class="form-input" placeholder="เช่น 15" min="0" step="0.5" style="height:40px;">
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Step 4: ผลคำนวณ -->
+              <div id="packSellResultSection" style="display:none;">
+                <div class="form-group mb-2">
+                  <label class="form-label font-bold" style="display:flex; align-items:center; gap:0.3rem;">
+                    <span style="background:#16a34a; color:#fff; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:700;">4</span>
+                    ผลคำนวณต้นทุนและกำไร
+                  </label>
+                </div>
+
+                <div class="pack-sell-result-grid">
+                  <!-- ต้นทุน -->
+                  <div class="pack-sell-result-card cost-card">
+                    <div class="pack-sell-result-title">💰 ต้นทุน</div>
+                    <div class="pack-sell-result-row">
+                      <span>ต้นทุนวัตถุดิบต่อแพ็ค</span>
+                      <strong id="psResMaterialCostPer">฿0.00</strong>
+                    </div>
+                    <div class="pack-sell-result-row">
+                      <span>ต้นทุนบรรจุภัณฑ์ต่อแพ็ค</span>
+                      <strong id="psResPackagingCostPer">฿0.00</strong>
+                    </div>
+                    <div class="pack-sell-result-row highlight">
+                      <span>ต้นทุนรวมต่อแพ็ค</span>
+                      <strong id="psResTotalCostPer">฿0.00</strong>
+                    </div>
+                  </div>
+
+                  <!-- รายรับ & กำไร -->
+                  <div class="pack-sell-result-card profit-card">
+                    <div class="pack-sell-result-title">📈 รายรับ & กำไร</div>
+                    <div class="pack-sell-result-row">
+                      <span>ราคาขายต่อแพ็ค</span>
+                      <strong id="psResSellPricePer">฿0.00</strong>
+                    </div>
+                    <div class="pack-sell-result-row">
+                      <span>รายรับรวมจากการขายทั้งหมด</span>
+                      <strong id="psResTotalRevenue" class="text-primary">฿0.00</strong>
+                    </div>
+                    <div class="pack-sell-result-row highlight">
+                      <span>กำไรต่อแพ็ค</span>
+                      <strong id="psResProfitPer" class="text-green">฿0.00</strong>
+                    </div>
+                    <div class="pack-sell-result-row highlight-total">
+                      <span>🎯 กำไรรวมทั้งหมด</span>
+                      <strong id="psResTotalProfit" class="text-green">฿0.00</strong>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- สรุปภาพรวม -->
+                <div class="pack-sell-summary-banner" id="packSellSummaryBanner">
+                  <!-- Dynamic summary banner -->
+                </div>
+
+                <!-- ปุ่มบันทึกเข้าสต๊อกร้านค้า -->
+                <div style="margin-top:1.25rem; display:flex; flex-direction:column; gap:0.5rem;">
+                  <button type="button" class="btn-fastwork" id="btnSavePackSellToStock" style="width:100%; height:44px; font-size:0.95rem; display:flex; align-items:center; justify-content:center; gap:0.5rem; background:#16a34a; border-color:#16a34a;">
+                    <i data-lucide="boxes" style="width:18px;height:18px;"></i>
+                    <span>บันทึกเป็นสินค้าเข้าสต๊อกร้านค้า</span>
+                  </button>
+                  <span class="field-hint text-center" style="font-size:0.78rem;">
+                    💡 เมื่อกดบันทึก สินค้าที่แพ็คเสร็จจะถูกนำเข้าสู่ระบบสต๊อกร้านค้า & วัตถุดิบ โดยอัตโนมัติ (พร้อมต้นทุนและราคาขาย)
+                  </span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+
+      <!-- TAB: DRINK SALES - 💰 คำนวณการขายน้ำชง -->
+      <section id="tab-drink-sales" class="tab-pane">
+        <div class="figma-mobile-container">
+
+          <div class="section-header mb-3">
+            <div>
+              <h2 class="page-title">💰 คำนวณการขายน้ำชง</h2>
+              <p class="page-desc">นับจำนวนแก้วก่อน-หลังขาย เลือกสูตรน้ำ แล้วคำนวณกำไรเฉลี่ย</p>
+            </div>
+          </div>
+
+          <!-- ขั้นตอนที่ 1: นับแก้ว -->
+          <div class="card mb-3">
+            <div class="card-header">
+              <div class="card-header-title">
+                <i data-lucide="cup-soda"></i>
+                <span>🥤 นับจำนวนแก้วก่อน-หลังขาย</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <div style="overflow-x:auto;">
+                <table class="drink-sales-cup-table" style="width:100%; border-collapse:separate; border-spacing:0 0.3rem;">
+                  <thead>
+                    <tr style="font-size:0.8rem; color:#64748b; text-align:center;">
+                      <th style="padding:0.3rem; text-align:left;">ขนาดแก้ว</th>
+                      <th style="padding:0.3rem;">ราคาขาย</th>
+                      <th style="padding:0.3rem;">ก่อนขาย</th>
+                      <th style="padding:0.3rem;">หลังขาย</th>
+                      <th style="padding:0.3rem;">ขายได้</th>
+                      <th style="padding:0.3rem;">รายรับ</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr class="drink-sales-cup-row">
+                      <td style="font-weight:700; font-size:0.9rem;">10 oz</td>
+                      <td><div class="input-with-affix" style="width:80px;"><span class="affix-left" style="font-size:0.75rem;">฿</span><input type="number" id="dsCupPrice10" class="form-input drink-sales-cup-price" value="5" min="0" step="1" style="height:36px; text-align:center; font-weight:600;"></div></td>
+                      <td><input type="number" id="dsCupBefore10" class="form-input drink-sales-cup-before" placeholder="0" min="0" step="1" style="width:70px; height:36px; text-align:center;"></td>
+                      <td><input type="number" id="dsCupAfter10" class="form-input drink-sales-cup-after" placeholder="0" min="0" step="1" style="width:70px; height:36px; text-align:center;"></td>
+                      <td style="text-align:center; font-weight:700;" id="dsCupSold10">0 แก้ว</td>
+                      <td style="text-align:center; font-weight:600; color:var(--primary);" id="dsCupRev10">฿0</td>
+                    </tr>
+                    <tr class="drink-sales-cup-row">
+                      <td style="font-weight:700; font-size:0.9rem;">16 oz</td>
+                      <td><div class="input-with-affix" style="width:80px;"><span class="affix-left" style="font-size:0.75rem;">฿</span><input type="number" id="dsCupPrice16" class="form-input drink-sales-cup-price" value="10" min="0" step="1" style="height:36px; text-align:center; font-weight:600;"></div></td>
+                      <td><input type="number" id="dsCupBefore16" class="form-input drink-sales-cup-before" placeholder="0" min="0" step="1" style="width:70px; height:36px; text-align:center;"></td>
+                      <td><input type="number" id="dsCupAfter16" class="form-input drink-sales-cup-after" placeholder="0" min="0" step="1" style="width:70px; height:36px; text-align:center;"></td>
+                      <td style="text-align:center; font-weight:700;" id="dsCupSold16">0 แก้ว</td>
+                      <td style="text-align:center; font-weight:600; color:var(--primary);" id="dsCupRev16">฿0</td>
+                    </tr>
+                    <tr class="drink-sales-cup-row">
+                      <td style="font-weight:700; font-size:0.9rem;">28 oz</td>
+                      <td><div class="input-with-affix" style="width:80px;"><span class="affix-left" style="font-size:0.75rem;">฿</span><input type="number" id="dsCupPrice28" class="form-input drink-sales-cup-price" value="20" min="0" step="1" style="height:36px; text-align:center; font-weight:600;"></div></td>
+                      <td><input type="number" id="dsCupBefore28" class="form-input drink-sales-cup-before" placeholder="0" min="0" step="1" style="width:70px; height:36px; text-align:center;"></td>
+                      <td><input type="number" id="dsCupAfter28" class="form-input drink-sales-cup-after" placeholder="0" min="0" step="1" style="width:70px; height:36px; text-align:center;"></td>
+                      <td style="text-align:center; font-weight:700;" id="dsCupSold28">0 แก้ว</td>
+                      <td style="text-align:center; font-weight:600; color:var(--primary);" id="dsCupRev28">฿0</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.75rem; padding:0.6rem 0.8rem; background:#eff6ff; border-radius:8px; border:1px solid #bfdbfe;">
+                <div style="font-size:0.85rem;">
+                  <span style="color:#64748b;">ขายรวม:</span>
+                  <strong id="dsTotalCupsSold" style="margin-left:0.3rem;">0 แก้ว</strong>
+                </div>
+                <div style="font-size:0.95rem; font-weight:700; color:var(--primary);">
+                  <span style="color:#64748b; font-weight:400; font-size:0.85rem;">รายรับ:</span>
+                  <span id="dsTotalRevenue">฿0</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ขั้นตอนที่ 2: เลือกสูตรน้ำ -->
+          <div class="card mb-3">
+            <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+              <div class="card-header-title">
+                <i data-lucide="beaker"></i>
+                <span>🏺 เลือกสูตรน้ำ (คำนวณต้นทุนเฉลี่ย)</span>
+              </div>
+              <button type="button" class="btn-fastwork" id="btnDrinkSalesAddRecipe" style="font-size:0.8rem; padding:0.3rem 0.8rem; height:32px;">
+                <i data-lucide="plus" style="width:14px;height:14px;"></i> เพิ่มสูตรน้ำ
+              </button>
+            </div>
+            <div class="card-body">
+              <div id="drinkSalesSelectedRecipesList">
+                <div style="text-align:center; color:#94a3b8; padding:1rem; font-size:0.85rem;">ยังไม่ได้เลือกสูตรน้ำ กดปุ่ม "+ เพิ่มสูตรน้ำ" ด้านบน</div>
+              </div>
+              <span class="field-hint" style="font-size:0.78rem; margin-top:0.5rem; display:block;">
+                💡 เลือกหลายสูตรน้ำเพื่อคำนวณต้นทุนเฉลี่ยรวม สูตรจะถูกดึงจากหน้า "สูตรชงน้ำ" ประเภท 🏺 ต่อ 1 โหล (ถัง/เหยือก)
+              </span>
+            </div>
+          </div>
+
+          <!-- ขั้นตอนที่ 3: คำนวณกำไร -->
+          <div style="margin-bottom:1rem;">
+            <button type="button" class="btn-fastwork" id="btnDrinkSalesCalculate" style="width:100%; height:44px; font-size:0.95rem; display:flex; align-items:center; justify-content:center; gap:0.5rem;">
+              <i data-lucide="calculator" style="width:18px;height:18px;"></i>
+              <span>คำนวณกำไรการขาย</span>
+            </button>
+          </div>
+
+          <!-- ผลคำนวณ -->
+          <div id="drinkSalesResultSection" style="display:none;">
+            <div class="form-group mb-2">
+              <label class="form-label font-bold" style="display:flex; align-items:center; gap:0.3rem;">
+                <span style="background:#16a34a; color:#fff; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:700;">✓</span>
+                ผลคำนวณกำไรการขายน้ำชง
+              </label>
+            </div>
+            <div id="dsResultContent">
+              <!-- Dynamic results -->
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- Modal: เลือกสูตรน้ำสำหรับคำนวณการขาย -->
+      <div class="modal-backdrop" id="drinkSalesRecipeModal">
+        <div class="modal-container" style="max-width:420px;">
+          <div class="modal-header">
+            <h3 class="modal-title">🏺 เลือกสูตรน้ำ</h3>
+            <button type="button" class="icon-btn" onclick="app.closeDrinkSalesRecipeModal()">
+              <i data-lucide="x"></i>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="form-group mb-3">
+              <label class="form-label">สูตรน้ำ (ต่อ 1 โหล / ถัง / เหยือก)</label>
+              <select id="drinkSalesRecipeSelect" class="form-input" style="height:42px;">
+                <option value="">-- เลือกสูตรน้ำ --</option>
+              </select>
+            </div>
+          </div>
+          <div class="modal-footer" style="display:flex; gap:0.5rem;">
+            <button type="button" class="btn-outline-fastwork" onclick="app.closeDrinkSalesRecipeModal()" style="flex:1;">ยกเลิก</button>
+            <button type="button" class="btn-fastwork" onclick="app.addDrinkSalesRecipe()" style="flex:1;">
+              <i data-lucide="plus" style="width:14px;height:14px;"></i> เพิ่มสูตรนี้
+            </button>
+          </div>
+        </div>
+      </div>
+
 
       <!-- TAB 7: SETTINGS & BACKUP -->
       <section id="tab-settings" class="tab-pane">
@@ -1878,6 +2205,7 @@
               <option value="FRIDGE_DRINK">🧊 น้ำขายในตู้</option>
               <option value="STOCK">📦 สินค้าสำเร็จรูป</option>
               <option value="OTHER">🛠️ ค่าใช้จ่ายอื่นๆ</option>
+              <option value="PACK_SELL">📦 ของแพ็คขาย</option>
             </select>
           </div>
         </div>
@@ -2332,6 +2660,7 @@
               <option value="FRIDGE_DRINK">🧊 น้ำขายในตู้ (น้ำอัดลม/น้ำเปล่า/ขวดแช่เย็น)</option>
               <option value="STOCK">📦 สินค้าสำเร็จรูป/ยกลัง (พร้อมขาย)</option>
               <option value="OTHER">🛠️ อุปกรณ์และอื่นๆ</option>
+              <option value="PACK_SELL">📦 ของแพ็คขาย</option>
             </select>
           </div>
           <div class="form-group">
