@@ -4796,7 +4796,7 @@ class WaterFlowApp {
           netWeightInput.value = (exp.netWeight !== undefined && exp.netWeight !== null && exp.netWeight !== '') ? exp.netWeight : '';
         }
         if (netUnitInput) {
-          netUnitInput.value = exp.netUnit || 'g';
+          netUnitInput.value = exp.netUnit || (exp.category === 'FRIDGE_DRINK' ? 'ml' : 'g');
         }
 
         const expSupplierEl = document.getElementById('expSupplier');
@@ -4853,8 +4853,9 @@ class WaterFlowApp {
       if (customUnitInput) customUnitInput.style.display = 'none';
       const netWeightInput = document.getElementById('expNetWeight');
       const netUnitInput = document.getElementById('expNetUnit');
+      const expCatEl = document.getElementById('expCategory');
       if (netWeightInput) netWeightInput.value = '';
-      if (netUnitInput) netUnitInput.value = 'g';
+      if (netUnitInput) netUnitInput.value = (expCatEl && expCatEl.value === 'FRIDGE_DRINK') ? 'ml' : 'g';
       const crateBottlesInput = document.getElementById('expCrateBottles');
       if (crateBottlesInput) crateBottlesInput.value = 24;
       const expMinInput = document.getElementById('expMinQty');
@@ -4894,6 +4895,23 @@ class WaterFlowApp {
     }
 
     this.updateExpenseModalPreview();
+
+    // Wire category change to set default net unit (ml for FRIDGE_DRINK)
+    const expCategoryEl = document.getElementById('expCategory');
+    if (expCategoryEl) {
+      expCategoryEl.onchange = () => {
+        const netUnitEl = document.getElementById('expNetUnit');
+        const netWeightEl = document.getElementById('expNetWeight');
+        if (expCategoryEl.value === 'FRIDGE_DRINK') {
+          if (netUnitEl && (!netWeightEl?.value || netUnitEl.value === 'g')) {
+            netUnitEl.value = 'ml';
+          }
+        } else if (netUnitEl && !netWeightEl?.value && netUnitEl.value === 'ml') {
+          netUnitEl.value = 'g';
+        }
+        this.updateExpenseModalPreview();
+      };
+    }
 
     // Wire live preview calculation listeners
     ['expAmount', 'expPackSize', 'expPackUnit', 'expTitle', 'expCrateBottles', 'expMinQty', 'expPackUnitCustom', 'expNetWeight', 'expNetUnit'].forEach(id => {
@@ -4936,6 +4954,14 @@ class WaterFlowApp {
     if (matched) {
       if (matched.category && document.getElementById('expCategory')) {
         document.getElementById('expCategory').value = matched.category;
+      }
+      const netUnitEl = document.getElementById('expNetUnit');
+      if (netUnitEl) {
+        if (matched.netUnit) {
+          netUnitEl.value = matched.netUnit;
+        } else if (matched.category === 'FRIDGE_DRINK') {
+          netUnitEl.value = 'ml';
+        }
       }
       const unitSelect = document.getElementById('expPackUnit');
       const customInput = document.getElementById('expPackUnitCustom');
