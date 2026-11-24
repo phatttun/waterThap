@@ -7491,12 +7491,18 @@ class WaterFlowApp {
 
     // Recipe Form Submit
     const recipeForm = document.getElementById('recipeForm');
-    if (recipeForm) {
+    if (recipeForm && !recipeForm._boundSubmit) {
+      recipeForm._boundSubmit = true;
       recipeForm.addEventListener('submit', (e) => {
         e.preventDefault();
+
+        if (this._isSavingRecipe) return;
+        this._isSavingRecipe = true;
+
         const editId = document.getElementById('recipeEditId')?.value || '';
         const name = (document.getElementById('recName')?.value || '').trim();
         if (!name) {
+          this._isSavingRecipe = false;
           this.showToast('กรุณากรอกชื่อเมนูเครื่องดื่ม', 'warning');
           document.getElementById('recName')?.focus();
           return;
@@ -7599,18 +7605,11 @@ class WaterFlowApp {
         const recModal = document.getElementById('recipeModal');
         if (recModal) recModal.classList.remove('active');
         this.renderRecipes();
-      });
 
-      const btnSaveRecipe = document.getElementById('btnSaveRecipe');
-      if (btnSaveRecipe && !btnSaveRecipe._bound) {
-        btnSaveRecipe._bound = true;
-        btnSaveRecipe.addEventListener('click', (e) => {
-          // หากเบราว์เซอร์ไม่ trigger submit ให้อนุญาตการ dispatch submit
-          if (recipeForm.requestSubmit) {
-            recipeForm.requestSubmit();
-          }
-        });
-      }
+        setTimeout(() => {
+          this._isSavingRecipe = false;
+        }, 300);
+      });
     }
 
     // Stock Quick Add & Form Submit
