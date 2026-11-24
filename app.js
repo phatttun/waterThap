@@ -8379,6 +8379,8 @@ class WaterFlowApp {
     if (priceInput) priceInput.value = defaultTotalExpense;
     if (dateInput) dateInput.value = this.formatDate(new Date());
     if (supInput) supInput.value = item.supplier || '';
+    const noteInput = document.getElementById('quickRestockNote');
+    if (noteInput) noteInput.value = '';
 
     // ฟังก์ชันคำนวณสด
     const updatePreview = () => {
@@ -8464,6 +8466,7 @@ class WaterFlowApp {
     const totalExpense = parseFloat(document.getElementById('quickRestockNewPrice')?.value) || 0;
     const purchaseDate = document.getElementById('quickRestockDate')?.value || this.formatDate(new Date());
     const supplier = document.getElementById('quickRestockSupplier')?.value.trim() || item.supplier || '';
+    const customNote = document.getElementById('quickRestockNote')?.value.trim() || '';
 
     if (addQty <= 0) {
       this.showToast('กรุณาระบุจำนวนที่ซื้อเพิ่มอย่างน้อย 1', 'error');
@@ -8510,14 +8513,18 @@ class WaterFlowApp {
       crateBottles: isBulk ? crateBottles : null,
       minQty: item.minQty,
       supplier: supplier,
-      note: `เติมสต๊อกด่วน: ทุนเดิม ฿${this.formatUnitCost(currentUnitCost)} → ทุนเฉลี่ยใหม่ ฿${this.formatUnitCost(newAvgCost)}/${item.unit || 'หน่วย'}`,
+      note: customNote
+        ? `${customNote} (เติมสต๊อกด่วน: ทุนเดิม ฿${this.formatUnitCost(currentUnitCost)} → ทุนเฉลี่ยใหม่ ฿${this.formatUnitCost(newAvgCost)}/${item.unit || 'หน่วย'})`
+        : `เติมสต๊อกด่วน: ทุนเดิม ฿${this.formatUnitCost(currentUnitCost)} → ทุนเฉลี่ยใหม่ ฿${this.formatUnitCost(newAvgCost)}/${item.unit || 'หน่วย'}`,
       stockItemId: item.id
     };
     this.data.expenses.unshift(newExpense);
 
     // 3. บันทึก Stock Log
     const crateSub = isBulk ? ` (~${(addQty / crateBottles).toFixed(2).replace(/\.?0+$/, '')} ${rawUnit})` : '';
-    const logNote = `ซื้อเพิ่ม +${addQty} ${item.unit || ''}${crateSub} (ราคารวม ฿${totalExpense} เฉลี่ย ฿${this.formatUnitCost(unitPriceThisRound)}/${item.unit || ''}) บันทึกรายจ่าย ฿${totalExpense} ทุนเฉลี่ยปรับเป็น ฿${this.formatUnitCost(newAvgCost)}`;
+    const supTag = supplier ? ` [ซื้อจาก: ${supplier}]` : '';
+    const noteTag = customNote ? ` [หมายเหตุ: ${customNote}]` : '';
+    const logNote = `ซื้อเพิ่ม +${addQty} ${item.unit || ''}${crateSub} (ราคารวม ฿${totalExpense} เฉลี่ย ฿${this.formatUnitCost(unitPriceThisRound)}/${item.unit || ''}) บันทึกรายจ่าย ฿${totalExpense} ทุนเฉลี่ยปรับเป็น ฿${this.formatUnitCost(newAvgCost)}${supTag}${noteTag}`;
     this.logStockAction(item.name, 'RESTOCK', addQty, totalQty, item.unit || '', logNote);
 
     // 4. บันทึกและรีเฟรชทุกหน้าจอ
@@ -9579,6 +9586,17 @@ class WaterFlowApp {
       const totalExp = quickRestockMatch[2];
       const avgRound = quickRestockMatch[3].trim();
       const newAvg = quickRestockMatch[5];
+      let tail = quickRestockMatch[6] || '';
+      let supHtml = '';
+      let noteText = '';
+      const supMatch = tail.match(/\[ซื้อจาก:\s*([^\]]+)\]/);
+      if (supMatch) {
+        supHtml = makeSupplierPill(supMatch[1]);
+      }
+      const noteMatch = tail.match(/\[หมายเหตุ:\s*([^\]]+)\]/);
+      if (noteMatch) {
+        noteText = noteMatch[1].trim();
+      }
       return `
         <div style="display:flex; flex-direction:column; gap:0.25rem;">
           <div style="display:flex; align-items:center; flex-wrap:wrap; gap:0.35rem;">
@@ -9588,9 +9606,13 @@ class WaterFlowApp {
             <span class="pill-tag" style="font-size:0.73rem; font-weight:700; padding:0.12rem 0.5rem; background:#fffbeb; color:#b45309; border:1px solid #fde68a;">
               🧾 จ่ายรวม ฿${this.escapeHtml(totalExp)}
             </span>
+            ${supHtml}
           </div>
-          <div style="font-size:0.75rem; color:#64748b;">
-            รอบนี้เฉลี่ย <b>฿${this.escapeHtml(avgRound)}</b> <span style="color:#cbd5e1;">•</span> ทุนเฉลี่ยใหม่ <b>฿${this.escapeHtml(newAvg)}</b>
+          <div style="font-size:0.75rem; color:#64748b; display:flex; align-items:center; flex-wrap:wrap; gap:0.4rem;">
+            <span>รอบนี้เฉลี่ย <b>฿${this.escapeHtml(avgRound)}</b></span>
+            <span style="color:#cbd5e1;">•</span>
+            <span>ทุนเฉลี่ยใหม่ <b>฿${this.escapeHtml(newAvg)}</b></span>
+            ${noteText ? `<span style="color:#cbd5e1;">•</span><span style="color:#334155;">📝 ${this.escapeHtml(noteText)}</span>` : ''}
           </div>
         </div>
       `;
