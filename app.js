@@ -8525,7 +8525,11 @@ class WaterFlowApp {
     const supTag = supplier ? ` [ซื้อจาก: ${supplier}]` : '';
     const noteTag = customNote ? ` [หมายเหตุ: ${customNote}]` : '';
     const logNote = `ซื้อเพิ่ม +${addQty} ${item.unit || ''}${crateSub} (ราคารวม ฿${totalExpense} เฉลี่ย ฿${this.formatUnitCost(unitPriceThisRound)}/${item.unit || ''}) บันทึกรายจ่าย ฿${totalExpense} ทุนเฉลี่ยปรับเป็น ฿${this.formatUnitCost(newAvgCost)}${supTag}${noteTag}`;
-    this.logStockAction(item.name, 'RESTOCK', addQty, totalQty, item.unit || '', logNote);
+    this.logStockAction(item.name, 'RESTOCK', addQty, totalQty, item.unit || '', logNote, {
+      itemId: item.id,
+      expenseId: newExpense.id,
+      prevUnitCost: currentUnitCost
+    });
 
     // 4. บันทึกและรีเฟรชทุกหน้าจอ
     this.saveData();
@@ -8982,6 +8986,74 @@ class WaterFlowApp {
     this.showToast(`↩️ คืนค่า "${itemName}" จำนวน ${qtyToRestore} ${unit} กลับเข้าสต๊อกเรียบร้อยแล้ว`, 'success');
   }
 
+  // ยกเลิกการเติมสต๊อก / หักคืนจำนวนสต๊อก (เผื่อผู้ใช้เติมผิดหรือบันทึกซ้ำ)
+  revertStockRestock(logId) {
+    if (!logId) return;
+    const logs = this.data.stockLogs || [];
+    const logIndex = logs.findIndex(l => l.id === logId);
+    if (logIndex === -1) {
+      this.showToast('ไม่พบรายการเติมสต๊อกที่ต้องการคืนค่าในระบบ', 'error');
+      return;
+    }
+
+    const log = logs[logIndex];
+    const qtyToRevert = Math.abs(Number(log.changeQty) || 0);
+    if (qtyToRevert <= 0) {
+      this.showToast('รายการนี้ไม่มีจำนวนที่ต้องคืนค่า', 'info');
+      return;
+    }
+
+    const itemName = log.itemName;
+    const unit = log.unit || 'หน่วย';
+
+    // 1. หักจำนวนสต๊อกที่เติมเกินออก
+    let item = null;
+    if (log.itemId) {
+      item = (this.data.stockItems || []).find(x => x.id === log.itemId);
+    }
+    if (!item) {
+      item = (this.data.stockItems || []).find(x => x.name === itemName);
+    }
+
+    let newQty = 0;
+    if (item) {
+      item.qty = Math.max(0, parseFloat(((Number(item.qty) || 0) - qtyToRevert).toFixed(2)));
+      newQty = item.qty;
+      if (log.prevUnitCost !== undefined && log.prevUnitCost !== null && !isNaN(Number(log.prevUnitCost))) {
+        item.unitCost = Number(log.prevUnitCost);
+      }
+    }
+
+    // 2. หากมีบิลรายจ่ายที่สร้างคู่กับการเติมสต๊อกด่วน ให้ลบออกด้วย
+    if (log.expenseId && Array.isArray(this.data.expenses)) {
+      const expIdx = this.data.expenses.findIndex(e => e && String(e.id) === String(log.expenseId));
+      if (expIdx !== -1) {
+        this.data.expenses.splice(expIdx, 1);
+      }
+    }
+
+    // 3. ลบรายการ log เติมสต๊อกเดิมออกจาก stockLogs
+    logs.splice(logIndex, 1);
+
+    // 4. บันทึก Stock Log แจ้งการคืนค่า
+    this.logStockAction(itemName, 'USE', -qtyToRevert, newQty, unit, `↩️ คืนค่าจากการเติมสต๊อกผิดพลาด (หักคืน -${qtyToRevert} ${unit})`, {
+      itemId: item ? item.id : null,
+      isReversal: true
+    });
+
+    // 5. บันทึกข้อมูลและอัปเดตหน้าจอทั้งหมดทันที
+    this.saveData();
+    this.syncRecipesWithExpenses();
+    this.renderStock();
+    this.renderStockProfitCard();
+    this.renderStockHistory();
+    this.renderLowStockAlertView();
+    this.renderExpenses();
+    this.renderDashboard();
+
+    this.showToast(`↩️ คืนค่าการเติม "${itemName}" (-${qtyToRevert} ${unit}) เรียบร้อยแล้ว`, 'success');
+  }
+
   // Render Daily Stock Profit Card ในหน้าสต๊อก
   renderStockProfitCard() {
     const cardEl = document.getElementById('stockProfitDailyCard');
@@ -9427,12 +9499,18 @@ class WaterFlowApp {
       const changeSign = log.changeQty > 0 ? `+${log.changeQty}` : `${log.changeQty}`;
       const changeClass = isUse ? 'text-danger' : 'text-green';
 
-      const canRevert = isUse && (Number(log.changeQty) < 0) && Boolean(log.id);
-      const revertBtn = canRevert ? `
-        <button type="button" class="btn btn-xs ml-2" onclick="app.revertStockUse('${log.id}')" title="คืนค่า/ยกเลิกรายการเบิกนี้" style="background:#fff1f2; color:#e11d48; border:1px solid #fecdd3; padding:0.15rem 0.45rem; border-radius:var(--radius-sm); font-size:0.72rem; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:0.2rem;">
+      const isReversalLog = Boolean(log.isReversal) || String(log.note || '').includes('คืนค่าจากการ');
+      const canRevertUse = isUse && (Number(log.changeQty) < 0) && Boolean(log.id) && !isReversalLog;
+      const canRevertRestock = !isUse && log.actionType === 'RESTOCK' && (Number(log.changeQty) > 0) && Boolean(log.id) && !isReversalLog;
+      const revertBtn = canRevertUse ? `
+        <button type="button" class="btn btn-xs ml-2" onclick="app.revertStockUse('${log.id}')" title="คืนค่า/ยกเลิกรายการเบิกนี้" style="background:#fff1f2; color:#e11d48; border:1px solid #fecdd3; padding:0.15rem 0.45rem; border-radius:var(--radius-sm); font-size:0.72rem; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:0.2rem; flex-shrink:0;">
           ↩️ คืนค่า
         </button>
-      ` : '';
+      ` : (canRevertRestock ? `
+        <button type="button" class="btn btn-xs ml-2" onclick="app.revertStockRestock('${log.id}')" title="คืนค่า/ยกเลิกรายการเติมสต๊อกนี้" style="background:#fffbeb; color:#d97706; border:1px solid #fde68a; padding:0.15rem 0.45rem; border-radius:var(--radius-sm); font-size:0.72rem; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:0.2rem; flex-shrink:0;">
+          ↩️ คืนค่า
+        </button>
+      ` : '');
 
       return `
         <tr>
@@ -9618,16 +9696,17 @@ class WaterFlowApp {
       `;
     }
 
-    // 4. คืนค่าจากการเบิกผิดพลาด
-    if (raw.includes('คืนค่าจากการเบิกผิดพลาด')) {
+    // 4. คืนค่าจากการเบิก/เติมสต๊อกผิดพลาด
+    if (raw.includes('คืนค่าจากการเบิกผิดพลาด') || raw.includes('คืนค่าจากการเติมสต๊อกผิดพลาด')) {
       const m = raw.match(/\(([^)]+)\)/);
       const detail = m ? m[1] : '';
+      const isRestockRev = raw.includes('เติมสต๊อกผิดพลาด');
       return `
         <div style="display:flex; align-items:center; flex-wrap:wrap; gap:0.35rem;">
           <span class="pill-tag" style="font-size:0.73rem; font-weight:700; padding:0.12rem 0.5rem; background:#f5f3ff; color:#6d28d9; border:1px solid #ddd6fe;">
-            ↩️ คืนค่าจากการเบิกผิดพลาด
+            ↩️ ${isRestockRev ? 'คืนค่าจากการเติมสต๊อกผิดพลาด' : 'คืนค่าจากการเบิกผิดพลาด'}
           </span>
-          ${detail ? `<span style="font-size:0.76rem; color:#15803d; font-weight:600;">${this.escapeHtml(detail)}</span>` : ''}
+          ${detail ? `<span style="font-size:0.76rem; color:${isRestockRev ? '#dc2626' : '#15803d'}; font-weight:600;">${this.escapeHtml(detail)}</span>` : ''}
         </div>
       `;
     }
