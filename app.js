@@ -9446,8 +9446,8 @@ class WaterFlowApp {
             <span class="text-xs text-muted ml-1">${this.escapeHtml(log.unit || '')}</span>
           </td>
           <td>
-            <div class="text-sm text-muted" style="line-height:1.4; display:flex; align-items:center; justify-content:space-between;">
-              <span>${this.formatLogNote(log.note || '-')}</span>
+            <div class="text-sm text-muted" style="line-height:1.4; display:flex; align-items:center; justify-content:space-between; gap:0.5rem;">
+              <div style="min-width:0; flex:1;">${this.formatLogNote(log.note || '-')}</div>
               ${revertBtn}
             </div>
           </td>
@@ -9472,38 +9472,202 @@ class WaterFlowApp {
     }
   }
 
-  // Format log note: Detects [ซื้อจาก: https://...] or raw URLs and shortens them to a tidy clickable badge
+  // Format log note: Formats all stock log note types into clean visual chips/pills and clickable supplier links
   formatLogNote(noteStr) {
     if (!noteStr) return '-';
+    const raw = String(noteStr).trim();
 
-    // Regex to match URLs (allowing parentheses inside URLs like Shopee product names; only strip unmatched trailing ')')
-    const urlPattern = /(https?:\/\/[^\s\]\>]+)/g;
-
-    return noteStr.split(urlPattern).map(part => {
-      if (part.match(/^https?:\/\//i)) {
-        let cleanUrl = part;
-        let trailing = '';
-        while (cleanUrl.endsWith(')')) {
-          const opens = (cleanUrl.match(/\(/g) || []).length;
-          const closes = (cleanUrl.match(/\)/g) || []).length;
-          if (closes > opens) {
-            trailing = ')' + trailing;
-            cleanUrl = cleanUrl.slice(0, -1);
-          } else {
-            break;
-          }
-        }
-        const parsed = this.parseSupplier(cleanUrl);
-        const shortLabel = parsed.name || (cleanUrl.length > 28 ? cleanUrl.substring(0, 25) + '...' : cleanUrl);
-        return `<a href="${this.escapeHtml(cleanUrl)}" target="_blank" rel="noopener noreferrer"
+    const makeSupplierPill = (supRaw) => {
+      if (!supRaw) return '';
+      const parsed = this.parseSupplier(supRaw.trim());
+      if (parsed.isUrl) {
+        const shortLabel = parsed.name || (parsed.url.length > 28 ? parsed.url.substring(0, 25) + '...' : parsed.url);
+        return `<a href="${this.escapeHtml(parsed.url)}" target="_blank" rel="noopener noreferrer"
                    class="pill-tag orange-tag"
-                   style="font-size:0.7rem; font-weight:700; padding:0.1rem 0.45rem; text-decoration:none; display:inline-flex; align-items:center; gap:0.2rem; background:#ffedd5; color:#c2410c; border:1px solid #fed7aa; margin:1px 2px; vertical-align:middle;"
-                   title="${this.escapeHtml(cleanUrl)}">
+                   style="font-size:0.7rem; font-weight:700; padding:0.1rem 0.45rem; text-decoration:none; display:inline-flex; align-items:center; gap:0.2rem; background:#ffedd5; color:#c2410c; border:1px solid #fed7aa; vertical-align:middle;"
+                   title="${this.escapeHtml(parsed.url)}">
                   🔗 ${this.escapeHtml(shortLabel)} <i data-lucide="external-link" style="width:10px;height:10px;"></i>
-                </a>${this.escapeHtml(trailing)}`;
+                </a>`;
       }
-      return this.escapeHtml(part);
-    }).join('');
+      return `<span class="pill-tag orange-tag" style="font-size:0.7rem; font-weight:600; padding:0.1rem 0.45rem; background:#fff7ed; color:#c2410c; border:1px solid #fed7aa;">🛒 ${this.escapeHtml(parsed.name || supRaw)}</span>`;
+    };
+
+    const linkifyText = (text) => {
+      const urlPattern = /(https?:\/\/[^\s\]\>]+)/g;
+      return String(text).split(urlPattern).map(part => {
+        if (part.match(/^https?:\/\//i)) {
+          let cleanUrl = part;
+          let trailing = '';
+          while (cleanUrl.endsWith(')')) {
+            const opens = (cleanUrl.match(/\(/g) || []).length;
+            const closes = (cleanUrl.match(/\)/g) || []).length;
+            if (closes > opens) {
+              trailing = ')' + trailing;
+              cleanUrl = cleanUrl.slice(0, -1);
+            } else {
+              break;
+            }
+          }
+          return makeSupplierPill(cleanUrl) + this.escapeHtml(trailing);
+        }
+        return this.escapeHtml(part);
+      }).join('');
+    };
+
+    // 1. เบิกขาย ...
+    const saleMatch = raw.match(/^เบิกขาย\s+(.+?)\s*\(@฿([\d,]+(?:\.\d+)?)\s+ทุน\s+฿([\d,]+(?:\.\d+)?)\)\s*กำไร\s*([+\-]?฿[\d,]+(?:\.\d+)?)(?:\s*\[([^\]]+)\])?(.*)$/);
+    if (saleMatch) {
+      const qtyRaw = saleMatch[1].trim();
+      const sellPrice = saleMatch[2];
+      const costPrice = saleMatch[3];
+      const profitStr = saleMatch[4].trim();
+      const tagStr = saleMatch[5] ? saleMatch[5].trim() : '';
+      const extraStr = saleMatch[6] ? saleMatch[6].trim() : '';
+      const isLoss = profitStr.startsWith('-');
+      const profitStyle = isLoss
+        ? 'background:#fef2f2; color:#dc2626; border:1px solid #fecaca;'
+        : 'background:#f0fdf4; color:#15803d; border:1px solid #bbf7d0;';
+
+      return `
+        <div style="display:flex; flex-direction:column; gap:0.28rem;">
+          <div style="display:flex; align-items:center; flex-wrap:wrap; gap:0.35rem;">
+            <span class="pill-tag" style="font-size:0.74rem; font-weight:700; padding:0.12rem 0.5rem; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe;">
+              🛒 เบิกขาย ${this.escapeHtml(qtyRaw)}
+            </span>
+            <span class="pill-tag" style="font-size:0.74rem; font-weight:700; padding:0.12rem 0.5rem; ${profitStyle}">
+              ${isLoss ? '📉 ขาดทุน' : '💰 กำไร'} ${this.escapeHtml(profitStr)}
+            </span>
+            ${tagStr ? `<span class="pill-tag" style="font-size:0.7rem; font-weight:600; padding:0.1rem 0.45rem; background:#f8fafc; color:#475569; border:1px solid #cbd5e1;">📌 ${this.escapeHtml(tagStr)}</span>` : ''}
+          </div>
+          <div style="font-size:0.76rem; color:#64748b; display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+            <span>ราคาขาย <b>฿${this.escapeHtml(sellPrice)}</b></span>
+            <span style="color:#cbd5e1;">•</span>
+            <span>ต้นทุน <b>฿${this.escapeHtml(costPrice)}</b></span>
+            ${extraStr ? `<span style="color:#cbd5e1;">•</span><span>${linkifyText(extraStr)}</span>` : ''}
+          </div>
+        </div>
+      `;
+    }
+
+    // 2. รับเข้าของ / เพิ่มรายการใหม่ จากบิลซื้อ
+    const restockBillMatch = raw.match(/^(รับเข้าของ|เพิ่มรายการใหม่|รับเข้าจากการแก้ไขบิลซื้อ)\s*(.*?)\s*จากบิลซื้อ\s*\(([^)]+)\)(?:\s*\[ซื้อจาก:\s*([^\]]+)\])?(.*)$/) ||
+      raw.match(/^(รับเข้าจากการแก้ไขบิลซื้อ)\s*\(([^)]+)\)(?:\s*\[ซื้อจาก:\s*([^\]]+)\])?(.*)$/);
+    if (restockBillMatch) {
+      const isEditRestock = restockBillMatch[1] === 'รับเข้าจากการแก้ไขบิลซื้อ' && restockBillMatch.length <= 5;
+      const actionLabel = restockBillMatch[1] === 'เพิ่มรายการใหม่' ? '✨ เพิ่มรายการใหม่' : (restockBillMatch[1].includes('แก้ไข') ? '📝 รับเข้า (แก้บิล)' : '📥 รับเข้าจากบิลซื้อ');
+      const qtyDetail = isEditRestock ? '' : (restockBillMatch[2] || '').trim();
+      const billDate = isEditRestock ? (restockBillMatch[2] || '').trim() : (restockBillMatch[3] || '').trim();
+      const supRaw = isEditRestock ? (restockBillMatch[3] || '').trim() : (restockBillMatch[4] || '').trim();
+
+      return `
+        <div style="display:flex; flex-direction:column; gap:0.25rem;">
+          <div style="display:flex; align-items:center; flex-wrap:wrap; gap:0.35rem;">
+            <span class="pill-tag" style="font-size:0.73rem; font-weight:700; padding:0.12rem 0.5rem; background:#f0fdf4; color:#15803d; border:1px solid #bbf7d0;">
+              ${actionLabel}${qtyDetail ? ` ${this.escapeHtml(qtyDetail)}` : ''}
+            </span>
+            ${supRaw ? makeSupplierPill(supRaw) : ''}
+          </div>
+          ${billDate ? `<div style="font-size:0.74rem; color:#64748b;">📅 บิลวันที่ <b>${this.escapeHtml(billDate)}</b></div>` : ''}
+        </div>
+      `;
+    }
+
+    // 3. ซื้อเพิ่ม +... (เติมสต๊อกด่วน)
+    const quickRestockMatch = raw.match(/^ซื้อเพิ่ม\s+(.+?)\s*\(ราคารวม\s*฿([\d,]+(?:\.\d+)?)\s+เฉลี่ย\s*฿([^)]+)\)\s*บันทึกรายจ่าย\s*฿([\d,]+(?:\.\d+)?)\s*ทุนเฉลี่ยปรับเป็น\s*฿([\d,]+(?:\.\d+)?)(.*)$/);
+    if (quickRestockMatch) {
+      const qtyText = quickRestockMatch[1].trim();
+      const totalExp = quickRestockMatch[2];
+      const avgRound = quickRestockMatch[3].trim();
+      const newAvg = quickRestockMatch[5];
+      return `
+        <div style="display:flex; flex-direction:column; gap:0.25rem;">
+          <div style="display:flex; align-items:center; flex-wrap:wrap; gap:0.35rem;">
+            <span class="pill-tag" style="font-size:0.73rem; font-weight:700; padding:0.12rem 0.5rem; background:#f0fdf4; color:#15803d; border:1px solid #bbf7d0;">
+              🛍️ ซื้อเพิ่ม ${this.escapeHtml(qtyText)}
+            </span>
+            <span class="pill-tag" style="font-size:0.73rem; font-weight:700; padding:0.12rem 0.5rem; background:#fffbeb; color:#b45309; border:1px solid #fde68a;">
+              🧾 จ่ายรวม ฿${this.escapeHtml(totalExp)}
+            </span>
+          </div>
+          <div style="font-size:0.75rem; color:#64748b;">
+            รอบนี้เฉลี่ย <b>฿${this.escapeHtml(avgRound)}</b> <span style="color:#cbd5e1;">•</span> ทุนเฉลี่ยใหม่ <b>฿${this.escapeHtml(newAvg)}</b>
+          </div>
+        </div>
+      `;
+    }
+
+    // 4. คืนค่าจากการเบิกผิดพลาด
+    if (raw.includes('คืนค่าจากการเบิกผิดพลาด')) {
+      const m = raw.match(/\(([^)]+)\)/);
+      const detail = m ? m[1] : '';
+      return `
+        <div style="display:flex; align-items:center; flex-wrap:wrap; gap:0.35rem;">
+          <span class="pill-tag" style="font-size:0.73rem; font-weight:700; padding:0.12rem 0.5rem; background:#f5f3ff; color:#6d28d9; border:1px solid #ddd6fe;">
+            ↩️ คืนค่าจากการเบิกผิดพลาด
+          </span>
+          ${detail ? `<span style="font-size:0.76rem; color:#15803d; font-weight:600;">${this.escapeHtml(detail)}</span>` : ''}
+        </div>
+      `;
+    }
+
+    // 5. พิมพ์ปรับจำนวนจาก ... เป็น ...
+    const manualAdjustMatch = raw.match(/^พิมพ์ปรับจำนวนจาก\s+(.+?)\s+เป็น\s+(.+)$/);
+    if (manualAdjustMatch) {
+      return `
+        <div style="display:flex; align-items:center; flex-wrap:wrap; gap:0.35rem;">
+          <span class="pill-tag" style="font-size:0.72rem; font-weight:700; padding:0.12rem 0.5rem; background:#f1f5f9; color:#334155; border:1px solid #cbd5e1;">
+            ✏️ ปรับยอดด้วยมือ
+          </span>
+          <span style="font-size:0.78rem; color:#475569;">จาก <b>${this.escapeHtml(manualAdjustMatch[1])}</b> → <b>${this.escapeHtml(manualAdjustMatch[2])}</b></span>
+        </div>
+      `;
+    }
+
+    // 6. แก้ไขบิลซื้อ / ย้ายรายการ / หักสต๊อกจากลบบิลซื้อ
+    if (raw.startsWith('แก้ไขบิลซื้อ') || raw.startsWith('ปรับแก้บิลซื้อ') || raw.startsWith('หักสต๊อกจากลบบิลซื้อ')) {
+      let text = raw;
+      let supHtml = '';
+      const supMatch = text.match(/\[(?:ร้าน|ซื้อจาก):\s*([^\]]+)\]/);
+      if (supMatch) {
+        supHtml = makeSupplierPill(supMatch[1]);
+        text = text.replace(supMatch[0], '').trim();
+      }
+      const isDelete = raw.startsWith('หักสต๊อก');
+      const badgeStyle = isDelete
+        ? 'background:#fef2f2; color:#dc2626; border:1px solid #fecaca;'
+        : 'background:#fffbeb; color:#b45309; border:1px solid #fde68a;';
+      const badgeLabel = isDelete ? '🗑️ ลบบิลซื้อ' : '📝 แก้ไขบิลซื้อ';
+      const cleanedBody = text.replace(/^(แก้ไขบิลซื้อ\s*&\s*สต๊อก|ปรับแก้บิลซื้อ|หักสต๊อกจากลบบิลซื้อ)\s*/, '').trim();
+      return `
+        <div style="display:flex; align-items:center; flex-wrap:wrap; gap:0.35rem;">
+          <span class="pill-tag" style="font-size:0.72rem; font-weight:700; padding:0.12rem 0.5rem; ${badgeStyle}">
+            ${badgeLabel}
+          </span>
+          ${cleanedBody ? `<span style="font-size:0.76rem; color:#475569;">${linkifyText(cleanedBody)}</span>` : ''}
+          ${supHtml}
+        </div>
+      `;
+    }
+
+    // 7. แพ็คขาย ...
+    const packSellMatch = raw.match(/^(แพ็คขาย|สร้างสินค้าแพ็คขายใหม่)\s+(.+?)\s+ทุน\s+฿([\d,]+(?:\.\d+)?)\s+ขาย\s+฿([\d,]+(?:\.\d+)?)(.*)$/);
+    if (packSellMatch) {
+      return `
+        <div style="display:flex; flex-direction:column; gap:0.25rem;">
+          <div style="display:flex; align-items:center; flex-wrap:wrap; gap:0.35rem;">
+            <span class="pill-tag" style="font-size:0.73rem; font-weight:700; padding:0.12rem 0.5rem; background:#fff7ed; color:#c2410c; border:1px solid #fed7aa;">
+              📦 ${this.escapeHtml(packSellMatch[1])} ${this.escapeHtml(packSellMatch[2])}
+            </span>
+          </div>
+          <div style="font-size:0.76rem; color:#64748b;">
+            ทุน <b>฿${this.escapeHtml(packSellMatch[3])}</b> <span style="color:#cbd5e1;">•</span> ราคาขาย <b>฿${this.escapeHtml(packSellMatch[4])}</b>
+          </div>
+        </div>
+      `;
+    }
+
+    // Fallback: format any URLs cleanly
+    return `<div style="display:flex; align-items:center; flex-wrap:wrap; gap:0.25rem;">${linkifyText(raw)}</div>`;
   }
 
   openStockModal(itemId = null) {
