@@ -1611,6 +1611,17 @@
                   ✕
                 </button>
               </div>
+              <div style="display:flex; align-items:center; gap:0.25rem;">
+                <input type="date" id="stockLogDateFilter" class="form-input-sm"
+                  onchange="app.renderStockHistory()"
+                  title="เลือกดูเฉพาะวันที่">
+                <button type="button" id="stockLogDateClearBtn"
+                  onclick="const d=document.getElementById('stockLogDateFilter'); if(d){d.value=''; app.renderStockHistory();}"
+                  title="ดูทุกวัน"
+                  style="display:none; background:#f1f5f9; border:1px solid #cbd5e1; color:#475569; border-radius:var(--radius-sm); padding:0.25rem 0.5rem; font-size:0.75rem; cursor:pointer; font-weight:600;">
+                  ทุกวัน
+                </button>
+              </div>
               <select id="stockLogTypeFilter" class="form-input-sm" onchange="app.renderStockHistory()">
                 <option value="ALL">ประเภททั้งหมด (เบิก/เติม/พิมพ์)</option>
                 <option value="USE">เฉพาะการเบิก/ใช้ของ (-)</option>
