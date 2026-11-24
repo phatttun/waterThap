@@ -9353,6 +9353,12 @@ class WaterFlowApp {
     const tbody = document.getElementById('stockHistoryTableBody');
     const badge = document.getElementById('stockLogsCountBadge');
     const typeFilter = document.getElementById('stockLogTypeFilter')?.value || 'ALL';
+    const dateFilterInput = document.getElementById('stockLogDateFilter');
+    const dateClearBtn = document.getElementById('stockLogDateClearBtn');
+    const dateFilter = (dateFilterInput?.value || '').trim();
+    if (dateClearBtn) {
+      dateClearBtn.style.display = dateFilter ? 'inline-block' : 'none';
+    }
     const searchInput = document.getElementById('stockLogSearchInput');
     const searchClearBtn = document.getElementById('stockLogSearchClearBtn');
     const searchQuery = (searchInput?.value || '').trim().toLowerCase();
@@ -9363,6 +9369,10 @@ class WaterFlowApp {
 
     const allLogs = this.data.stockLogs || [];
     let logs = allLogs;
+
+    if (dateFilter) {
+      logs = logs.filter(l => String(l.date || '').substring(0, 10) === dateFilter);
+    }
 
     if (typeFilter !== 'ALL') {
       logs = logs.filter(l => l.actionType === typeFilter);
@@ -9384,7 +9394,7 @@ class WaterFlowApp {
     }
 
     if (badge) {
-      badge.textContent = (searchQuery || typeFilter !== 'ALL')
+      badge.textContent = (searchQuery || typeFilter !== 'ALL' || dateFilter)
         ? `${logs.length} / ${allLogs.length} รายการ`
         : `${allLogs.length} รายการ`;
     }
@@ -9466,19 +9476,31 @@ class WaterFlowApp {
   formatLogNote(noteStr) {
     if (!noteStr) return '-';
 
-    // Regex to match URLs (standalone or inside brackets)
-    const urlPattern = /(https?:\/\/[^\s\]\)\>]+)/g;
+    // Regex to match URLs (allowing parentheses inside URLs like Shopee product names; only strip unmatched trailing ')')
+    const urlPattern = /(https?:\/\/[^\s\]\>]+)/g;
 
     return noteStr.split(urlPattern).map(part => {
       if (part.match(/^https?:\/\//i)) {
-        const parsed = this.parseSupplier(part);
-        const shortLabel = parsed.name || (part.length > 28 ? part.substring(0, 25) + '...' : part);
-        return `<a href="${this.escapeHtml(part)}" target="_blank" rel="noopener noreferrer"
+        let cleanUrl = part;
+        let trailing = '';
+        while (cleanUrl.endsWith(')')) {
+          const opens = (cleanUrl.match(/\(/g) || []).length;
+          const closes = (cleanUrl.match(/\)/g) || []).length;
+          if (closes > opens) {
+            trailing = ')' + trailing;
+            cleanUrl = cleanUrl.slice(0, -1);
+          } else {
+            break;
+          }
+        }
+        const parsed = this.parseSupplier(cleanUrl);
+        const shortLabel = parsed.name || (cleanUrl.length > 28 ? cleanUrl.substring(0, 25) + '...' : cleanUrl);
+        return `<a href="${this.escapeHtml(cleanUrl)}" target="_blank" rel="noopener noreferrer"
                    class="pill-tag orange-tag"
                    style="font-size:0.7rem; font-weight:700; padding:0.1rem 0.45rem; text-decoration:none; display:inline-flex; align-items:center; gap:0.2rem; background:#ffedd5; color:#c2410c; border:1px solid #fed7aa; margin:1px 2px; vertical-align:middle;"
-                   title="${this.escapeHtml(part)}">
+                   title="${this.escapeHtml(cleanUrl)}">
                   🔗 ${this.escapeHtml(shortLabel)} <i data-lucide="external-link" style="width:10px;height:10px;"></i>
-                </a>`;
+                </a>${this.escapeHtml(trailing)}`;
       }
       return this.escapeHtml(part);
     }).join('');
