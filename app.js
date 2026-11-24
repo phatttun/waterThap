@@ -3101,12 +3101,12 @@ class WaterFlowApp {
         const supplier = String(exp.supplier || '').toLowerCase();
         const note = String(exp.note || '').toLowerCase();
         const cat = String(exp.category || '').toLowerCase();
-        const catThai = exp.category === 'INGREDIENT' ? 'วัตถุดิบชงน้ำ วัตถุดิบ ชงน้ำ'
-          : exp.category === 'PACKAGING' ? 'บรรจุภัณฑ์ แก้ว ฝา หลอด'
-            : exp.category === 'FRIDGE_DRINK' ? 'น้ำขายในตู้ เครื่องดื่ม แช่เย็น'
-              : exp.category === 'STOCK' ? 'ยกลัง สำเร็จรูป ลัง'
-                : exp.category === 'PACK_SELL' ? 'ของแพ็คขาย แพ็คขาย'
-                  : 'อื่นๆ น้ำแข็ง ทั่วไป';
+        const catThai = exp.category === 'INGREDIENT' ? 'วัตถุดิบชงน้ำ'
+          : exp.category === 'PACKAGING' ? 'บรรจุภัณฑ์'
+            : exp.category === 'FRIDGE_DRINK' ? 'น้ำขายในตู้ เครื่องดื่มแช่เย็น'
+              : exp.category === 'STOCK' ? 'ยกลัง สินค้าสำเร็จรูป'
+                : exp.category === 'PACK_SELL' ? 'ของแพ็คขาย'
+                  : 'อื่นๆ ทั่วไป';
         const dateStr = String(exp.date || '');
         const thaiDate = this.formatThaiDate(exp.date, true).toLowerCase();
         const unit = String(exp.packUnit || '').toLowerCase();
