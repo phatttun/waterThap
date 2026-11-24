@@ -1597,7 +1597,20 @@
               <span>รายการบันทึกการใช้ของ & ปรับสต๊อก</span>
               <span class="badge-counter" id="stockLogsCountBadge">0 รายการ</span>
             </div>
-            <div class="filter-group" style="display:flex; gap:0.5rem; align-items:center;">
+            <div class="filter-group" style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+              <div style="position:relative; min-width:220px; flex:1;">
+                <i data-lucide="search" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); width:15px; height:15px; color:var(--text-muted); pointer-events:none;"></i>
+                <input type="text" id="stockLogSearchInput" class="form-input-sm"
+                  placeholder="ค้นหาชื่อสินค้า, หมายเหตุ, วันที่..."
+                  oninput="app.renderStockHistory()"
+                  style="padding-left:2rem; padding-right:1.75rem; width:100%; min-width:220px;">
+                <button type="button" id="stockLogSearchClearBtn"
+                  onclick="const el=document.getElementById('stockLogSearchInput'); if(el){el.value=''; app.renderStockHistory(); el.focus();}"
+                  title="ล้างคำค้นหา"
+                  style="display:none; position:absolute; right:6px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:0.9rem; line-height:1; padding:2px 4px;">
+                  ✕
+                </button>
+              </div>
               <select id="stockLogTypeFilter" class="form-input-sm" onchange="app.renderStockHistory()">
                 <option value="ALL">ประเภททั้งหมด (เบิก/เติม/พิมพ์)</option>
                 <option value="USE">เฉพาะการเบิก/ใช้ของ (-)</option>

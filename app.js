@@ -112,47 +112,119 @@ class WaterFlowApp {
       if (!Array.isArray(parsed.stockItems)) {
         parsed.stockItems = [];
       }
-      // Migration: แปลงสต๊อกที่เคยบันทึกเป็นหน่วยบรรจุ (ลัง/แพ็ค/กล่อง) ให้แสดงเป็นชิ้นย่อย (ขวด/ใบ/ชิ้น)
-      if (Array.isArray(parsed.stockItems)) {
-        parsed.stockItems.forEach(stk => {
-          if (!stk) return;
-          const crateBottles = Number(stk.crateBottles) || 0;
-          if (crateBottles <= 1) return;
-          const rawUnit = (stk.rawUnit || '').trim();
-          const currentUnit = (stk.unit || '').trim();
-          const isBulkUnit = currentUnit.includes('ลัง') || currentUnit.includes('แพ็ค') || currentUnit.includes('กล่อง') ||
-            currentUnit.toLowerCase() === 'crate' || currentUnit.toLowerCase() === 'pack' || currentUnit.toLowerCase() === 'box';
-          // ถ้าหน่วยปัจจุบันยังเป็นหน่วยบรรจุรวม (ลัง/แพ็ค) → แปลงเป็นชิ้นย่อย
-          if (isBulkUnit) {
-            const oldQty = Number(stk.qty) || 0;
-            stk.qty = Math.round(oldQty * crateBottles * 100) / 100;
-            // กำหนดชื่อหน่วยย่อยจากชื่อสินค้า
-            const lowerName = String(stk.name || '').toLowerCase();
-            if (lowerName.includes('แก้ว') || lowerName.includes('ฝา') || lowerName.includes('หลอด') || lowerName.includes('ถุงแก้ว')) {
-              stk.unit = 'ใบ';
-            } else if (lowerName.includes('ถุง') || lowerName.includes('ห่อ')) {
-              stk.unit = 'ถุง';
-            } else if (lowerName.includes('กระป๋อง') || lowerName.includes('กป')) {
-              stk.unit = 'กระป๋อง';
-            } else {
-              stk.unit = 'ขวด';
-            }
-            if (Number(stk.unitCost) > 0) {
-              stk.unitCost = parseFloat((Number(stk.unitCost) / crateBottles).toFixed(4));
-            }
-            if (stk.minQty > 0) {
-              stk.minQty = Math.max(1, Math.round(stk.minQty * crateBottles));
-            }
-            if (!stk.rawUnit) stk.rawUnit = currentUnit;
-          }
-        });
-      }
+      this.migrateData(parsed);
       return parsed;
     } catch (e) {
       console.error('Error parsing stored data, resetting:', e);
       this.saveData(DEFAULT_DATA, false);
       return JSON.parse(JSON.stringify(DEFAULT_DATA));
     }
+  }
+
+  migrateData(parsed) {
+    if (!parsed || typeof parsed !== 'object') return false;
+    let changed = false;
+
+    // Migration: แปลงสต๊อกที่เคยบันทึกเป็นหน่วยบรรจุ (ลัง/แพ็ค/กล่อง) ให้แสดงเป็นชิ้นย่อย (ขวด/ใบ/ชิ้น)
+    if (Array.isArray(parsed.stockItems)) {
+      parsed.stockItems.forEach(stk => {
+        if (!stk) return;
+        const crateBottles = Number(stk.crateBottles) || 0;
+        if (crateBottles <= 1) return;
+        const currentUnit = (stk.unit || '').trim();
+        const isBulkUnit = currentUnit.includes('ลัง') || currentUnit.includes('แพ็ค') || currentUnit.includes('กล่อง') ||
+          currentUnit.toLowerCase() === 'crate' || currentUnit.toLowerCase() === 'pack' || currentUnit.toLowerCase() === 'box';
+        if (isBulkUnit) {
+          const oldQty = Number(stk.qty) || 0;
+          stk.qty = Math.round(oldQty * crateBottles * 100) / 100;
+          const lowerName = String(stk.name || '').toLowerCase();
+          if (lowerName.includes('แก้ว') || lowerName.includes('ฝา') || lowerName.includes('หลอด') || lowerName.includes('ถุงแก้ว')) {
+            stk.unit = 'ใบ';
+          } else if (lowerName.includes('ถุง') || lowerName.includes('ห่อ')) {
+            stk.unit = 'ถุง';
+          } else if (lowerName.includes('กระป๋อง') || lowerName.includes('กป')) {
+            stk.unit = 'กระป๋อง';
+          } else {
+            stk.unit = 'ขวด';
+          }
+          if (Number(stk.unitCost) > 0) {
+            stk.unitCost = parseFloat((Number(stk.unitCost) / crateBottles).toFixed(4));
+          }
+          if (stk.minQty > 0) {
+            stk.minQty = Math.max(1, Math.round(stk.minQty * crateBottles));
+          }
+          if (!stk.rawUnit) stk.rawUnit = currentUnit;
+          changed = true;
+        }
+      });
+    }
+
+    // Migration: แยกสินค้าที่เคยถูกรวมสต๊อกผิดพลาดเพราะชื่อต่างกันแค่วงเล็บ เช่น ดีโด้โยเกิร์ต(สตอ), ดีโด้โยเกิร์ต(ส้ม), ดีโด้โยเกิร์ต(เขียว)
+    if (!parsed._splitParenVariants && Array.isArray(parsed.stockItems) && Array.isArray(parsed.expenses)) {
+      const normName = (s) => String(s || '').trim().replace(/\s+/g, ' ').toLowerCase();
+      const existingStockNames = new Set(parsed.stockItems.map(s => normName(s?.name)).filter(Boolean));
+      parsed.stockItems.slice().forEach(stk => {
+        if (!stk || !stk.id) return;
+        const stkBase = String(stk.name || '').split('(')[0].trim().toLowerCase();
+        const linkedExps = parsed.expenses.filter(e => {
+          if (!e || !e.title) return false;
+          if (String(e.stockItemId || '') === String(stk.id)) return true;
+          const eNorm = normName(e.title);
+          const eBase = String(e.title).split('(')[0].trim().toLowerCase();
+          return !existingStockNames.has(eNorm) && stkBase && eBase === stkBase;
+        });
+        if (linkedExps.length <= 1) return;
+        const groups = new Map();
+        linkedExps.forEach(e => {
+          const key = normName(e.title);
+          if (!groups.has(key)) groups.set(key, []);
+          groups.get(key).push(e);
+        });
+        if (groups.size <= 1) return;
+        const stkKey = normName(stk.name);
+        groups.forEach((exps, key) => {
+          if (key === stkKey) return;
+          const sample = exps[0];
+          let totalPieces = 0;
+          exps.forEach(e => {
+            const pSize = Number(e.packSize) || 1;
+            const rawU = String(e.packUnit || '').trim();
+            const isBulk = rawU.includes('ลัง') || rawU.includes('แพ็ค') || rawU.includes('กล่อง') ||
+              rawU.toLowerCase() === 'crate' || rawU.toLowerCase() === 'pack' || rawU.toLowerCase() === 'box';
+            const cb = (isBulk && Number(e.crateBottles) > 0) ? Number(e.crateBottles) : 1;
+            totalPieces += pSize * cb;
+          });
+          stk.qty = Math.max(0, Math.round(((Number(stk.qty) || 0) - totalPieces) * 100) / 100);
+          const newId = 'stk_' + Date.now() + Math.random().toString(36).substring(2, 5);
+          const sampleSize = Number(sample.packSize) || 1;
+          const sampleRawU = String(sample.packUnit || '').trim();
+          const sampleBulk = sampleRawU.includes('ลัง') || sampleRawU.includes('แพ็ค') || sampleRawU.includes('กล่อง');
+          const sampleCb = (sampleBulk && Number(sample.crateBottles) > 0) ? Number(sample.crateBottles) : 1;
+          const samplePieces = sampleSize * sampleCb;
+          const unitCost = samplePieces > 0 ? parseFloat((Number(sample.amount || 0) / samplePieces).toFixed(4)) : 0;
+          const newItem = {
+            ...stk,
+            id: newId,
+            name: sample.title,
+            qty: totalPieces,
+            unitCost: unitCost || stk.unitCost,
+            supplier: sample.supplier || stk.supplier || '',
+            category: sample.category || stk.category,
+            netWeight: sample.netWeight || stk.netWeight || null,
+            netUnit: sample.netUnit || stk.netUnit || null,
+            minQty: (sample.minQty !== undefined && sample.minQty !== null && sample.minQty !== '') ? Number(sample.minQty) : stk.minQty
+          };
+          parsed.stockItems.unshift(newItem);
+          exps.forEach(e => { e.stockItemId = newId; });
+          existingStockNames.add(key);
+          changed = true;
+        });
+      });
+      parsed._splitParenVariants = true;
+      changed = true;
+    }
+
+    return changed;
   }
 
   saveData(customData = null, syncToCloud = true) {
@@ -227,9 +299,13 @@ class WaterFlowApp {
       }
 
       if (data && data.data) {
-        // If remote data exists, sync it
+        // If remote data exists, sync it and run migrations
         this.data = data.data;
+        const migrated = this.migrateData(this.data);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data));
+        if (migrated) {
+          await this.pushDataToCloud(this.data);
+        }
         this.renderAllViews();
         this.updateCloudSyncUI('online', 'เชื่อมต่อคลาวด์แล้ว');
       } else {
@@ -3245,14 +3321,11 @@ class WaterFlowApp {
         }
 
         // ค้นหาข้อมูลสต๊อกคงเหลือปัจจุบันที่เชื่อมโยงกับรายการนี้
-        const expTitleClean = String(exp.title || '').split('(')[0].trim().toLowerCase();
+        const expTitleNorm = this.normalizeProductName(exp.title);
         const matchedStock = (this.data.stockItems || []).find(s => {
           if (!s || !s.name) return false;
           if (exp.stockItemId && String(s.id) === String(exp.stockItemId)) return true;
-          const sClean = String(s.name).split('(')[0].trim().toLowerCase();
-          const sNameLower = String(s.name).toLowerCase();
-          const expTitleLower = String(exp.title || '').toLowerCase();
-          return sNameLower === expTitleLower || sClean === expTitleClean;
+          return this.normalizeProductName(s.name) === expTitleNorm;
         });
 
         let stockBalanceBadge = '';
@@ -4810,14 +4883,11 @@ class WaterFlowApp {
         }
 
         // Match existing stock item if available
-        const expTitleClean = String(exp.title || '').split('(')[0].trim().toLowerCase();
+        const expTitleNorm = this.normalizeProductName(exp.title);
         const matched = (this.data.stockItems || []).find(s => {
           if (!s || !s.name) return false;
           if (exp.stockItemId && String(s.id) === String(exp.stockItemId)) return true;
-          const sClean = String(s.name).split('(')[0].trim().toLowerCase();
-          const sNameLower = String(s.name).toLowerCase();
-          const expTitleLower = String(exp.title || '').toLowerCase();
-          return sNameLower === expTitleLower || sClean === expTitleClean || sClean.includes(expTitleClean) || expTitleClean.includes(sClean);
+          return this.normalizeProductName(s.name) === expTitleNorm;
         });
 
         if (matched && expSupplierEl && !exp.supplier && matched.supplier) {
@@ -5101,13 +5171,10 @@ class WaterFlowApp {
 
     if (syncStatusEl) {
       const editId = document.getElementById('expenseEditId')?.value;
-      const titleClean = String(titleVal || '').split('(')[0].trim().toLowerCase();
+      const titleNorm = this.normalizeProductName(titleVal);
       const matched = (this.data.stockItems || []).find(s => {
         if (!s || !s.name) return false;
-        const sClean = String(s.name).split('(')[0].trim().toLowerCase();
-        const sNameLower = String(s.name).toLowerCase();
-        const titleLower = String(titleVal || '').toLowerCase();
-        return sNameLower === titleLower || sClean === titleClean || sClean.includes(titleClean) || titleClean.includes(sClean);
+        return this.normalizeProductName(s.name) === titleNorm;
       });
 
       const currentPricing = this.getExpenseUnitPricing({
@@ -5119,10 +5186,10 @@ class WaterFlowApp {
         netWeight: netWeightVal,
         netUnit: netUnitVal
       });
-      const newPieces = currentPricing ? currentPricing.rawPackSize : packSize;
       const isBulkUnit = currentPricing ? currentPricing.isBulk : false;
-      const pieceUnit = isBulkUnit ? (unit || (currentPricing ? currentPricing.rawUnit : 'แพ็ค')) : (currentPricing ? currentPricing.pieceName : (matched ? matched.unit : unit));
-      const costPerUnit = isBulkUnit ? (currentPricing ? currentPricing.costPerPack : (packSize > 0 ? amount / packSize : 0)) : (currentPricing ? currentPricing.costPerPiece : (packSize > 0 ? amount / packSize : 0));
+      const newPieces = currentPricing ? (isBulkUnit ? currentPricing.totalPieces : currentPricing.rawPackSize) : packSize;
+      const pieceUnit = currentPricing ? currentPricing.pieceName : (matched ? matched.unit : unit);
+      const costPerUnit = currentPricing ? currentPricing.costPerPiece : (packSize > 0 ? amount / packSize : 0);
 
       if (editId) {
         const oldExp = (this.data.expenses || []).find(e => e && String(e.id) === String(editId));
@@ -9286,13 +9353,40 @@ class WaterFlowApp {
     const tbody = document.getElementById('stockHistoryTableBody');
     const badge = document.getElementById('stockLogsCountBadge');
     const typeFilter = document.getElementById('stockLogTypeFilter')?.value || 'ALL';
+    const searchInput = document.getElementById('stockLogSearchInput');
+    const searchClearBtn = document.getElementById('stockLogSearchClearBtn');
+    const searchQuery = (searchInput?.value || '').trim().toLowerCase();
+    if (searchClearBtn) {
+      searchClearBtn.style.display = searchQuery ? 'block' : 'none';
+    }
     if (!tbody) return;
 
-    let logs = this.data.stockLogs || [];
-    if (badge) badge.textContent = `${logs.length} รายการ`;
+    const allLogs = this.data.stockLogs || [];
+    let logs = allLogs;
 
     if (typeFilter !== 'ALL') {
       logs = logs.filter(l => l.actionType === typeFilter);
+    }
+
+    if (searchQuery) {
+      logs = logs.filter(l => {
+        const itemName = String(l.itemName || '').toLowerCase();
+        const note = String(l.note || '').toLowerCase();
+        const unit = String(l.unit || '').toLowerCase();
+        const dateStr = String(l.date || '').toLowerCase();
+        const thaiDate = String(this.formatThaiDate(l.date) || '').toLowerCase();
+        return itemName.includes(searchQuery) ||
+          note.includes(searchQuery) ||
+          unit.includes(searchQuery) ||
+          dateStr.includes(searchQuery) ||
+          thaiDate.includes(searchQuery);
+      });
+    }
+
+    if (badge) {
+      badge.textContent = (searchQuery || typeFilter !== 'ALL')
+        ? `${logs.length} / ${allLogs.length} รายการ`
+        : `${allLogs.length} รายการ`;
     }
 
     if (logs.length === 0) {
@@ -9576,6 +9670,10 @@ class WaterFlowApp {
     this.renderDashboard();
   }
 
+  normalizeProductName(name) {
+    return String(name || '').trim().replace(/\s+/g, ' ').toLowerCase();
+  }
+
   // ซิงค์การแก้ไขข้อมูลสต๊อกสินค้า -> รายการค่าใช้จ่าย & ต้นทุนวัตถุดิบ (Expenses)
   syncStockToExpenses(stockItem, oldItem = null, isNew = false) {
     if (!stockItem) return;
@@ -9583,18 +9681,17 @@ class WaterFlowApp {
       this.data.expenses = [];
     }
 
-    const stockNameClean = String(stockItem.name || '').split('(')[0].trim().toLowerCase();
-    const oldNameClean = oldItem ? String(oldItem.name || '').split('(')[0].trim().toLowerCase() : '';
+    const stockNameNorm = this.normalizeProductName(stockItem.name);
+    const oldNameNorm = oldItem ? this.normalizeProductName(oldItem.name) : '';
 
     // ค้นหารายการค่าใช้จ่ายที่เชื่อมโยงกับสินค้านี้
     const matchedExpenses = this.data.expenses.filter(exp => {
       if (!exp) return false;
       if (exp.stockItemId && String(exp.stockItemId) === String(stockItem.id)) return true;
       if (exp.title) {
-        const expClean = String(exp.title).split('(')[0].trim().toLowerCase();
-        const expLower = String(exp.title).toLowerCase();
-        if (stockItem.name && (expLower === String(stockItem.name).toLowerCase() || expClean === stockNameClean)) return true;
-        if (oldItem && oldItem.name && (expLower === String(oldItem.name).toLowerCase() || expClean === oldNameClean)) return true;
+        const expNorm = this.normalizeProductName(exp.title);
+        if (stockNameNorm && expNorm === stockNameNorm) return true;
+        if (oldNameNorm && expNorm === oldNameNorm) return true;
       }
       return false;
     });
@@ -9698,14 +9795,11 @@ class WaterFlowApp {
       this.data.stockItems = [];
     }
 
-    const expTitleClean = String(exp.title || '').split('(')[0].trim().toLowerCase();
+    const expTitleNorm = this.normalizeProductName(exp.title);
     let match = this.data.stockItems.find(s => {
       if (!s || !s.name) return false;
       if (exp.stockItemId && String(s.id) === String(exp.stockItemId)) return true;
-      const sNameClean = String(s.name).split('(')[0].trim().toLowerCase();
-      const sNameLower = String(s.name).toLowerCase();
-      const expTitleLower = String(exp.title || '').toLowerCase();
-      return sNameLower === expTitleLower || sNameClean === expTitleClean || sNameClean.includes(expTitleClean) || expTitleClean.includes(sNameClean);
+      return this.normalizeProductName(s.name) === expTitleNorm;
     });
 
     const pricing = this.getExpenseUnitPricing(exp);
@@ -9791,23 +9885,17 @@ class WaterFlowApp {
       match = this.data.stockItems.find(s => s && String(s.id) === String(oldExp.stockItemId));
     }
     if (!match && oldExp && oldExp.title) {
-      const oldTitleClean = String(oldExp.title).split('(')[0].trim().toLowerCase();
+      const oldTitleNorm = this.normalizeProductName(oldExp.title);
       match = this.data.stockItems.find(s => {
         if (!s || !s.name) return false;
-        const sClean = String(s.name).split('(')[0].trim().toLowerCase();
-        const sNameLower = String(s.name).toLowerCase();
-        const oldTitleLower = String(oldExp.title).toLowerCase();
-        return sNameLower === oldTitleLower || sClean === oldTitleClean || sClean.includes(oldTitleClean) || oldTitleClean.includes(sClean);
+        return this.normalizeProductName(s.name) === oldTitleNorm;
       });
     }
     if (!match && updatedExp && updatedExp.title) {
-      const newTitleClean = String(updatedExp.title).split('(')[0].trim().toLowerCase();
+      const newTitleNorm = this.normalizeProductName(updatedExp.title);
       match = this.data.stockItems.find(s => {
         if (!s || !s.name) return false;
-        const sClean = String(s.name).split('(')[0].trim().toLowerCase();
-        const sNameLower = String(s.name).toLowerCase();
-        const newTitleLower = String(updatedExp.title).toLowerCase();
-        return sNameLower === newTitleLower || sClean === newTitleClean || sClean.includes(newTitleClean) || newTitleClean.includes(sClean);
+        return this.normalizeProductName(s.name) === newTitleNorm;
       });
     }
 
@@ -9837,13 +9925,10 @@ class WaterFlowApp {
       : Math.max(1, Math.round(newStockQty * 0.25));
 
     // ตรวจสอบว่ามีการเปลี่ยนชื่อไปตรงกับสต๊อกรายการอื่นหรือไม่
-    const newTitleClean = String(updatedExp.title || '').split('(')[0].trim().toLowerCase();
+    const newTitleNorm = this.normalizeProductName(updatedExp.title);
     const anotherMatch = this.data.stockItems.find(s => {
       if (!s || !s.name || (match && String(s.id) === String(match.id))) return false;
-      const sClean = String(s.name).split('(')[0].trim().toLowerCase();
-      const sNameLower = String(s.name).toLowerCase();
-      const newTitleLower = String(updatedExp.title || '').toLowerCase();
-      return sNameLower === newTitleLower || sClean === newTitleClean;
+      return this.normalizeProductName(s.name) === newTitleNorm;
     });
 
     if (anotherMatch) {
@@ -9900,19 +9985,19 @@ class WaterFlowApp {
   removeExpenseFromStock(exp) {
     if (!Array.isArray(this.data.stockItems) || !exp) return;
     const pricing = this.getExpenseUnitPricing(exp);
-    const qtyToRemove = pricing ? pricing.rawPackSize : (Number(exp.packSize) || 1);
+    const isBulk = pricing ? pricing.isBulk : false;
+    const rawPackSize = pricing ? pricing.rawPackSize : (Number(exp.packSize) || 1);
+    const crateBottles = pricing ? pricing.itemsPerBulk : 1;
+    const qtyToRemove = isBulk ? (rawPackSize * crateBottles) : rawPackSize;
     let match = null;
     if (exp.stockItemId) {
       match = this.data.stockItems.find(s => s && String(s.id) === String(exp.stockItemId));
     }
     if (!match && exp.title) {
-      const expTitleClean = String(exp.title).split('(')[0].trim().toLowerCase();
+      const expTitleNorm = this.normalizeProductName(exp.title);
       match = this.data.stockItems.find(s => {
         if (!s || !s.name) return false;
-        const sClean = String(s.name).split('(')[0].trim().toLowerCase();
-        const sNameLower = String(s.name).toLowerCase();
-        const expTitleLower = String(exp.title).toLowerCase();
-        return sNameLower === expTitleLower || sClean === expTitleClean || sClean.includes(expTitleClean) || expTitleClean.includes(sClean);
+        return this.normalizeProductName(s.name) === expTitleNorm;
       });
     }
 
@@ -9935,28 +10020,25 @@ class WaterFlowApp {
 
     expenses.forEach(exp => {
       if (!exp || !exp.title) return;
-      const expTitleClean = String(exp.title).split('(')[0].trim().toLowerCase();
+      const expTitleNorm = this.normalizeProductName(exp.title);
       let match = this.data.stockItems.find(s => {
         if (!s || !s.name) return false;
         if (exp.stockItemId && String(s.id) === String(exp.stockItemId)) return true;
-        const sNameClean = String(s.name).split('(')[0].trim().toLowerCase();
-        const sNameLower = String(s.name).toLowerCase();
-        const expTitleLower = String(exp.title).toLowerCase();
-        return sNameLower === expTitleLower || sNameClean === expTitleClean || sNameClean.includes(expTitleClean) || expTitleClean.includes(sNameClean);
+        return this.normalizeProductName(s.name) === expTitleNorm;
       });
 
       const pricing = this.getExpenseUnitPricing(exp);
       const isBulk = pricing ? pricing.isBulk : false;
       const rawPackSize = pricing ? pricing.rawPackSize : (Number(exp.packSize) || 1);
-      // ใช้หน่วยบรรจุเดิม (แพ็ค/ลัง) ไม่แปลงเป็นชิ้น
-      const stockQty = rawPackSize;
-      const stockUnit = isBulk ? (exp.packUnit || (pricing ? pricing.rawUnit : 'แพ็ค')) : (pricing ? pricing.pieceName : (exp.packUnit || 'หน่วย'));
-      const unitCost = isBulk ? (pricing ? pricing.costPerPack : (rawPackSize > 0 ? (Number(exp.amount) / rawPackSize) : Number(exp.amount))) : (pricing ? pricing.costPerPiece : (rawPackSize > 0 ? (Number(exp.amount) / rawPackSize) : Number(exp.amount)));
       const crateBottles = pricing ? pricing.itemsPerBulk : 1;
+      // เก็บสต๊อกเป็นชิ้นย่อย (ขวด/ใบ/ชิ้น) เมื่อเป็นหน่วยบรรจุรวม (ลัง/แพ็ค/กล่อง)
+      const stockQty = isBulk ? (rawPackSize * crateBottles) : rawPackSize;
+      const stockUnit = pricing ? pricing.pieceName : (exp.packUnit || 'หน่วย');
+      const unitCost = pricing ? pricing.costPerPiece : (rawPackSize > 0 ? (Number(exp.amount) / rawPackSize) : Number(exp.amount));
 
       const effectiveMin = (exp.minQty !== undefined && exp.minQty !== null && exp.minQty !== '')
         ? Number(exp.minQty)
-        : Math.max(1, Math.round(rawPackSize * 0.25));
+        : Math.max(1, Math.round(stockQty * 0.25));
 
       if (match) {
         match.unitCost = parseFloat(unitCost.toFixed(4));
@@ -9988,7 +10070,7 @@ class WaterFlowApp {
           netWeight: exp.netWeight || null,
           netUnit: exp.netUnit || null,
           note: (isBulk && crateBottles > 1)
-            ? `ซิงค์อัตโนมัติจากบิลซื้อ ${rawPackSize} ${stockUnit} (บรรจุ ${crateBottles} ${pieceName}/${stockUnit})`
+            ? `ซิงค์อัตโนมัติจากบิลซื้อ ${rawPackSize} ${exp.packUnit || 'ลัง'} (= ${stockQty} ${pieceName})`
             : `ซิงค์อัตโนมัติจากบิลซื้อ (${this.formatThaiDate(exp.date)})`
         };
         this.data.stockItems.push(newItem);
@@ -10771,13 +10853,10 @@ isExpenseAvailableForSelection(exp) {
     stockItem = stockItems.find(s => s && String(s.id) === String(exp.stockItemId));
   }
   if (!stockItem && exp.title) {
-    const expTitleClean = String(exp.title).split('(')[0].trim().toLowerCase();
+    const expTitleNorm = this.normalizeProductName(exp.title);
     stockItem = stockItems.find(s => {
       if (!s || !s.name) return false;
-      const sNameClean = String(s.name).split('(')[0].trim().toLowerCase();
-      const sNameLower = String(s.name).toLowerCase();
-      const expTitleLower = String(exp.title).toLowerCase();
-      return sNameLower === expTitleLower || sNameClean === expTitleClean || sNameClean.includes(expTitleClean) || expTitleClean.includes(sNameClean);
+      return this.normalizeProductName(s.name) === expTitleNorm;
     });
   }
   if (!stockItem) return true; // ไม่พบสต๊อก → แสดงให้เลือกได้ (ยังไม่ได้ซิงค์สต๊อก)
