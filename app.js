@@ -112,7 +112,10 @@ class WaterFlowApp {
       if (!Array.isArray(parsed.stockItems)) {
         parsed.stockItems = [];
       }
-      this.migrateData(parsed);
+      const migrated = this.migrateData(parsed);
+      if (migrated) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+      }
       return parsed;
     } catch (e) {
       console.error('Error parsing stored data, resetting:', e);
@@ -221,6 +224,43 @@ class WaterFlowApp {
         });
       });
       parsed._splitParenVariants = true;
+      changed = true;
+    }
+
+    // Migration: ปรับวันที่ของประวัติสต๊อกเดิมที่มาจากบิลซื้อ/เติมสต๊อก ให้ตรงกับวันที่บิลจริง
+    if (!parsed._syncedStockLogBillDates && Array.isArray(parsed.stockLogs)) {
+      const thaiMonths = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+      const parseThaiDateToISO = (str) => {
+        const m = String(str || '').match(/(\d{1,2})\s+(ม\.ค\.|ก\.พ\.|มี\.ค\.|เม\.ย\.|พ\.ค\.|มิ\.ย\.|ก\.ค\.|ส\.ค\.|ก\.ย\.|ต\.ค\.|พ\.ย\.|ธ\.ค\.)\s+(\d{4})/);
+        if (!m) return null;
+        const day = String(parseInt(m[1], 10)).padStart(2, '0');
+        const mIdx = thaiMonths.indexOf(m[2]);
+        if (mIdx === -1) return null;
+        const month = String(mIdx + 1).padStart(2, '0');
+        const yearBE = parseInt(m[3], 10);
+        const yearAD = yearBE > 2400 ? yearBE - 543 : yearBE;
+        return `${yearAD}-${month}-${day}`;
+      };
+      const expById = new Map((parsed.expenses || []).filter(e => e && e.id).map(e => [String(e.id), e]));
+      parsed.stockLogs.forEach(log => {
+        if (!log) return;
+        let targetDate = null;
+        if (log.expenseId && expById.has(String(log.expenseId))) {
+          const exp = expById.get(String(log.expenseId));
+          if (exp && exp.date) targetDate = String(exp.date).substring(0, 10);
+        }
+        if (!targetDate && log.note) {
+          const billMatch = String(log.note).match(/(?:จากบิลซื้อ|จากการแก้ไขบิลซื้อ|ลบบิลซื้อ[^\(]*)\s*\(([^)]+)\)/);
+          if (billMatch) {
+            targetDate = parseThaiDateToISO(billMatch[1]);
+          }
+        }
+        if (targetDate && /^\d{4}-\d{2}-\d{2}$/.test(targetDate) && log.date !== targetDate) {
+          log.date = targetDate;
+          changed = true;
+        }
+      });
+      parsed._syncedStockLogBillDates = true;
       changed = true;
     }
 
@@ -3112,12 +3152,7 @@ class WaterFlowApp {
             </div>
 
             <!-- Optional Note -->
-            ${d.note ? `
-              <div class="figma-tx-note-row">
-                <i data-lucide="message-square"></i>
-                <span>${this.escapeHtml(d.note)}</span>
-              </div>
-            ` : ''}
+            ${d.note ? this.formatDailySalesNote(d.note, d.id || d.date) : ''}
 
             <!-- Touch Actions -->
             <div class="figma-tx-actions">
@@ -3136,6 +3171,140 @@ class WaterFlowApp {
     }
 
     this.refreshLucide();
+  }
+
+  // จัดรูปแบบหมายเหตุรายการขายในหน้าประวัติยอดขาย (แปลงรายการยาวๆ เป็นการ์ดย่อย + ปุ่มดูทั้งหมด/ย่อ)
+  formatDailySalesNote(noteStr, cardKey) {
+    if (!noteStr) return '';
+    const raw = String(noteStr).trim();
+    if (!raw) return '';
+
+    // Split by ", " outside square brackets [...]
+    const parts = [];
+    let current = '';
+    let bracketDepth = 0;
+    for (let i = 0; i < raw.length; i++) {
+      const ch = raw[i];
+      if (ch === '[') bracketDepth++;
+      else if (ch === ']' && bracketDepth > 0) bracketDepth--;
+      if (bracketDepth === 0 && ch === ',' && raw[i + 1] === ' ') {
+        if (current.trim()) parts.push(current.trim());
+        current = '';
+        i++; // skip space
+      } else {
+        current += ch;
+      }
+    }
+    if (current.trim()) parts.push(current.trim());
+
+    // Check if this is a structured list of sale items
+    const parsedItems = parts.map(part => {
+      // Drink sale: 💰 ขายน้ำชง 42 แก้ว [สูตร...] (กำไร +฿252.06)
+      const drinkMatch = part.match(/^💰\s*ขายน้ำชง\s+(\d+)\s*แก้ว\s*(?:\[([^\]]+)\])?\s*\(กำไร\s*([+\-]?฿[\d,]+(?:\.\d+)?)\)$/);
+      if (drinkMatch) {
+        return {
+          type: 'drink',
+          name: `น้ำชง ${drinkMatch[1]} แก้ว`,
+          sub: drinkMatch[2] || '',
+          qty: `${drinkMatch[1]} แก้ว`,
+          profit: drinkMatch[3],
+          isLoss: drinkMatch[3].startsWith('-')
+        };
+      }
+      // Stock/product sale: ขาย <name> x<qty> <unit> (กำไร +฿XX.XX)
+      const itemMatch = part.match(/^ขาย\s+(.+?)\s+x([\d,]+(?:\.\d+)?)\s*([^\(\s]+)?\s*\(กำไร\s*([+\-]?฿[\d,]+(?:\.\d+)?)\)$/);
+      if (itemMatch) {
+        return {
+          type: 'item',
+          name: itemMatch[1].trim(),
+          qty: `×${itemMatch[2]}${itemMatch[3] ? ' ' + itemMatch[3] : ''}`,
+          profit: itemMatch[4],
+          isLoss: itemMatch[4].startsWith('-')
+        };
+      }
+      return { type: 'text', text: part };
+    });
+
+    const structuredCount = parsedItems.filter(p => p.type !== 'text').length;
+    if (structuredCount === 0) {
+      return `
+        <div class="figma-tx-note-row">
+          <i data-lucide="message-square"></i>
+          <span>${this.escapeHtml(raw)}</span>
+        </div>
+      `;
+    }
+
+    const safeId = String(cardKey || 'note').replace(/[^a-zA-Z0-9_-]/g, '_');
+    const previewLimit = 6;
+    const hasMore = parsedItems.length > previewLimit;
+
+    const renderChip = (it) => {
+      if (it.type === 'drink') {
+        const profitColor = it.isLoss ? '#dc2626' : '#15803d';
+        const profitBg = it.isLoss ? '#fef2f2' : '#f0fdf4';
+        return `
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:0.4rem; padding:0.35rem 0.55rem; background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; font-size:0.76rem; min-width:0;">
+            <div style="min-width:0; flex:1;">
+              <div style="font-weight:700; color:#1d4ed8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${this.escapeHtml(it.sub)}">
+                🥤 ${this.escapeHtml(it.name)}
+              </div>
+              ${it.sub ? `<div style="font-size:0.68rem; color:#475569; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${this.escapeHtml(it.sub)}">${this.escapeHtml(it.sub)}</div>` : ''}
+            </div>
+            <span style="font-weight:700; color:${profitColor}; background:${profitBg}; padding:0.1rem 0.4rem; border-radius:999px; font-size:0.71rem; flex-shrink:0;">
+              ${this.escapeHtml(it.profit)}
+            </span>
+          </div>
+        `;
+      }
+      if (it.type === 'item') {
+        const profitColor = it.isLoss ? '#dc2626' : '#15803d';
+        const profitBg = it.isLoss ? '#fef2f2' : '#f0fdf4';
+        const borderCol = it.isLoss ? '#fecaca' : '#e2e8f0';
+        const bgCol = it.isLoss ? '#fffbfb' : '#ffffff';
+        return `
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:0.35rem; padding:0.32rem 0.55rem; background:${bgCol}; border:1px solid ${borderCol}; border-radius:8px; font-size:0.76rem; min-width:0;">
+            <div style="display:flex; align-items:center; gap:0.3rem; min-width:0; flex:1;">
+              <span style="font-weight:600; color:#1e293b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${this.escapeHtml(it.name)}">${this.escapeHtml(it.name)}</span>
+              <span style="font-size:0.7rem; font-weight:700; color:#475569; background:#f1f5f9; padding:0.05rem 0.35rem; border-radius:5px; flex-shrink:0;">${this.escapeHtml(it.qty)}</span>
+            </div>
+            <span style="font-weight:700; color:${profitColor}; background:${profitBg}; padding:0.1rem 0.38rem; border-radius:999px; font-size:0.71rem; flex-shrink:0;">
+              ${this.escapeHtml(it.profit)}
+            </span>
+          </div>
+        `;
+      }
+      return `
+        <div style="padding:0.32rem 0.55rem; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; font-size:0.75rem; color:#475569;">
+          📝 ${this.escapeHtml(it.text)}
+        </div>
+      `;
+    };
+
+    const previewHtml = parsedItems.slice(0, previewLimit).map(renderChip).join('');
+    const restHtml = hasMore ? parsedItems.slice(previewLimit).map(renderChip).join('') : '';
+
+    return `
+      <div style="margin-top:0.55rem; padding:0.55rem 0.7rem; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:0.5rem; margin-bottom:0.45rem; flex-wrap:wrap;">
+          <div style="display:flex; align-items:center; gap:0.4rem; font-size:0.75rem; font-weight:700; color:#334155;">
+            <span>🧾 รายการขายวันนี้</span>
+            <span style="background:#e2e8f0; color:#334155; padding:0.08rem 0.45rem; border-radius:999px; font-size:0.7rem;">${parsedItems.length} รายการ</span>
+          </div>
+          ${hasMore ? `
+            <button type="button"
+              onclick="const more=document.getElementById('dailyNoteMore_${safeId}'); const wrap=document.getElementById('dailyNoteGrid_${safeId}'); if(more){const show=more.style.display==='none'; more.style.display=show?'contents':'none'; if(wrap){wrap.style.maxHeight=show?'280px':'none'; wrap.style.overflowY=show?'auto':'visible';} this.textContent=show?'ย่อรายการ ▴':'ดูทั้งหมด (${parsedItems.length} รายการ) ▾';}"
+              style="background:#ffffff; border:1px solid #cbd5e1; color:#2563eb; border-radius:999px; padding:0.15rem 0.6rem; font-size:0.72rem; font-weight:700; cursor:pointer;">
+              ดูทั้งหมด (${parsedItems.length} รายการ) ▾
+            </button>
+          ` : ''}
+        </div>
+        <div id="dailyNoteGrid_${safeId}" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(215px, 1fr)); gap:0.35rem;">
+          ${previewHtml}
+          ${hasMore ? `<div id="dailyNoteMore_${safeId}" style="display:none;">${restHtml}</div>` : ''}
+        </div>
+      </div>
+    `;
   }
 
   editDailyRecord(dateStr) {
@@ -8142,8 +8311,8 @@ class WaterFlowApp {
     }
 
     const now = new Date();
-    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    const dateStr = this.formatDate(now);
+    const timeStr = (extra && extra.time) ? extra.time : `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const dateStr = (extra && extra.date) ? String(extra.date).substring(0, 10) : this.formatDate(now);
 
     const logEntry = {
       id: 'log_' + Date.now() + Math.random().toString(36).substring(2, 5),
@@ -8162,7 +8331,10 @@ class WaterFlowApp {
       cost: extra.cost !== undefined ? extra.cost : null,
       sellingPrice: extra.sellingPrice !== undefined ? extra.sellingPrice : null,
       unitCost: extra.unitCost !== undefined ? extra.unitCost : null,
-      isStockSale: Boolean(extra.isStockSale)
+      isStockSale: Boolean(extra.isStockSale),
+      expenseId: extra.expenseId || null,
+      prevUnitCost: extra.prevUnitCost !== undefined ? extra.prevUnitCost : null,
+      isReversal: Boolean(extra.isReversal)
     };
 
     this.data.stockLogs.unshift(logEntry);
@@ -8527,6 +8699,7 @@ class WaterFlowApp {
     const logNote = `ซื้อเพิ่ม +${addQty} ${item.unit || ''}${crateSub} (ราคารวม ฿${totalExpense} เฉลี่ย ฿${this.formatUnitCost(unitPriceThisRound)}/${item.unit || ''}) บันทึกรายจ่าย ฿${totalExpense} ทุนเฉลี่ยปรับเป็น ฿${this.formatUnitCost(newAvgCost)}${supTag}${noteTag}`;
     this.logStockAction(item.name, 'RESTOCK', addQty, totalQty, item.unit || '', logNote, {
       itemId: item.id,
+      date: purchaseDate,
       expenseId: newExpense.id,
       prevUnitCost: currentUnitCost
     });
@@ -8753,6 +8926,7 @@ class WaterFlowApp {
     const logNote = `เบิกขาย ${useQty} ${unit}${crateSub} (@฿${sellPrice.toFixed(2)} ทุน ฿${this.formatUnitCost(currentUnitCost)}) กำไร ${profitStr}${addToDailySales ? ' [ลงยอดขายวันนี้แล้ว]' : ''}${userNote ? ' • ' + userNote : ''}`;
     this.logStockAction(item.name, 'USE', -useQty, newQty, unit, logNote, {
       itemId: item.id,
+      date: saleDate,
       profit: totalProfit,
       revenue: totalRevenue,
       cost: totalCost,
@@ -9490,7 +9664,17 @@ class WaterFlowApp {
       return;
     }
 
-    tbody.innerHTML = logs.map(log => {
+    const sortedLogs = [...logs].sort((a, b) => {
+      const dateA = String(a.date || '').substring(0, 10);
+      const dateB = String(b.date || '').substring(0, 10);
+      if (dateB !== dateA) return dateB.localeCompare(dateA);
+      const timeA = String(a.time || '00:00');
+      const timeB = String(b.time || '00:00');
+      if (timeB !== timeA) return timeB.localeCompare(timeA);
+      return (Number(b.timestamp) || 0) - (Number(a.timestamp) || 0);
+    });
+
+    tbody.innerHTML = sortedLogs.map(log => {
       const isUse = log.actionType === 'USE';
       const typeBadge = isUse
         ? `<span class="pill-tag red-tag" style="font-weight:700; font-size:0.75rem;"><i data-lucide="arrow-down-circle" style="width:12px;height:12px;"></i> เบิก/ตัดใช้</span>`
@@ -9515,7 +9699,10 @@ class WaterFlowApp {
       return `
         <tr>
           <td>
-            <div class="font-bold text-main" style="font-size:0.875rem;">${this.formatThaiDate(log.date)}</div>
+            <div style="display:flex; align-items:center; gap:0.35rem;">
+              <div class="font-bold text-main" style="font-size:0.875rem;">${this.formatThaiDate(log.date)}</div>
+              ${log.id ? `<input type="date" value="${this.escapeHtml(String(log.date || '').substring(0, 10))}" onchange="app.updateStockLogDate('${log.id}', this.value)" title="แก้ไขวันที่รายการนี้" style="width:22px; height:22px; padding:0; border:1px solid #e2e8f0; border-radius:4px; cursor:pointer; background:#f8fafc; font-size:0.75rem;">` : ''}
+            </div>
             <div class="text-xs text-muted">⏰ ${log.time || '-'} น.</div>
           </td>
           <td>
@@ -9541,6 +9728,18 @@ class WaterFlowApp {
     }).join('');
 
     this.refreshLucide();
+  }
+
+  updateStockLogDate(logId, newDate) {
+    if (!logId || !newDate || !/^\d{4}-\d{2}-\d{2}$/.test(newDate)) return;
+    const logs = this.data.stockLogs || [];
+    const log = logs.find(l => l && String(l.id) === String(logId));
+    if (!log) return;
+    log.date = newDate;
+    this.saveData();
+    this.renderStockHistory();
+    this.renderStockProfitCard();
+    this.showToast(`อัปเดตวันที่ประวัติ "${log.itemName}" เป็น ${this.formatThaiDate(newDate)} แล้ว`, 'success');
   }
 
   clearStockHistory() {
@@ -10017,14 +10216,8 @@ class WaterFlowApp {
 
         // ปรับยอดเงินรวม amount ตามราคาต่อหน่วยใหม่
         const packSize = Number(exp.packSize) || 1;
-        if (stockItem.unitCost > 0) {
-          if (isExpBulk) {
-            const crateCap = Number(exp.crateBottles) || 12;
-            exp.amount = parseFloat((stockItem.unitCost * (packSize * crateCap)).toFixed(2));
-          } else {
-            exp.amount = parseFloat((stockItem.unitCost * packSize).toFixed(2));
-          }
-        }
+        const crateCap = isExpBulk ? (Number(exp.crateBottles) || 12) : 1;
+        exp.amount = parseFloat((stockItem.unitCost * packSize * crateCap).toFixed(2));
       });
     } else if (isNew && stockItem.qty > 0 && stockItem.unitCost > 0) {
       // ถ้าเป็นการสร้างสต๊อกใหม่ที่ยังไม่มีบิลค่าใช้จ่าย ให้สร้างบันทึกต้นทุนอัตโนมัติ
@@ -10131,7 +10324,7 @@ class WaterFlowApp {
       const logNote = (isBulk && crateBottles > 1)
         ? `รับเข้าของ ${rawPackSize} ${bulkUnit} (= ${stockQty} ${stockUnit}) จากบิลซื้อ (${this.formatThaiDate(exp.date)})${supText}`
         : `รับเข้าของ +${stockQty} ${stockUnit} จากบิลซื้อ (${this.formatThaiDate(exp.date)})${supText}`;
-      this.logStockAction(match.name, 'RESTOCK', stockQty, newQty, match.unit || '', logNote);
+      this.logStockAction(match.name, 'RESTOCK', stockQty, newQty, match.unit || '', logNote, { itemId: match.id, date: exp.date, expenseId: exp.id });
       exp.stockItemId = match.id;
     } else {
       // ยังไม่มีในสต๊อก -> เพิ่มเป็นสินค้าคงคลังรายการใหม่ทันที
@@ -10155,7 +10348,7 @@ class WaterFlowApp {
       };
       this.data.stockItems.unshift(newItem);
       const supText = exp.supplier ? ` [ซื้อจาก: ${exp.supplier}]` : '';
-      this.logStockAction(newItem.name, 'RESTOCK', stockQty, stockQty, newItem.unit, `เพิ่มรายการใหม่ +${stockQty} ${stockUnit} จากบิลซื้อ (${this.formatThaiDate(exp.date)})${supText}`);
+      this.logStockAction(newItem.name, 'RESTOCK', stockQty, stockQty, newItem.unit, `เพิ่มรายการใหม่ +${stockQty} ${stockUnit} จากบิลซื้อ (${this.formatThaiDate(exp.date)})${supText}`, { itemId: newItem.id, date: exp.date, expenseId: exp.id });
       exp.stockItemId = newItem.id;
     }
   }
@@ -10222,7 +10415,7 @@ class WaterFlowApp {
       // ผู้ใช้เปลี่ยนชื่อบิลไปตรงกับสินค้าตัวอื่นที่มีอยู่แล้ว -> ตัดยอดออกจากตัวเดิม แล้วย้ายไปบวกที่ตัวใหม่
       const prevQty = Number(match.qty) || 0;
       match.qty = Math.max(0, prevQty - oldStockQty);
-      this.logStockAction(match.name, 'ADJUST', -oldStockQty, match.qty, match.unit || '', `ปรับแก้บิลซื้อ ย้ายรายการไปที่ "${anotherMatch.name}"`);
+      this.logStockAction(match.name, 'ADJUST', -oldStockQty, match.qty, match.unit || '', `ปรับแก้บิลซื้อ ย้ายรายการไปที่ "${anotherMatch.name}"`, { itemId: match.id, date: updatedExp.date });
 
       const anotherPrevQty = Number(anotherMatch.qty) || 0;
       const anotherNewQty = anotherPrevQty + newStockQty;
@@ -10237,7 +10430,7 @@ class WaterFlowApp {
       if (updatedExp.supplier) anotherMatch.supplier = updatedExp.supplier;
       if (updatedExp.category) anotherMatch.category = updatedExp.category;
 
-      this.logStockAction(anotherMatch.name, 'RESTOCK', newStockQty, anotherNewQty, anotherMatch.unit || '', `รับเข้าจากการแก้ไขบิลซื้อ (${this.formatThaiDate(updatedExp.date)})`);
+      this.logStockAction(anotherMatch.name, 'RESTOCK', newStockQty, anotherNewQty, anotherMatch.unit || '', `รับเข้าจากการแก้ไขบิลซื้อ (${this.formatThaiDate(updatedExp.date)})`, { itemId: anotherMatch.id, date: updatedExp.date });
       updatedExp.stockItemId = anotherMatch.id;
     } else {
       // รายการเดิม -> อัปเดตข้อมูลทั้งหมดตามที่แก้ไข
@@ -10263,7 +10456,16 @@ class WaterFlowApp {
       const diffText = diffQty !== 0 ? ` (ปรับจำนวน ${diffQty >= 0 ? '+' : ''}${diffQty} ${match.unit} คงเหลือ ${newQty})` : '';
       const crateSub = (isBulk && newPricing.itemsPerBulk > 1) ? ` [${updatedExp.packSize} ${updatedExp.packUnit} @ ${newPricing.itemsPerBulk} ${match.unit}/${updatedExp.packUnit}]` : '';
       const logNote = `แก้ไขบิลซื้อ & สต๊อก${diffText}${crateSub} ทุน ฿${match.unitCost}/${match.unit} เกณฑ์เตือน ${match.minQty}${supText}`;
-      this.logStockAction(match.name, 'ADJUST', diffQty, newQty, match.unit || '', logNote);
+      this.logStockAction(match.name, 'ADJUST', diffQty, newQty, match.unit || '', logNote, { itemId: match.id, date: updatedExp.date, expenseId: updatedExp.id });
+      // อัปเดตวันที่ของ log เดิมที่ผูกกับบิลนี้ให้ตรงกับวันที่บิลล่าสุดด้วย
+      if (updatedExp.id && updatedExp.date && Array.isArray(this.data.stockLogs)) {
+        const newDateStr = String(updatedExp.date).substring(0, 10);
+        this.data.stockLogs.forEach(l => {
+          if (l && String(l.expenseId || '') === String(updatedExp.id)) {
+            l.date = newDateStr;
+          }
+        });
+      }
       updatedExp.stockItemId = match.id;
     }
   }
@@ -10292,7 +10494,7 @@ class WaterFlowApp {
       const oldQty = Number(match.qty) || 0;
       const newQty = Math.max(0, oldQty - qtyToRemove);
       match.qty = newQty;
-      this.logStockAction(match.name, 'ADJUST', -qtyToRemove, newQty, match.unit || '', `หักสต๊อกจากลบบิลซื้อ -${qtyToRemove} ${match.unit} (${this.formatThaiDate(exp.date)})`);
+      this.logStockAction(match.name, 'ADJUST', -qtyToRemove, newQty, match.unit || '', `หักสต๊อกจากลบบิลซื้อ -${qtyToRemove} ${match.unit} (${this.formatThaiDate(exp.date)})`, { itemId: match.id, date: exp.date });
     }
   }
 
@@ -11111,6 +11313,12 @@ initDrinkSales() {
     btnCalc.addEventListener('click', () => this.calculateDrinkSalesProfit());
   }
 
+  // Default save date to today
+  const saveDateInput = document.getElementById('drinkSalesSaveDate');
+  if (saveDateInput && !saveDateInput.value) {
+    saveDateInput.value = this.formatDate(new Date());
+  }
+
   // Bind save log button
   const btnSave = document.getElementById('btnSaveDrinkSalesLog');
   if (btnSave && !btnSave._bound) {
@@ -11579,9 +11787,10 @@ saveDrinkSalesLog() {
 
   const calc = this.lastDrinkSalesCalc;
   const now = new Date();
+  const selectedDate = document.getElementById('drinkSalesSaveDate')?.value || this.formatDate(now);
   const newLog = {
     id: 'dsl_' + Date.now() + Math.random().toString(36).substring(2, 5),
-    date: this.formatDate(now),
+    date: selectedDate,
     time: now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
     timestamp: Date.now(),
     cups: calc.cups,
@@ -11646,10 +11855,11 @@ saveDrinkSalesLog() {
 
   this.saveData();
   this.renderDrinkSalesHistory();
+  this.renderDailyHistoryTable();
   this.renderDashboard();
   this.renderTodaySummary(saleDate);
   this.renderCalendar();
-  this.showToast('✅ บันทึกประวัติยอดขายน้ำชงเรียบร้อยแล้ว!', 'success');
+  this.showToast(`✅ บันทึกประวัติยอดขายน้ำชง (${this.formatThaiDate(saleDate)}) เรียบร้อยแล้ว!`, 'success');
 }
 
 renderDrinkSalesHistory() {
