@@ -589,27 +589,26 @@
       <section id="tab-expenses" class="tab-pane">
         <div class="figma-mobile-container">
 
-          <!-- Top Action Bar -->
-          <div class="figma-expense-header mb-3">
-            <button class="figma-btn-add-expense" id="btnOpenExpenseModal" title="เพิ่มรายการค่าใช้จ่าย">
-              <i data-lucide="plus"></i>
-              <span>เพิ่มค่าใช้จ่าย</span>
-            </button>
-          </div>
-
-          <!-- Total Spent Highlight Banner (Figma Hero Banner) -->
+          <!-- Total Spent Highlight Banner (with integrated Add Expense button) -->
           <div class="figma-expense-hero-card mb-3">
-            <div class="feh-top">
-              <div class="feh-label">
-                <i data-lucide="receipt"></i>
-                <span>ยอดจ่ายรวมทั้งหมด</span>
+            <div class="feh-top" style="align-items:flex-start; flex-wrap:wrap; gap:0.75rem;">
+              <div>
+                <div class="feh-label">
+                  <i data-lucide="receipt"></i>
+                  <span>ยอดจ่ายรวมทั้งหมด</span>
+                  <span class="feh-count-badge" id="expTotalCountSubtext" style="margin-left:0.35rem;">0 รายการ</span>
+                </div>
+                <div class="feh-amount-wrap" style="margin-top:0.25rem; margin-bottom:0;">
+                  <span class="feh-amount" id="expCategoryTotal">฿0</span>
+                </div>
               </div>
-              <span class="feh-count-badge" id="expTotalCountSubtext">0 รายการ</span>
+              <button class="figma-btn-add-expense" id="btnOpenExpenseModal" title="เพิ่มรายการค่าใช้จ่าย"
+                style="height:40px; padding:0 1rem; font-size:0.86rem; border-radius:10px; box-shadow:0 4px 12px rgba(0,0,0,0.18); flex-shrink:0;">
+                <i data-lucide="plus" style="width:16px;height:16px;"></i>
+                <span>เพิ่มค่าใช้จ่าย</span>
+              </button>
             </div>
-            <div class="feh-amount-wrap">
-              <span class="feh-amount" id="expCategoryTotal">฿0</span>
-            </div>
-            <div class="feh-breakdown-row">
+            <div class="feh-breakdown-row" style="margin-top:0.85rem;">
               <div class="feh-stat-pill" onclick="app.setExpenseCategory('INGREDIENT')">
                 <span class="pill-dot amber"></span>
                 <span class="pill-lbl">วัตถุดิบ</span>
@@ -1022,53 +1021,51 @@
       <section id="tab-recipes" class="tab-pane">
         <div class="figma-mobile-container">
 
-          <!-- Top Action Bar (Add Recipe Dropdown Menu) -->
-          <div class="figma-recipe-header mb-3">
-            <div class="recipe-create-dropdown-wrapper w-full" style="position: relative; width: 100%;">
-              <button class="figma-btn-add-recipe w-full" id="btnOpenAddRecipeModal" style="width: 100%;">
-                <i data-lucide="plus"></i>
-                <span>+ สร้างสูตรชงใหม่</span>
-                <i data-lucide="chevron-down" style="width:16px; height:16px; margin-left:auto;"></i>
-              </button>
-              <div class="recipe-create-menu" id="recipeCreateMenu"
-                style="display:none; position:absolute; right:0; left:0; top:calc(100% + 6px); background:#ffffff; border:1px solid var(--border-color); border-radius:var(--radius-md); box-shadow:0 12px 30px rgba(0,0,0,0.15); z-index:100; overflow:hidden; padding:0.4rem 0;">
-                <button type="button" class="recipe-dropdown-item" id="btnOptionAddCupRecipe"
-                  style="width:100%; text-align:left; padding:0.75rem 1rem; border:none; background:none; cursor:pointer; display:flex; align-items:center; gap:0.75rem; transition:background 0.2s;">
-                  <span style="font-size:1.4rem; line-height:1;">🥤</span>
-                  <div style="flex:1;">
-                    <div style="font-weight:700; color:var(--text-main); font-size:0.92rem;">สูตรต่อ 1 แก้ว (ชงสด)</div>
-                    <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">คำนวณต้นทุนต่อแก้วโดยตรง
-                    </div>
-                  </div>
-                </button>
-                <div style="height:1px; background:var(--border-color); margin:0.3rem 0;"></div>
-                <button type="button" class="recipe-dropdown-item" id="btnOptionAddJarRecipe"
-                  style="width:100%; text-align:left; padding:0.75rem 1rem; border:none; background:none; cursor:pointer; display:flex; align-items:center; gap:0.75rem; transition:background 0.2s;">
-                  <span style="font-size:1.4rem; line-height:1;">🏺</span>
-                  <div style="flex:1;">
-                    <div style="font-weight:700; color:var(--text-main); font-size:0.92rem;">สูตรต่อ 1 โหล
-                      (ชงถัง/เหยือก)</div>
-                    <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">ขยายสูตรเป็นถัง 5-6 ลิตร
-                    </div>
-                  </div>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Recipe Hero Highlight Summary Card -->
+          <!-- Recipe Hero Highlight Summary Card (with integrated Create Recipe button) -->
           <div class="figma-recipe-hero-card mb-3">
-            <div class="frh-top">
-              <div class="frh-label">
-                <i data-lucide="beaker"></i>
-                <span>คลังสูตรเครื่องดื่มประจำร้าน</span>
+            <div class="frh-top" style="align-items:flex-start; flex-wrap:wrap; gap:0.75rem;">
+              <div>
+                <div class="frh-label">
+                  <i data-lucide="beaker"></i>
+                  <span>คลังสูตรเครื่องดื่มประจำร้าน</span>
+                  <span class="frh-count-badge" id="recipeTotalCountBadge" style="margin-left:0.35rem;">0 เมนู</span>
+                </div>
+                <div class="frh-amount-wrap" style="margin-top:0.25rem; margin-bottom:0;">
+                  <span class="frh-title-text">ต้นทุนสูตรชงน้ำ</span>
+                </div>
               </div>
-              <span class="frh-count-badge" id="recipeTotalCountBadge">0 เมนู</span>
+
+              <div class="recipe-create-dropdown-wrapper" style="position:relative; flex-shrink:0;">
+                <button class="figma-btn-add-recipe" id="btnOpenAddRecipeModal"
+                  style="height:40px; padding:0 1rem; font-size:0.86rem; border-radius:10px; box-shadow:0 4px 12px rgba(0,0,0,0.18);">
+                  <i data-lucide="plus" style="width:16px;height:16px;"></i>
+                  <span>สร้างสูตรชงใหม่</span>
+                  <i data-lucide="chevron-down" style="width:15px; height:15px;"></i>
+                </button>
+                <div class="recipe-create-menu" id="recipeCreateMenu"
+                  style="display:none; position:absolute; right:0; top:calc(100% + 6px); min-width:250px; background:#ffffff; border:1px solid var(--border-color); border-radius:var(--radius-md); box-shadow:0 12px 30px rgba(0,0,0,0.15); z-index:100; overflow:hidden; padding:0.4rem 0;">
+                  <button type="button" class="recipe-dropdown-item" id="btnOptionAddCupRecipe"
+                    style="width:100%; text-align:left; padding:0.75rem 1rem; border:none; background:none; cursor:pointer; display:flex; align-items:center; gap:0.75rem; transition:background 0.2s;">
+                    <span style="font-size:1.35rem; line-height:1;">🥤</span>
+                    <div style="flex:1;">
+                      <div style="font-weight:700; color:var(--text-main); font-size:0.9rem;">สูตรต่อ 1 แก้ว (ชงสด)</div>
+                      <div style="font-size:0.74rem; color:var(--text-muted); margin-top:2px;">คำนวณต้นทุนต่อแก้วโดยตรง</div>
+                    </div>
+                  </button>
+                  <div style="height:1px; background:var(--border-color); margin:0.25rem 0;"></div>
+                  <button type="button" class="recipe-dropdown-item" id="btnOptionAddJarRecipe"
+                    style="width:100%; text-align:left; padding:0.75rem 1rem; border:none; background:none; cursor:pointer; display:flex; align-items:center; gap:0.75rem; transition:background 0.2s;">
+                    <span style="font-size:1.35rem; line-height:1;">🏺</span>
+                    <div style="flex:1;">
+                      <div style="font-weight:700; color:var(--text-main); font-size:0.9rem;">สูตรต่อ 1 โหล (ชงถัง/เหยือก)</div>
+                      <div style="font-size:0.74rem; color:var(--text-muted); margin-top:2px;">ขยายสูตรเป็นถัง 5–12 ลิตร</div>
+                    </div>
+                  </button>
+                </div>
+              </div>
             </div>
-            <div class="frh-amount-wrap">
-              <span class="frh-title-text">ต้นทุนสูตรชงน้ำ</span>
-            </div>
-            <div class="frh-breakdown-row">
+
+            <div class="frh-breakdown-row" style="margin-top:0.85rem;">
               <div class="frh-stat-pill" onclick="app.setRecipeFilter('cup')">
                 <span class="pill-dot green"></span>
                 <span class="pill-lbl">สูตรชงสด</span>
@@ -1552,14 +1549,20 @@
 
         <!-- Urgent Purchasing Cards Grid -->
         <div class="card mb-4" style="border: 1px solid #fecaca; box-shadow: 0 4px 20px rgba(239,68,68,0.06);">
-          <div class="card-header space-between" style="background: #fffafa; border-bottom: 1px solid #fee2e2;">
+          <div class="card-header space-between" style="background: #fffafa; border-bottom: 1px solid #fee2e2; flex-wrap:wrap; gap:0.65rem;">
             <div class="card-header-title"
               style="color: #991b1b; display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
               <i data-lucide="bell-ring" style="color: #ef4444;"></i>
-              <span>การ์ดรายการเตือนด่วน & แนะนำการสั่งซื้อ (Urgent Restock Cards)</span>
+              <span>รายการเตือนสั่งซื้อ</span>
               <span id="lowStockFilterIndicator" style="display:none; margin-left:0.5rem;"></span>
             </div>
-            <div style="display:flex; align-items:center; gap:0.5rem;">
+            <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+              <select id="lowStockSortOrder" class="form-input-sm" onchange="app.renderLowStockAlertView()"
+                style="height:32px; font-size:0.78rem; font-weight:600; background:#ffffff;" title="เรียงลำดับรายการ">
+                <option value="newest">🕒 รายการล่าสุด</option>
+                <option value="oldest">🕰️ รายการเก่าสุด</option>
+                <option value="critical">🚨 หมดสต๊อกขึ้นก่อน</option>
+              </select>
               <button id="btnResetLowStockFilter" class="btn-outline-fastwork btn-sm"
                 style="display:none; color:#dc2626; border-color:#fca5a5; background:#ffffff; font-size:0.75rem; padding:0.25rem 0.6rem;"
                 onclick="app.filterLowStockBySupplier('ALL')">
@@ -1568,6 +1571,31 @@
               </button>
               <div class="pill-tag red-tag" id="lowAlertPendingBadge">ตรวจพบของใกล้หมด</div>
             </div>
+          </div>
+          <!-- Category Filter Pills -->
+          <div class="figma-pills-scroll-row" id="lowStockCategoryPills"
+            style="padding:0.65rem 1rem; background:#ffffff; border-bottom:1px solid #fee2e2; margin:0;">
+            <button type="button" class="figma-pill-filter active" data-cat="ALL" onclick="app.setLowStockCategoryFilter('ALL')">
+              <span>ทั้งหมด</span>
+            </button>
+            <button type="button" class="figma-pill-filter" data-cat="INGREDIENT" onclick="app.setLowStockCategoryFilter('INGREDIENT')">
+              <span>🍵 วัตถุดิบชงน้ำ</span>
+            </button>
+            <button type="button" class="figma-pill-filter" data-cat="PACKAGING" onclick="app.setLowStockCategoryFilter('PACKAGING')">
+              <span>🥤 บรรจุภัณฑ์ &amp; แก้ว</span>
+            </button>
+            <button type="button" class="figma-pill-filter" data-cat="FRIDGE_DRINK" onclick="app.setLowStockCategoryFilter('FRIDGE_DRINK')">
+              <span>🧊 น้ำขายในตู้</span>
+            </button>
+            <button type="button" class="figma-pill-filter" data-cat="STOCK" onclick="app.setLowStockCategoryFilter('STOCK')">
+              <span>📦 ยกลัง/สำเร็จรูป</span>
+            </button>
+            <button type="button" class="figma-pill-filter" data-cat="OTHER" onclick="app.setLowStockCategoryFilter('OTHER')">
+              <span>🛠️ ค่าใช้จ่ายอื่นๆ</span>
+            </button>
+            <button type="button" class="figma-pill-filter" data-cat="PACK_SELL" onclick="app.setLowStockCategoryFilter('PACK_SELL')">
+              <span>📦 ของแพ็คขาย</span>
+            </button>
           </div>
           <div class="card-body p-3">
             <div class="low-stock-cards-grid" id="lowStockCardsContainer">
@@ -2526,231 +2554,207 @@
     </div>
   </div>
 
-  <!-- MODAL: ADD / EDIT RECIPE (สูตร 1 โหล) -->
+  <!-- MODAL: ADD / EDIT RECIPE (สูตรชงน้ำ - Redesigned) -->
   <div class="modal-backdrop" id="recipeModal">
     <div class="modal-dialog modal-lg">
       <div class="modal-header">
-        <h3 class="modal-title" id="recipeModalTitle">สูตรชงน้ำต่อ 1 โหล (Batch Recipe)</h3>
+        <div style="display:flex; align-items:center; gap:0.65rem;">
+          <div style="width:36px; height:36px; background:linear-gradient(135deg, var(--primary) 0%, #2563eb 100%); color:#fff; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+            <i data-lucide="beaker" style="width:18px;height:18px;"></i>
+          </div>
+          <div>
+            <h3 class="modal-title" id="recipeModalTitle" style="margin-bottom:0;">สร้าง / แก้ไขสูตรชงน้ำ</h3>
+            <span class="text-xs text-muted">คำนวณต้นทุนวัตถุดิบและกำไรต่อแก้วอัตโนมัติ</span>
+          </div>
+        </div>
         <button class="close-modal-btn" data-close="recipeModal">&times;</button>
       </div>
-      <form id="recipeForm" class="modal-body" novalidate>
-        <input type="hidden" id="recipeEditId">
-        <input type="hidden" id="recMode" value="jar">
 
-        <!-- Recipe Mode Switcher (ต่อ 1 แก้ว vs ต่อ 1 โหล) -->
-        <div class="mb-3"
-          style="display:flex; gap:0.5rem; background:#f1f5f9; padding:0.35rem; border-radius:var(--radius-md); border:1px solid var(--border-color);">
-          <button type="button" class="recipe-mode-tab-btn" id="btnModeJar"
-            style="flex:1; border:none; padding:0.6rem 1rem; border-radius:var(--radius-sm); font-weight:700; font-size:0.875rem; cursor:pointer; background:#ffffff; color:var(--primary); box-shadow:0 1px 3px rgba(0,0,0,0.1); display:flex; align-items:center; justify-content:center; gap:0.4rem; transition:all 0.2s;">
-            <span>🏺 สูตรชงต่อ 1 โหล / ถัง</span>
-            <span class="pill-tag green-tag" style="font-size:0.7rem; padding:0.15rem 0.4rem;">ชงขายได้หลายแก้ว</span>
-          </button>
-          <button type="button" class="recipe-mode-tab-btn" id="btnModeCup"
-            style="flex:1; border:none; padding:0.6rem 1rem; border-radius:var(--radius-sm); font-weight:600; font-size:0.875rem; cursor:pointer; background:transparent; color:var(--text-muted); display:flex; align-items:center; justify-content:center; gap:0.4rem; transition:all 0.2s;">
-            <span>🥤 สูตรชงต่อ 1 แก้ว</span>
-            <span class="pill-tag"
-              style="font-size:0.7rem; padding:0.15rem 0.4rem; background:#e2e8f0; color:#475569;">ชงสดทีละแก้ว</span>
-          </button>
-        </div>
+      <form id="recipeForm" style="display:flex; flex-direction:column; flex:1; min-height:0; overflow:hidden;" novalidate>
+        <div class="modal-body rec-modal-body">
+          <input type="hidden" id="recipeEditId">
+          <input type="hidden" id="recMode" value="jar">
+          <input type="hidden" id="recJarCapacity" value="โหล 6 ลิตร (24 แก้ว)">
 
-        <div class="form-row mb-3">
-          <div class="form-group">
-            <label class="form-label" for="recName">ชื่อเมนูเครื่องดื่ม <span class="text-danger">*</span></label>
-            <input type="text" id="recName" class="form-input" placeholder="เช่น ชาไทยโบราณ, ชาเขียวนมสด, โกโก้เข้มข้น"
-              required>
-          </div>
-        </div>
-
-        <!-- Automatic Capacity & Yield Calculation (โหมดต่อ 1 โหล) -->
-        <div id="recipeJarYieldSection" class="form-row three-col mb-3"
-          style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.85rem;">
-          <div class="form-group">
-            <label class="form-label" for="recJarLiters">ปริมาตรชงต่อโหล/ถัง (ลิตร)</label>
-            <div class="input-with-affix">
-              <input type="number" id="recJarLiters" class="form-input font-bold" value="6" min="0.5" step="0.5"
-                required>
-              <span class="affix-right">ลิตร</span>
-            </div>
-            <div style="display:flex; gap:0.35rem; margin-top:0.35rem; align-items:center; flex-wrap:wrap;">
-              <span style="font-size:0.75rem; color:var(--text-muted); font-weight:600;">เลือกด่วน:</span>
-              <button type="button" class="btn-fastwork-xs btn-liter-preset" data-liters="5"
-                style="padding:2px 8px; font-size:0.75rem; border-radius:4px; border:1px solid var(--border-color); background:#fff; cursor:pointer;">5
-                ลิตร</button>
-              <button type="button" class="btn-fastwork-xs btn-liter-preset" data-liters="6"
-                style="padding:2px 8px; font-size:0.75rem; border-radius:4px; border:1px solid var(--border-color); background:#fff; cursor:pointer;">6
-                ลิตร</button>
-              <button type="button" class="btn-fastwork-xs btn-liter-preset" data-liters="8"
-                style="padding:2px 8px; font-size:0.75rem; border-radius:4px; border:1px solid var(--border-color); background:#fff; cursor:pointer;">8
-                ลิตร</button>
-              <button type="button" class="btn-fastwork-xs btn-liter-preset" data-liters="10"
-                style="padding:2px 8px; font-size:0.75rem; border-radius:4px; border:1px solid var(--border-color); background:#fff; cursor:pointer;">10
-                ลิตร</button>
-            </div>
-            <span class="field-hint">เช่น 5 ลิตร หรือ 6 ลิตร</span>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="recCupSizeOz">ขนาดแก้วที่เสิร์ฟ</label>
-            <select id="recCupSizeOz" class="form-input">
-              <option value="16" selected>แก้ว 16 oz (250 ml รวมน้ำแข็ง - มาตรฐานร้าน)</option>
-              <option value="20">แก้ว 20 oz (~310 ml รวมน้ำแข็ง)</option>
-              <option value="22">แก้ว 22 oz (~340 ml รวมน้ำแข็ง)</option>
-              <option value="28">แก้วยีราฟ 28 oz (~440 ml รวมน้ำแข็ง)</option>
-              <option value="32">แก้ว/ถัง 32 oz (~500 ml รวมน้ำแข็ง)</option>
-            </select>
-            <span class="field-hint">เกณฑ์มาตรฐานร้าน: แก้ว 16 oz ใช้น้ำชง 250 ml (รวมน้ำแข็งเต็มแก้ว)</span>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="recYieldCups">ชงเสิร์ฟได้ประมาณ</label>
-            <div class="input-with-affix">
-              <input type="number" id="recYieldCups" class="form-input font-bold" value="24" min="1" step="1" readonly
-                style="background-color: #ffffff; color: var(--primary); font-size: 1.1rem;">
-              <span class="affix-right">แก้ว</span>
-            </div>
-            <span class="field-hint" id="recYieldHintText">ถัง 6 ลิตร (ใช้น้ำ 250 ml/แก้ว) ชงเสิร์ฟได้ ~24 แก้ว</span>
-          </div>
-        </div>
-
-        <input type="hidden" id="recJarCapacity" value="โหล 6 ลิตร (24 แก้ว)">
-
-        <!-- SECTION: น้ำชงต่อ 1 แก้ว (Single Cup Recipe Proportion) -->
-        <div id="recipeSingleCupSection"
-          style="background: #ffffff; border: 1.5px solid var(--primary-border); border-radius: var(--radius-sm); padding: 0.85rem; margin-bottom: 1.25rem; box-shadow: var(--shadow-sm);">
-          <div class="space-between align-center mb-2">
-            <div>
-              <label class="form-label mb-0 font-bold" style="color: var(--primary); font-size: 0.95rem;">
-                🥤 สัดส่วนน้ำชงต่อ 1 แก้ว (มาตรฐานชงสด):
-              </label>
-              <span class="field-hint" id="singleCupSectionHint" style="margin-top: 2px; display: block;">
-                กำหนดส่วนผสมของ 1 แก้ว ระบบจะคูณสเกลขยายเป็นสูตรต่อโหล/ถัง (ชงได้ <span id="cupScaleCountBadge"
-                  class="font-bold text-primary">24</span> แก้ว) ให้ด้านล่างอัตโนมัติ
-              </span>
-            </div>
-            <button type="button" class="btn-fastwork-sm" id="btnAddSingleCupRow"
-              style="background:#eef6ff; color:var(--primary); border:1px solid #bfdbfe;">
-              <i data-lucide="plus"></i>
-              <span>+ เพิ่มวัตถุดิบแก้ว</span>
+          <!-- Mode Switcher -->
+          <div class="rec-mode-switcher mb-3">
+            <button type="button" class="recipe-mode-tab-btn" id="btnModeJar"
+              style="flex:1; border:none; padding:0.55rem 0.75rem; border-radius:8px; font-weight:700; font-size:0.85rem; cursor:pointer; background:#ffffff; color:var(--primary); box-shadow:0 1px 3px rgba(0,0,0,0.08); display:flex; align-items:center; justify-content:center; gap:0.4rem; transition:all 0.2s;">
+              <span>🏺 ต่อ 1 โหล / ถัง</span>
+              <span class="pill-tag green-tag" style="font-size:0.68rem; padding:0.1rem 0.4rem;">ชงหลายแก้ว</span>
+            </button>
+            <button type="button" class="recipe-mode-tab-btn" id="btnModeCup"
+              style="flex:1; border:none; padding:0.55rem 0.75rem; border-radius:8px; font-weight:600; font-size:0.85rem; cursor:pointer; background:transparent; color:var(--text-muted); display:flex; align-items:center; justify-content:center; gap:0.4rem; transition:all 0.2s;">
+              <span>🥤 ต่อ 1 แก้ว</span>
+              <span class="pill-tag" style="font-size:0.68rem; padding:0.1rem 0.4rem; background:#e2e8f0; color:#475569;">ชงสด</span>
             </button>
           </div>
 
-          <div class="single-cup-table mb-2" id="singleCupContainer">
-            <!-- Dynamic rows of single cup ingredients -->
+          <!-- Menu Name -->
+          <div class="form-group mb-3">
+            <label class="form-label font-bold" for="recName">ชื่อเมนูเครื่องดื่ม <span class="text-danger">*</span></label>
+            <input type="text" id="recName" class="form-input font-bold" placeholder="เช่น ชาไทย, ชาเขียว, โกโก้เข้มข้น" required>
           </div>
 
-          <div id="syncCupToBatchWrapper" style="text-align: right;">
-            <button type="button" class="btn-fastwork-sm" id="btnSyncCupToBatch"
-              title="คำนวณและอัปเดตสัดส่วนลงสูตรโหลทันที">
-              <span>⚡ คำนวณขยายสูตรลง 1 โหล</span>
-            </button>
-          </div>
-        </div>
+          <!-- Batch Capacity & Yield (Jar Mode) -->
+          <div id="recipeJarYieldSection" class="rec-modal-section mb-3">
+            <div class="rec-yield-grid">
+              <div class="form-group mb-0">
+                <label class="form-label" for="recJarLiters">ปริมาตรโหล/ถัง</label>
+                <div class="input-with-affix">
+                  <input type="number" id="recJarLiters" class="form-input font-bold" value="6" min="0.5" step="0.5" required>
+                  <span class="affix-right">ลิตร</span>
+                </div>
+                <div class="rec-liter-presets">
+                  <button type="button" class="btn-fastwork-xs btn-liter-preset" data-liters="5">5L</button>
+                  <button type="button" class="btn-fastwork-xs btn-liter-preset" data-liters="6">6L</button>
+                  <button type="button" class="btn-fastwork-xs btn-liter-preset" data-liters="8">8L</button>
+                  <button type="button" class="btn-fastwork-xs btn-liter-preset" data-liters="10">10L</button>
+                </div>
+              </div>
 
-        <div class="divider-hr" id="recipeDivider"></div>
+              <div class="form-group mb-0">
+                <label class="form-label" for="recCupSizeOz">ขนาดแก้วเสิร์ฟ</label>
+                <select id="recCupSizeOz" class="form-input">
+                  <option value="16" selected>16 oz (250 ml)</option>
+                  <option value="20">20 oz (310 ml)</option>
+                  <option value="22">22 oz (340 ml)</option>
+                  <option value="28">28 oz (440 ml)</option>
+                  <option value="32">32 oz (500 ml)</option>
+                </select>
+              </div>
 
-        <div id="recipeBatchSection">
-          <div class="space-between align-center mb-1">
-            <div>
-              <label class="form-label mb-0 font-bold" id="batchSectionTitle">รายการส่วนผสมต่อ 1 โหล/ถัง:</label>
-              <span class="field-hint" id="batchSectionHint"
-                style="margin-top:2px; display:block;">ระบุวัตถุดิบที่ใช้ผสมใน 1 โหล/ถัง (หรือกำหนดสัดส่วน 1 แก้วด้านบน
-                แล้วกด "⚡ คำนวณขยายสูตรลง 1 โหล" เพื่อคำนวณลงมาอัตโนมัติ)</span>
+              <div class="form-group mb-0">
+                <label class="form-label" for="recYieldCups">ชงได้ประมาณ</label>
+                <div class="input-with-affix">
+                  <input type="number" id="recYieldCups" class="form-input font-bold" value="24" min="1" step="1" readonly
+                    style="background-color:#ffffff; color:var(--primary); font-size:1.05rem;">
+                  <span class="affix-right">แก้ว</span>
+                </div>
+                <span class="field-hint" id="recYieldHintText" style="font-size:0.72rem; margin-top:4px; display:block;">~24 แก้ว</span>
+              </div>
             </div>
-            <button type="button" class="btn-fastwork-sm" id="btnAddIngredientRow">
-              <i data-lucide="plus"></i>
-              <span id="btnAddIngredientRowText">เพิ่มส่วนผสมในโหล</span>
-            </button>
           </div>
 
-          <div class="ingredients-list-table mb-3" id="recipeIngredientsContainer">
-            <!-- Rows dynamically added -->
-          </div>
-        </div>
-
-        <!-- Recipe Cost Summary in Modal -->
-        <div class="calc-preview-card mb-3">
-          <div class="calc-preview-row" id="modalRecipeJarCostRow">
-            <span id="modalRecipeJarCostLabel">ต้นทุนวัตถุดิบต่อ 1 โหล/ถัง (6 ลิตร):</span>
-            <span class="font-bold text-amber" id="modalRecipeTotalJarCost">฿0.00</span>
-          </div>
-          <div class="calc-preview-row">
-            <span id="modalRecipeUnitCostLabel">ต้นทุนเฉลี่ยต่อแก้ว:</span>
-            <span class="font-bold text-amber" id="modalRecipeUnitCost">฿0.00</span>
-          </div>
-        </div>
-
-        <!-- User Input Selling Price & Live Profit Analysis -->
-        <div class="calc-preview-card mb-3"
-          style="background:linear-gradient(135deg, rgba(0, 80, 240, 0.04) 0%, rgba(16, 185, 129, 0.05) 100%); border:1.5px solid var(--border-color); border-radius:var(--radius-md); padding:1rem 1.25rem;">
-          <div
-            style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem; flex-wrap:wrap; gap:0.5rem;">
-            <label class="form-label mb-0 font-bold" for="recSellingPrice"
-              style="color:var(--text-main); font-size:0.95rem; display:flex; align-items:center; gap:0.35rem;">
-              💰 ตั้งราคาขายต่อแก้ว:
-            </label>
-            <span class="pill-tag green-tag" style="font-size:0.75rem; font-weight:700;">คำนวณกำไรตามราคาจริง</span>
-          </div>
-
-          <div
-            style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:0.65rem; align-items:center;">
-            <div>
-              <label class="form-label mb-1" for="recSellingPrice"
-                style="font-size:0.8rem; font-weight:700;">ราคาขาย/แก้ว</label>
-              <div class="input-with-affix" style="width:100%;">
-                <span class="affix-left" style="font-weight:700; color:var(--primary);">฿</span>
-                <input type="number" id="recSellingPrice" class="form-input font-bold" placeholder="ราคาขาย" value="25"
-                  min="0" step="any"
-                  style="font-size:1.1rem; font-weight:800; color:var(--primary); height:40px; padding-left:2.2rem;"
-                  required>
+          <!-- Single Cup Recipe Proportion -->
+          <div id="recipeSingleCupSection" class="rec-modal-section is-primary mb-3">
+            <div class="rec-section-head">
+              <div>
+                <div class="rec-section-title" style="color:var(--primary);">🥤 สัดส่วนต่อ 1 แก้ว</div>
+                <span class="text-xs text-muted" id="singleCupSectionHint">คูณขยายเป็น <span id="cupScaleCountBadge" class="font-bold text-primary">24</span> แก้วอัตโนมัติ</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:0.4rem;">
+                <button type="button" class="btn-fastwork-sm" id="btnAddSingleCupRow"
+                  style="background:#eff6ff; color:var(--primary); border:1px solid #bfdbfe;">
+                  <i data-lucide="plus"></i>
+                  <span>เพิ่มวัตถุดิบ</span>
+                </button>
+                <button type="button" class="btn-fastwork-sm" id="btnToggleSingleCupSection"
+                  onclick="const b=document.getElementById('singleCupBodyWrapper'); if(b){const hide=b.style.display!=='none'; b.style.display=hide?'none':'block'; this.textContent=hide?'แสดง ▾':'ซ่อน ▴';}"
+                  style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; font-weight:600;">
+                  ซ่อน ▴
+                </button>
               </div>
             </div>
 
-            <div>
-              <label class="form-label mb-1" for="recTargetProfit"
-                style="font-size:0.8rem; font-weight:700; color:#c2410c;">🎯 กำไรที่ต้องการ/แก้ว</label>
-              <div class="input-with-affix" style="width:100%;">
-                <span class="affix-left" style="font-weight:800; color:#ea580c;">฿</span>
-                <input type="number" id="recTargetProfit" class="form-input font-bold" placeholder="เช่น 5" value="5"
-                  min="0.5" step="0.5"
-                  style="font-size:1.1rem; font-weight:800; color:#c2410c; height:40px; padding-left:2.2rem; background:#fff7ed; border-color:#fdba74;"
-                  title="กำหนดกำไรต่อแก้วที่ต้องการ (ระบบจะช่วยคำนวณปรับลดสูตรให้ได้ตามนี้)">
+            <div id="singleCupBodyWrapper">
+              <div class="single-cup-table mb-2" id="singleCupContainer">
+                <!-- Dynamic rows of single cup ingredients -->
+              </div>
+
+              <div id="syncCupToBatchWrapper" style="text-align:right;">
+                <button type="button" class="btn-fastwork-sm" id="btnSyncCupToBatch" title="คำนวณและอัปเดตสัดส่วนลงสูตรโหลทันที">
+                  <span>⚡ ขยายสูตรลง 1 โหล</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="divider-hr" id="recipeDivider"></div>
+
+          <!-- Batch Ingredients -->
+          <div id="recipeBatchSection" class="rec-modal-section mb-3">
+            <div class="rec-section-head">
+              <div>
+                <div class="rec-section-title" id="batchSectionTitle">🏺 ส่วนผสมต่อ 1 โหล/ถัง</div>
+                <span class="text-xs text-muted" id="batchSectionHint">ระบุปริมาณที่ใช้ต่อ 1 โหล</span>
+              </div>
+              <button type="button" class="btn-fastwork-sm" id="btnAddIngredientRow">
+                <i data-lucide="plus"></i>
+                <span id="btnAddIngredientRowText">เพิ่มส่วนผสม</span>
+              </button>
+            </div>
+
+            <div class="ingredients-list-table" id="recipeIngredientsContainer">
+              <!-- Rows dynamically added -->
+            </div>
+          </div>
+
+          <!-- Cost & Profit Analysis Card -->
+          <div class="rec-finance-card mb-3">
+            <div class="rec-cost-strip">
+              <div class="rec-cost-item" id="modalRecipeJarCostRow">
+                <span id="modalRecipeJarCostLabel">ต้นทุนต่อ 1 โหล (6 ลิตร)</span>
+                <strong class="text-amber" id="modalRecipeTotalJarCost">฿0.00</strong>
+              </div>
+              <div class="rec-cost-item">
+                <span id="modalRecipeUnitCostLabel">ต้นทุนเฉลี่ย/แก้ว</span>
+                <strong class="text-amber" id="modalRecipeUnitCost">฿0.00</strong>
               </div>
             </div>
 
-            <div
-              style="background:#ffffff; border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:0.45rem 0.65rem; text-align:center;">
-              <div style="font-size:0.725rem; color:var(--text-muted); font-weight:600;">กำไรต่อแก้ว</div>
-              <div class="font-bold text-success" id="modalRecipeProfitPerCup" style="font-size:1.05rem;">+฿0.00</div>
+            <div class="rec-price-grid">
+              <div>
+                <label class="form-label mb-1" for="recSellingPrice" style="font-size:0.78rem; font-weight:700;">💰 ราคาขาย/แก้ว</label>
+                <div class="input-with-affix" style="width:100%;">
+                  <span class="affix-left" style="font-weight:700; color:var(--primary);">฿</span>
+                  <input type="number" id="recSellingPrice" class="form-input font-bold" placeholder="ราคาขาย" value="25"
+                    min="0" step="any" style="font-size:1.05rem; font-weight:800; color:var(--primary); height:40px; padding-left:2rem;" required>
+                </div>
+              </div>
+
+              <div>
+                <label class="form-label mb-1" for="recTargetProfit" style="font-size:0.78rem; font-weight:700; color:#c2410c;">🎯 กำไรเป้าหมาย/แก้ว</label>
+                <div class="input-with-affix" style="width:100%;">
+                  <span class="affix-left" style="font-weight:800; color:#ea580c;">฿</span>
+                  <input type="number" id="recTargetProfit" class="form-input font-bold" placeholder="5" value="5"
+                    min="0.5" step="0.5" style="font-size:1.05rem; font-weight:800; color:#c2410c; height:40px; padding-left:2rem; background:#fff7ed; border-color:#fdba74;">
+                </div>
+              </div>
+
+              <div class="rec-kpi-box">
+                <div class="rec-kpi-lbl">กำไร/แก้ว</div>
+                <div class="font-bold text-success rec-kpi-val" id="modalRecipeProfitPerCup">+฿0.00</div>
+              </div>
+
+              <div class="rec-kpi-box">
+                <div class="rec-kpi-lbl">กำไร (%)</div>
+                <div class="font-bold text-primary rec-kpi-val" id="modalRecipeMarginPercent">0%</div>
+              </div>
+
+              <div class="rec-kpi-box" id="modalRecipeTotalJarProfitBox">
+                <div class="rec-kpi-lbl" id="modalRecipeTotalJarProfitLabel">กำไรหมดโหล</div>
+                <div class="font-bold text-amber rec-kpi-val" id="modalRecipeTotalJarProfit">฿0.00</div>
+              </div>
             </div>
 
-            <div
-              style="background:#ffffff; border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:0.45rem 0.65rem; text-align:center;">
-              <div style="font-size:0.725rem; color:var(--text-muted); font-weight:600;">กำไร (%)</div>
-              <div class="font-bold text-primary" id="modalRecipeMarginPercent" style="font-size:1.05rem;">0%</div>
-            </div>
-
-            <div id="modalRecipeTotalJarProfitBox"
-              style="background:#ffffff; border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:0.45rem 0.65rem; text-align:center;">
-              <div id="modalRecipeTotalJarProfitLabel"
-                style="font-size:0.725rem; color:var(--text-muted); font-weight:600;">ขายหมดโหลได้กำไร</div>
-              <div class="font-bold text-amber" id="modalRecipeTotalJarProfit" style="font-size:1.05rem;">฿0.00</div>
-            </div>
+            <div id="recipeAdviceContainer" style="display:none; margin-top:0.75rem;"></div>
           </div>
 
-          <div id="recipeAdviceContainer" style="display:none; margin-top:0.75rem;">
-            <!-- Rendered dynamically when profit/margin is low or needs optimization -->
+          <!-- Instructions -->
+          <div class="form-group mb-0">
+            <label class="form-label font-bold" for="recInstructions">📝 วิธีชง / เคล็ดลับ</label>
+            <textarea id="recInstructions" class="form-input" rows="2"
+              placeholder="เช่น แช่ชา 5 นาที กรองกาก เติมนมข้นคนให้ละลาย"></textarea>
           </div>
-        </div>
-
-        <div class="form-group mb-3">
-          <label class="form-label" for="recInstructions">วิธีชง / เคล็ดลับ</label>
-          <textarea id="recInstructions" class="form-input" rows="3"
-            placeholder="เช่น แช่ผงชาในน้ำร้อน 5 นาที กรองกากออก ใส่นมข้นหวานคนให้ละลาย เติมนมข้นจืดตาม คนให้เข้ากันแล้วเทลงโหลแช่เย็น"></textarea>
         </div>
 
         <div class="modal-footer">
           <button type="button" class="btn-secondary" data-close="recipeModal">ยกเลิก</button>
-          <button type="submit" class="btn-fastwork" id="btnSaveRecipe">บันทึกสูตรชง</button>
+          <button type="submit" class="btn-fastwork" id="btnSaveRecipe">
+            <i data-lucide="save" style="width:16px;height:16px;"></i>
+            <span>บันทึกสูตรชง</span>
+          </button>
         </div>
       </form>
     </div>

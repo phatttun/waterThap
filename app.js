@@ -4867,9 +4867,10 @@ class WaterFlowApp {
       const totalJarProfit = profitPerCup * yieldCups;
       const isProfit = profitPerCup >= 0;
 
+      const rawCap = recipe.jarCapacity || '1 โหล';
       const capacityText = isCup
         ? `ชงแก้ว ${recipe.cupSizeOz || 16} oz (ชงสด)`
-        : `${this.escapeHtml(recipe.jarCapacity || '1 โหล')} (~${yieldCups} แก้ว)`;
+        : (rawCap.includes('แก้ว') ? this.escapeHtml(rawCap) : `${this.escapeHtml(rawCap)} (~${yieldCups} แก้ว)`);
 
       const ingredientsList = recipe.ingredients || [];
 
@@ -4944,16 +4945,16 @@ class WaterFlowApp {
           ` : ''}
 
           <!-- Card Actions Footer -->
-          <div class="frc-actions">
+          <div class="frc-actions frc-actions-redesigned">
             <span class="frc-total-summary">
-              ${isCup ? `กำไร +฿${profitPerCup.toFixed(2)}/แก้ว` : `ขายหมดโหลได้กำไร ~${this.formatCurrency(totalJarProfit)}`}
+              ${isCup ? `กำไร +฿${profitPerCup.toFixed(2)} / แก้ว` : `กำไรหมดโหล ~${this.formatCurrency(totalJarProfit)}`}
             </span>
             <div class="frc-btns-group">
-              <button class="btn-figma-tx-action" onclick="app.openRecipeModal('${recipe.id}')" title="แก้ไขสูตร">
+              <button type="button" class="frc-action-btn is-edit" onclick="app.openRecipeModal('${recipe.id}')" title="แก้ไขสูตร">
                 <i data-lucide="edit-3"></i>
                 <span>แก้ไข</span>
               </button>
-              <button class="btn-figma-tx-action danger" onclick="app.deleteRecipe('${recipe.id}')" title="ลบสูตร">
+              <button type="button" class="frc-action-btn is-delete" onclick="app.deleteRecipe('${recipe.id}')" title="ลบสูตร">
                 <i data-lucide="trash-2"></i>
                 <span>ลบ</span>
               </button>
@@ -6104,7 +6105,7 @@ class WaterFlowApp {
     }
 
     let amountVal = '';
-    let amountUnit = 'oz';
+    let amountUnit = 'g';
 
     // ดึงตัวเลขและหน่วยคงที่ออกจาก amount หรือ calcData
     if (calcData && calcData.originalUnit) {
@@ -6125,7 +6126,7 @@ class WaterFlowApp {
     }
 
     if (!amountUnit) {
-      amountUnit = 'oz';
+      amountUnit = 'g';
     }
 
     const row = document.createElement('div');
@@ -6219,7 +6220,7 @@ class WaterFlowApp {
     const isCupMode = document.getElementById('recMode')?.value === 'cup';
 
     const standardUnits = ['oz', 'ml', 'g', 'ลูก', 'ช้อนโต๊ะ', 'ชุด', 'ชิ้น'];
-    const currentUnit = amountUnit || 'oz';
+    const currentUnit = amountUnit || 'g';
     const isCustomUnit = currentUnit && !standardUnits.includes(currentUnit);
 
     row.innerHTML = `
@@ -10700,6 +10701,14 @@ class WaterFlowApp {
     this.renderLowStockAlertView();
   }
 
+  setLowStockCategoryFilter(cat) {
+    this.currentLowStockCategoryFilter = cat || 'ALL';
+    document.querySelectorAll('#lowStockCategoryPills .figma-pill-filter').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.cat === this.currentLowStockCategoryFilter);
+    });
+    this.renderLowStockAlertView();
+  }
+
   renderLowStockAlertView() {
     const list = this.data.stockItems || [];
     const container = document.getElementById('lowStockCardsContainer');
@@ -10707,6 +10716,9 @@ class WaterFlowApp {
 
     if (!this.currentLowStockSupplierFilter) {
       this.currentLowStockSupplierFilter = 'ALL';
+    }
+    if (!this.currentLowStockCategoryFilter) {
+      this.currentLowStockCategoryFilter = 'ALL';
     }
 
     // รวมรายการที่วิกฤต:
@@ -10814,10 +10826,14 @@ class WaterFlowApp {
       }
     }
 
-    // Apply Filter to lowItems
-    let displayedItems = lowItems;
+    // Apply Supplier & Category Filters to lowItems
+    let displayedItems = [...lowItems];
+    if (this.currentLowStockCategoryFilter && this.currentLowStockCategoryFilter !== 'ALL') {
+      displayedItems = displayedItems.filter(item => item.category === this.currentLowStockCategoryFilter);
+    }
+
     if (this.currentLowStockSupplierFilter && this.currentLowStockSupplierFilter !== 'ALL') {
-      displayedItems = lowItems.filter(item => {
+      displayedItems = displayedItems.filter(item => {
         const itemSup = (item.supplier || '').trim();
         const parsed = this.parseSupplier(itemSup);
         const nameToMatch = (parsed.name || itemSup || 'ไม่ระบุร้านค้า').toLowerCase();
@@ -10837,6 +10853,14 @@ class WaterFlowApp {
       if (filterIndicator) filterIndicator.style.display = 'none';
       if (btnResetFilter) btnResetFilter.style.display = 'none';
     }
+
+    // Apply Sort Order (newest / oldest / critical)
+    const sortOrder = document.getElementById('lowStockSortOrder')?.value || 'newest';
+    if (sortOrder === 'newest') {
+      displayedItems.sort((a, b) => String(b.id || '').localeCompare(String(a.id || '')));
+    } else if (sortOrder === 'oldest') {
+      displayedItems.sort((a, b) => String(a.id || '').localeCompare(String(b.id || '')));
+    } // 'critical' keeps default lowItems sort (qty <= 0 first, then Thai name)
 
     // Bind Hero Actions
     const btnCopy = document.getElementById('btnExportShoppingList');
