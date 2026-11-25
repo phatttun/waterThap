@@ -1841,183 +1841,164 @@
 
       <!-- TAB: DRINK SALES - 💰 คำนวณการขายน้ำชง -->
       <section id="tab-drink-sales" class="tab-pane">
-        <div class="figma-mobile-container">
+        <div class="ds-page-container">
 
-          <div class="section-header mb-3">
-            <div>
-              <h2 class="page-title">💰 คำนวณการขายน้ำชง</h2>
-              <p class="page-desc">ตั้งค่าขนาดแก้ว บรรจุภัณฑ์ เลือกสูตรน้ำ แล้วคำนวณต้นทุน-กำไรอย่างละเอียด</p>
-            </div>
-          </div>
-
-          <!-- ═══ STEP 1: ตั้งค่าขนาดแก้ว & บรรจุภัณฑ์ ═══ -->
-          <div class="card mb-3">
-            <div class="card-header">
-              <div class="card-header-title">
+          <!-- Compact Hero Header -->
+          <div class="ds-hero-banner mb-4">
+            <div class="ds-hero-left">
+              <div class="ds-hero-icon">
                 <i data-lucide="cup-soda"></i>
-                <span>🥤 ตั้งค่าขนาดแก้ว & บรรจุภัณฑ์</span>
+              </div>
+              <div>
+                <div class="ds-hero-eyebrow">DRINK SALES &amp; PROFIT CALCULATOR</div>
+                <h2 class="ds-hero-title">💰 คำนวณการขายน้ำชง</h2>
+                <p class="ds-hero-sub">นับจำนวนแก้ว เลือกสูตรน้ำ แล้วคำนวณต้นทุน–กำไรสุทธิได้ทันที</p>
               </div>
             </div>
-            <div class="card-body" style="padding:0;">
-              <div id="dsCupSizeCards"></div>
+            <div class="ds-hero-stats">
+              <div class="ds-hero-stat-pill" style="background:rgba(255,255,255,0.14); border-color:rgba(255,255,255,0.28);">
+                <label class="ds-hero-stat-lbl" for="drinkSalesSaveDate" style="color:#e2e8f0; cursor:pointer;">📅 วันที่บันทึก</label>
+                <input type="date" id="drinkSalesSaveDate" class="form-input"
+                  style="height:30px; margin-top:3px; padding:0.15rem 0.45rem; font-size:0.82rem; font-weight:700; background:#ffffff; color:#0f172a; border:none; border-radius:7px; min-width:136px;">
+              </div>
+              <div class="ds-hero-stat-pill">
+                <span class="ds-hero-stat-lbl">ขายรวม (ประวัติ)</span>
+                <strong class="ds-hero-stat-val" id="dsHeroTotalHistorySold">0 แก้ว</strong>
+              </div>
+              <div class="ds-hero-stat-pill is-primary">
+                <span class="ds-hero-stat-lbl">รายรับรวม (ประวัติ)</span>
+                <strong class="ds-hero-stat-val" id="dsHeroTotalHistoryRevenue">฿0</strong>
+              </div>
+              <div class="ds-hero-stat-pill"
+                style="background:rgba(16,185,129,0.22); border-color:rgba(52,211,153,0.45);">
+                <span class="ds-hero-stat-lbl" style="color:#a7f3d0;">ยอดรวมกำไรน้ำชง</span>
+                <strong class="ds-hero-stat-val" id="dsHeroTotalHistoryProfit" style="color:#6ee7b7;">+฿0.00</strong>
+              </div>
             </div>
           </div>
 
-          <!-- ═══ STEP 2: นับแก้วก่อน-หลังขาย ═══ -->
-          <div class="card mb-3">
-            <div class="card-header">
-              <div class="card-header-title">
-                <i data-lucide="hash"></i>
-                <span>📊 นับจำนวนแก้วก่อน-หลังขาย</span>
-              </div>
-            </div>
-            <div class="card-body">
-              <div style="overflow-x:auto;">
-                <table class="drink-sales-cup-table"
-                  style="width:100%; border-collapse:separate; border-spacing:0 0.3rem;">
-                  <thead>
-                    <tr style="font-size:0.8rem; color:#64748b; text-align:center;">
-                      <th style="padding:0.3rem; text-align:left;">ขนาด</th>
-                      <th style="padding:0.3rem;">ราคาขาย</th>
-                      <th style="padding:0.3rem;">ก่อนขาย</th>
-                      <th style="padding:0.3rem;">หลังขาย</th>
-                      <th style="padding:0.3rem;">ขายได้</th>
-                      <th style="padding:0.3rem;">รายรับ</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr class="drink-sales-cup-row">
-                      <td style="font-weight:700; font-size:0.9rem;">10 oz</td>
-                      <td>
-                        <div class="input-with-affix" style="width:80px;"><span class="affix-left"
-                            style="font-size:0.75rem;">฿</span><input type="number" id="dsCupPrice10"
-                            class="form-input drink-sales-cup-price" value="5" min="0" step="1"
-                            style="height:36px; text-align:center; font-weight:600;"></div>
-                      </td>
-                      <td><input type="number" id="dsCupBefore10" class="form-input drink-sales-cup-before"
-                          placeholder="0" min="0" step="1" style="width:70px; height:36px; text-align:center;"></td>
-                      <td><input type="number" id="dsCupAfter10" class="form-input drink-sales-cup-after"
-                          placeholder="0" min="0" step="1" style="width:70px; height:36px; text-align:center;"></td>
-                      <td style="text-align:center; font-weight:700;" id="dsCupSold10">0 แก้ว</td>
-                      <td style="text-align:center; font-weight:600; color:var(--primary);" id="dsCupRev10">฿0</td>
-                    </tr>
-                    <tr class="drink-sales-cup-row">
-                      <td style="font-weight:700; font-size:0.9rem;">16 oz</td>
-                      <td>
-                        <div class="input-with-affix" style="width:80px;"><span class="affix-left"
-                            style="font-size:0.75rem;">฿</span><input type="number" id="dsCupPrice16"
-                            class="form-input drink-sales-cup-price" value="10" min="0" step="1"
-                            style="height:36px; text-align:center; font-weight:600;"></div>
-                      </td>
-                      <td><input type="number" id="dsCupBefore16" class="form-input drink-sales-cup-before"
-                          placeholder="0" min="0" step="1" style="width:70px; height:36px; text-align:center;"></td>
-                      <td><input type="number" id="dsCupAfter16" class="form-input drink-sales-cup-after"
-                          placeholder="0" min="0" step="1" style="width:70px; height:36px; text-align:center;"></td>
-                      <td style="text-align:center; font-weight:700;" id="dsCupSold16">0 แก้ว</td>
-                      <td style="text-align:center; font-weight:600; color:var(--primary);" id="dsCupRev16">฿0</td>
-                    </tr>
-                    <tr class="drink-sales-cup-row">
-                      <td style="font-weight:700; font-size:0.9rem;">28 oz</td>
-                      <td>
-                        <div class="input-with-affix" style="width:80px;"><span class="affix-left"
-                            style="font-size:0.75rem;">฿</span><input type="number" id="dsCupPrice28"
-                            class="form-input drink-sales-cup-price" value="20" min="0" step="1"
-                            style="height:36px; text-align:center; font-weight:600;"></div>
-                      </td>
-                      <td><input type="number" id="dsCupBefore28" class="form-input drink-sales-cup-before"
-                          placeholder="0" min="0" step="1" style="width:70px; height:36px; text-align:center;"></td>
-                      <td><input type="number" id="dsCupAfter28" class="form-input drink-sales-cup-after"
-                          placeholder="0" min="0" step="1" style="width:70px; height:36px; text-align:center;"></td>
-                      <td style="text-align:center; font-weight:700;" id="dsCupSold28">0 แก้ว</td>
-                      <td style="text-align:center; font-weight:600; color:var(--primary);" id="dsCupRev28">฿0</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+          <!-- Responsive 2-Column Workspace -->
+          <div class="ds-workspace-grid">
 
-              <div
-                style="display:flex; justify-content:space-between; align-items:center; margin-top:0.75rem; padding:0.6rem 0.8rem; background:#eff6ff; border-radius:8px; border:1px solid #bfdbfe;">
-                <div style="font-size:0.85rem;">
-                  <span style="color:#64748b;">ขายรวม:</span>
-                  <strong id="dsTotalCupsSold" style="margin-left:0.3rem;">0 แก้ว</strong>
+            <!-- Left Column: Packaging Config & Cup Count -->
+            <div class="ds-col">
+
+              <!-- Step 1: ตั้งค่าขนาดแก้ว & บรรจุภัณฑ์ (Collapsible) -->
+              <div class="card ds-section-card mb-3">
+                <div class="card-header ds-card-header space-between" style="cursor:pointer;"
+                  onclick="const body=document.getElementById('dsCupConfigBody'); const chev=document.getElementById('dsCupConfigChev'); if(body){const open=body.style.display!=='none'; body.style.display=open?'none':'block'; if(chev) chev.style.transform=open?'rotate(-90deg)':'rotate(0deg)';}">
+                  <div class="card-header-title">
+                    <span class="ds-step-badge">1</span>
+                    <i data-lucide="package"></i>
+                    <span>ตั้งค่าแก้ว &amp; บรรจุภัณฑ์</span>
+                  </div>
+                  <span
+                    style="display:inline-flex; align-items:center; gap:0.25rem; font-size:0.75rem; color:#64748b; font-weight:600;">
+                    <span>ปรับแต่ง</span>
+                    <i data-lucide="chevron-down" id="dsCupConfigChev"
+                      style="width:16px;height:16px; transition:transform 0.2s;"></i>
+                  </span>
                 </div>
-                <div style="font-size:0.95rem; font-weight:700; color:var(--primary);">
-                  <span style="color:#64748b; font-weight:400; font-size:0.85rem;">รายรับ:</span>
-                  <span id="dsTotalRevenue">฿0</span>
+                <div class="card-body" id="dsCupConfigBody" style="padding:0;">
+                  <div id="dsCupSizeCards"></div>
                 </div>
               </div>
-            </div>
-          </div>
 
-          <!-- ═══ STEP 3: เลือกสูตรน้ำ (inline cards) ═══ -->
-          <div class="card mb-3">
-            <div class="card-header">
-              <div class="card-header-title">
-                <i data-lucide="beaker"></i>
-                <span>🏺 เลือกสูตรน้ำ (คำนวณต้นทุนน้ำ)</span>
+              <!-- Step 2: นับแก้วก่อน-หลังขาย -->
+              <div class="card ds-section-card mb-3">
+                <div class="card-header ds-card-header">
+                  <div class="card-header-title">
+                    <span class="ds-step-badge">2</span>
+                    <i data-lucide="hash"></i>
+                    <span>นับจำนวนแก้วก่อน–หลังขาย</span>
+                  </div>
+                </div>
+                <div class="card-body" style="padding:0.85rem;">
+                  <div id="dsCupCountTbody" class="ds-cup-count-list">
+                    <!-- Rendered dynamically from Step 1 cup sizes -->
+                  </div>
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.75rem; padding:0.55rem 0.85rem; background:#eff6ff; border-radius:8px; border:1px solid #bfdbfe;">
+                    <div style="font-size:0.84rem;">
+                      <span style="color:#64748b;">ขายรอบนี้:</span>
+                      <strong id="dsTotalCupsSold" style="margin-left:0.25rem;">0 แก้ว</strong>
+                    </div>
+                    <div style="font-size:0.92rem; font-weight:700; color:var(--primary);">
+                      <span style="color:#64748b; font-weight:400; font-size:0.82rem;">รายรับรอบนี้:</span>
+                      <span id="dsTotalRevenue">฿0</span>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div class="card-body">
-              <span class="field-hint" style="font-size:0.78rem; margin-bottom:0.5rem; display:block;">
-                💡 คลิกเลือกหลายสูตรน้ำ ระบบจะคำนวณต้นทุนน้ำเฉลี่ยต่อ ml อัตโนมัติ (ดึงจากสูตรชงน้ำ 🏺 ต่อ 1 โหล)
-              </span>
-              <div id="dsRecipeInlineList" class="ds-recipe-inline-list">
-                <div style="text-align:center; color:#94a3b8; padding:1rem; font-size:0.85rem;">
-                  ไม่พบสูตรน้ำประเภทโหล/ถัง กรุณาเพิ่มสูตรน้ำในหน้า "สูตรชงน้ำ" ก่อน</div>
-              </div>
-            </div>
-          </div>
 
-          <!-- ═══ STEP 4: คำนวณกำไร ═══ -->
-          <div style="margin-bottom:1rem;">
-            <button type="button" class="btn-fastwork" id="btnDrinkSalesCalculate"
-              style="width:100%; height:44px; font-size:0.95rem; display:flex; align-items:center; justify-content:center; gap:0.5rem;">
-              <i data-lucide="calculator" style="width:18px;height:18px;"></i>
-              <span>คำนวณต้นทุน & กำไรการขาย</span>
-            </button>
-          </div>
-
-          <!-- ผลคำนวณ -->
-          <div id="drinkSalesResultSection" style="display:none;">
-            <div class="form-group mb-2">
-              <label class="form-label font-bold" style="display:flex; align-items:center; gap:0.3rem;">
-                <span
-                  style="background:#16a34a; color:#fff; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:700;">✓</span>
-                ผลคำนวณต้นทุน & กำไรการขายน้ำชง
-              </label>
             </div>
-            <div id="dsResultContent"></div>
-            <div style="margin-top:1.25rem; display:flex; gap:0.75rem; align-items:flex-end; flex-wrap:wrap;">
-              <div style="min-width:190px; flex:0 0 auto;">
-                <label class="form-label font-bold" for="drinkSalesSaveDate"
-                  style="font-size:0.8rem; margin-bottom:0.25rem; display:block;">📅 วันที่บันทึกยอดขาย</label>
-                <input type="date" id="drinkSalesSaveDate" class="form-input" style="height:44px; font-weight:600;">
+
+            <!-- Right Column: Recipes + Calculate + Result -->
+            <div class="ds-col">
+
+              <!-- Step 3: เลือกสูตรน้ำ -->
+              <div class="card ds-section-card mb-3">
+                <div class="card-header ds-card-header space-between">
+                  <div class="card-header-title">
+                    <span class="ds-step-badge">3</span>
+                    <i data-lucide="beaker"></i>
+                    <span>เลือกสูตรน้ำที่ขาย</span>
+                  </div>
+                  <span style="font-size:0.72rem; color:#64748b; font-weight:600;">เลือกได้หลายสูตร</span>
+                </div>
+                <div class="card-body" style="padding:1rem;">
+                  <div id="dsRecipeInlineList" class="ds-recipe-inline-list">
+                    <div style="text-align:center; color:#94a3b8; padding:1rem; font-size:0.85rem;">
+                      ไม่พบสูตรน้ำประเภทโหล/ถัง กรุณาเพิ่มสูตรในหน้า "สูตรชงน้ำ"
+                    </div>
+                  </div>
+                </div>
               </div>
-              <button type="button" class="btn-fastwork" id="btnSaveDrinkSalesLog"
-                style="flex:1; min-width:220px; height:44px; font-size:0.95rem; display:flex; align-items:center; justify-content:center; gap:0.5rem; background:#16a34a; border-color:#16a34a;">
-                <i data-lucide="save" style="width:18px;height:18px;"></i>
-                <span>💾 บันทึกประวัติยอดขายน้ำ</span>
+
+              <!-- Calculate CTA -->
+              <button type="button" class="btn-fastwork ds-calc-btn mb-3" id="btnDrinkSalesCalculate">
+                <i data-lucide="calculator" style="width:19px;height:19px;"></i>
+                <span>คำนวณต้นทุน &amp; กำไรสุทธิ</span>
               </button>
+
+              <!-- ผลคำนวณ -->
+              <div id="drinkSalesResultSection" class="ds-result-card mb-3" style="display:none;">
+                <div class="ds-result-header">
+                  <span class="ds-result-check">✓</span>
+                  <span>สรุปต้นทุน &amp; กำไรการขายน้ำชง</span>
+                </div>
+                <div id="dsResultContent"></div>
+                <div class="ds-save-bar">
+                  <button type="button" class="btn-fastwork ds-save-btn" id="btnSaveDrinkSalesLog">
+                    <i data-lucide="save" style="width:18px;height:18px;"></i>
+                    <span id="btnSaveDrinkSalesLogText">บันทึกประวัติยอดขาย</span>
+                  </button>
+                  <button type="button" class="btn-secondary" id="btnCancelEditDrinkSalesLog"
+                    onclick="app.cancelEditDrinkSalesLog()"
+                    style="display:none; height:42px; padding:0 0.9rem; font-size:0.85rem; font-weight:600;">
+                    ยกเลิกแก้ไข
+                  </button>
+                </div>
+              </div>
+
             </div>
           </div>
 
-          <!-- ประวัติการบันทึกยอดขายน้ำชง -->
-          <div class="card mb-3" style="margin-top:1.25rem;">
-            <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+          <!-- ประวัติการบันทึกยอดขายน้ำชง (Full Width) -->
+          <div class="card ds-section-card mt-2 mb-3">
+            <div class="card-header ds-card-header space-between">
               <div class="card-header-title">
                 <i data-lucide="history"></i>
-                <span>📜 ประวัติการบันทึกยอดขายน้ำชง</span>
+                <span>ประวัติการบันทึกยอดขายน้ำชง</span>
               </div>
               <span class="pill-tag blue-tag" id="drinkSalesHistoryCount" style="font-size:0.75rem; font-weight:700;">0
                 รายการ</span>
             </div>
-            <div class="card-body">
-              <div id="drinkSalesHistoryList">
-                <div class="figma-tx-empty" style="padding:1.5rem 1rem;">
+            <div class="card-body" style="padding:1rem;">
+              <div id="drinkSalesHistoryList" class="ds-history-grid">
+                <div class="figma-tx-empty" style="padding:1.5rem 1rem; grid-column:1 / -1;">
                   <div class="figma-tx-empty-icon"><i data-lucide="inbox"></i></div>
                   <div class="figma-tx-empty-title">ยังไม่มีประวัติการบันทึกยอดขายน้ำชง</div>
-                  <div class="figma-tx-empty-desc">เมื่อคำนวณกำไรเสร็จแล้ว กดปุ่ม "บันทึกประวัติยอดขายน้ำ"
-                    เพื่อบันทึกประวัติไว้ที่นี่</div>
+                  <div class="figma-tx-empty-desc">คำนวณกำไรแล้วกด "บันทึกประวัติยอดขาย" เพื่อเก็บข้อมูลที่นี่</div>
                 </div>
               </div>
             </div>
@@ -3122,6 +3103,17 @@
               style="position:absolute; left:10px; top:50%; transform:translateY(-50%); width:16px; height:16px; color:#94a3b8; pointer-events:none;"></i>
             <input type="text" id="stockProfitHistorySearch" class="form-input" placeholder="ค้นหาวันที่ / ยอดเงิน..."
               style="padding-left:34px; font-size:0.85rem; height:38px;" oninput="app.filterStockProfitHistory()">
+          </div>
+          <div style="display:flex; gap:0.3rem; align-items:center;">
+            <input type="date" id="stockProfitHistoryDatePicker" class="form-input"
+              style="width:auto; min-width:145px; font-size:0.85rem; height:38px;"
+              onchange="app.filterStockProfitHistory()" title="เลือกวันที่ต้องการดู">
+            <button type="button" id="stockProfitHistoryDateClearBtn"
+              onclick="const d=document.getElementById('stockProfitHistoryDatePicker'); if(d){d.value=''; app.filterStockProfitHistory();}"
+              title="ดูทุกวัน"
+              style="display:none; height:38px; padding:0 0.65rem; background:#f1f5f9; border:1px solid #cbd5e1; color:#475569; border-radius:var(--radius-sm); font-size:0.78rem; font-weight:600; cursor:pointer; white-space:nowrap;">
+              ทุกวัน
+            </button>
           </div>
           <select id="stockProfitHistoryFilter" class="form-input"
             style="width:auto; min-width:120px; font-size:0.85rem; height:38px;"

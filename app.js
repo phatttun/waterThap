@@ -9412,8 +9412,12 @@ class WaterFlowApp {
     // Reset search/filter
     const searchEl = document.getElementById('stockProfitHistorySearch');
     const filterEl = document.getElementById('stockProfitHistoryFilter');
+    const dateEl = document.getElementById('stockProfitHistoryDatePicker');
+    const dateClearEl = document.getElementById('stockProfitHistoryDateClearBtn');
     if (searchEl) searchEl.value = '';
     if (filterEl) filterEl.value = 'ALL';
+    if (dateEl) dateEl.value = '';
+    if (dateClearEl) dateClearEl.style.display = 'none';
 
     this.filterStockProfitHistory();
     modal.classList.add('active');
@@ -9424,8 +9428,16 @@ class WaterFlowApp {
     if (!this._stockProfitRawLogs) return;
     const searchQuery = (document.getElementById('stockProfitHistorySearch')?.value || '').toLowerCase().trim();
     const filterVal = document.getElementById('stockProfitHistoryFilter')?.value || 'ALL';
+    const dateFilter = (document.getElementById('stockProfitHistoryDatePicker')?.value || '').trim();
+    const dateClearEl = document.getElementById('stockProfitHistoryDateClearBtn');
+    if (dateClearEl) dateClearEl.style.display = dateFilter ? 'inline-block' : 'none';
 
     let filtered = [...this._stockProfitRawLogs];
+
+    // Filter by selected date
+    if (dateFilter) {
+      filtered = filtered.filter(r => String(r.date || '').substring(0, 10) === dateFilter);
+    }
 
     // Search by item name, date, note, amounts
     if (searchQuery) {
@@ -9699,10 +9711,7 @@ class WaterFlowApp {
       return `
         <tr>
           <td>
-            <div style="display:flex; align-items:center; gap:0.35rem;">
-              <div class="font-bold text-main" style="font-size:0.875rem;">${this.formatThaiDate(log.date)}</div>
-              ${log.id ? `<input type="date" value="${this.escapeHtml(String(log.date || '').substring(0, 10))}" onchange="app.updateStockLogDate('${log.id}', this.value)" title="แก้ไขวันที่รายการนี้" style="width:22px; height:22px; padding:0; border:1px solid #e2e8f0; border-radius:4px; cursor:pointer; background:#f8fafc; font-size:0.75rem;">` : ''}
-            </div>
+            <div class="font-bold text-main" style="font-size:0.875rem;">${this.formatThaiDate(log.date)}</div>
             <div class="text-xs text-muted">⏰ ${log.time || '-'} น.</div>
           </td>
           <td>
@@ -11280,31 +11289,37 @@ populateDrinkSalesRecipes() {
 }
 
 initDrinkSales() {
-  // Cup size config: oz -> default ml, default selling price
-  this.dsCupSizes = [
-    { oz: 10, mlDefault: 150, priceDefault: 5 },
-    { oz: 16, mlDefault: 250, priceDefault: 10 },
-    { oz: 28, mlDefault: 400, priceDefault: 20 }
+  // Cup size config: persist in this.data so custom sizes, variants & prices are saved
+  const defaultSizes = [
+    { id: '10', oz: 10, label: '', mlDefault: 150, priceDefault: 5 },
+    { id: '16', oz: 16, label: '', mlDefault: 250, priceDefault: 10 },
+    { id: '28', oz: 28, label: '', mlDefault: 400, priceDefault: 20 }
   ];
-  // Packaging config per size
-  if (!this.dsPackagingConfig) {
-    this.dsPackagingConfig = {};
-    this.dsCupSizes.forEach(s => {
-      this.dsPackagingConfig[s.oz] = { bundled: false, bundledExpId: '', cupExpId: '', lidExpId: '', strawExpId: '', mlPerCup: s.mlDefault };
-    });
+  if (!Array.isArray(this.data.dsCupSizes) || this.data.dsCupSizes.length === 0) {
+    this.data.dsCupSizes = defaultSizes;
   }
+  this.dsCupSizes = this.data.dsCupSizes;
+
+  if (!this.data.dsPackagingConfig || typeof this.data.dsPackagingConfig !== 'object') {
+    this.data.dsPackagingConfig = {};
+  }
+  this.dsCupSizes.forEach(s => {
+    if (!s.id) s.id = String(s.oz);
+    if (s.label === undefined) s.label = '';
+    if (!this.data.dsPackagingConfig[s.id]) {
+      this.data.dsPackagingConfig[s.id] = { bundled: false, bundledExpId: '', cupExpId: '', lidExpId: '', strawExpId: '', mlPerCup: s.mlDefault };
+    }
+  });
+  this.dsPackagingConfig = this.data.dsPackagingConfig;
+
   // Selected recipe IDs
   if (!this.drinkSalesSelectedRecipeIds) this.drinkSalesSelectedRecipeIds = new Set();
 
-  // Render cup size config cards
+  // Render cup size config cards & cup count rows
   this.renderDsCupSizeCards();
+  this.renderDsCupCountRows();
   // Render inline recipe list
   this.renderDsInlineRecipes();
-
-  // Bind cup count inputs
-  document.querySelectorAll('.drink-sales-cup-before, .drink-sales-cup-after').forEach(input => {
-    input.addEventListener('input', () => this.calculateDrinkSalesCups());
-  });
 
   // Bind calculate button
   const btnCalc = document.getElementById('btnDrinkSalesCalculate');
@@ -11329,13 +11344,53 @@ initDrinkSales() {
   this.renderDrinkSalesHistory();
 }
 
-// ═══ Get PACKAGING expenses for dropdown options ═══
+// ═══ Get PACKAGING expenses for dropdown options (latest per product only, excluding out-of-stock/no-alert) ═══
 getDsPackagingOptions() {
-  return (this.data.expenses || []).filter(e => e.category === 'PACKAGING').filter(exp => this.isExpenseAvailableForSelection(exp)).map(exp => {
+  const available = (this.data.expenses || [])
+    .filter(e => e && e.category === 'PACKAGING')
+    .filter(exp => this.isExpenseAvailableForSelection(exp));
+
+  // Sort newest first (by date desc, then id desc) so restocked/new bill wins over old depleted bill
+  const sorted = [...available].sort((a, b) => {
+    const dateCmp = String(b.date || '').localeCompare(String(a.date || ''));
+    if (dateCmp !== 0) return dateCmp;
+    return String(b.id || '').localeCompare(String(a.id || ''));
+  });
+
+  const seen = new Set();
+  const deduped = [];
+  sorted.forEach(exp => {
+    const key = exp.stockItemId ? `stk_${exp.stockItemId}` : `name_${this.normalizeProductName(exp.title)}`;
+    if (seen.has(key)) return;
+    seen.add(key);
     const pricing = this.getExpenseUnitPricing(exp);
     const costPerPiece = pricing ? pricing.costPerPiece : (Number(exp.amount) || 0);
-    return { id: exp.id, title: exp.title || 'ไม่ระบุ', costPerPiece, pricingLabel: pricing ? pricing.badgeSpec : `฿${costPerPiece.toFixed(2)}` };
+    deduped.push({
+      id: exp.id,
+      stockItemId: exp.stockItemId || null,
+      normTitle: this.normalizeProductName(exp.title),
+      title: exp.title || 'ไม่ระบุ',
+      costPerPiece,
+      pricingLabel: pricing ? pricing.badgeSpec : `฿${costPerPiece.toFixed(2)}`
+    });
   });
+
+  return deduped;
+}
+
+// Resolve a saved expenseId to the latest matching packaging option (handles old depleted bill IDs after restock)
+resolveLatestDsPackagingOption(pkgOptions, expId) {
+  if (!expId) return null;
+  const direct = pkgOptions.find(o => String(o.id) === String(expId));
+  if (direct) return direct;
+  const oldExp = (this.data.expenses || []).find(e => e && String(e.id) === String(expId));
+  if (!oldExp) return null;
+  if (oldExp.stockItemId) {
+    const byStock = pkgOptions.find(o => o.stockItemId && String(o.stockItemId) === String(oldExp.stockItemId));
+    if (byStock) return byStock;
+  }
+  const oldNorm = this.normalizeProductName(oldExp.title);
+  return pkgOptions.find(o => o.normTitle === oldNorm) || null;
 }
 
 // ═══ ตรวจสอบว่ารายจ่ายนี้มีสต๊อกพร้อมใช้งานหรือไม่ (ไม่หมดสต๊อก & ไม่ติ๊กไม่เตือน) ═══
@@ -11369,90 +11424,273 @@ renderDsCupSizeCards() {
   if (!container) return;
   const pkgOptions = this.getDsPackagingOptions();
 
-  const makeSelect = (sizeOz, field, selectedId, label) => {
+  const makeSelect = (cupId, field, selectedId, label) => {
+    const resolved = this.resolveLatestDsPackagingOption(pkgOptions, selectedId);
+    const effectiveId = resolved ? resolved.id : selectedId;
     let opts = `<option value="">-- เลือก${label} --</option>`;
     pkgOptions.forEach(o => {
-      const sel = String(o.id) === String(selectedId) ? ' selected' : '';
+      const sel = String(o.id) === String(effectiveId) ? ' selected' : '';
       opts += `<option value="${o.id}"${sel}>${this.escapeHtml(o.title)} (${o.pricingLabel})</option>`;
     });
-    return `<select class="form-input ds-pkg-select" data-size="${sizeOz}" data-field="${field}" style="height:36px; font-size:0.8rem;">${opts}</select>`;
+    return `<select class="form-input ds-pkg-select" data-cup-id="${cupId}" data-field="${field}" style="height:36px; font-size:0.8rem;">${opts}</select>`;
   };
 
-  container.innerHTML = this.dsCupSizes.map(s => {
-    const cfg = this.dsPackagingConfig[s.oz];
+  const cardsHtml = this.dsCupSizes.map(s => {
+    const cupId = String(s.id || s.oz);
+    const cfg = this.dsPackagingConfig[cupId] || { bundled: false, bundledExpId: '', cupExpId: '', lidExpId: '', strawExpId: '', mlPerCup: s.mlDefault };
     const bundledChecked = cfg.bundled ? ' checked' : '';
+    const canDelete = this.dsCupSizes.length > 1;
     return `
-        <div class="ds-cup-config-card" data-oz="${s.oz}">
-          <div class="ds-cup-config-header">
-            <span class="ds-cup-config-size">${s.oz} oz</span>
-            <div class="ds-cup-config-ml">
-              <label style="font-size:0.75rem; color:#64748b;">น้ำ/แก้ว</label>
-              <div class="input-with-affix" style="width:90px;">
-                <input type="number" class="form-input ds-ml-input" data-size="${s.oz}" value="${cfg.mlPerCup}" min="0" step="10" style="height:32px; text-align:center; font-size:0.82rem; font-weight:600;">
-                <span class="affix-right" style="font-size:0.7rem;">ml</span>
+        <div class="ds-cup-config-card" data-cup-id="${cupId}">
+          <div class="ds-cup-config-header" style="flex-wrap:wrap; gap:0.5rem;">
+            <div style="display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap;">
+              <span class="ds-cup-config-size">${s.oz} oz</span>
+              <input type="text" class="form-input ds-cfg-label-input" data-cup-id="${cupId}" value="${this.escapeHtml(s.label || '')}" placeholder="รุ่น/หมายเหตุ (ถ้ามี)" style="height:30px; width:125px; font-size:0.78rem; padding:0.15rem 0.45rem;">
+              ${canDelete ? `<button type="button" class="icon-btn text-danger" onclick="app.removeDsCupSize('${cupId}')" title="ลบรายการนี้" style="width:24px;height:24px;color:#ef4444;padding:0;"><i data-lucide="trash-2" style="width:13px;height:13px;"></i></button>` : ''}
+            </div>
+            <div style="display:flex; align-items:center; gap:0.55rem; flex-wrap:wrap;">
+              <div class="ds-cup-config-ml">
+                <label style="font-size:0.74rem; color:#64748b;">ราคาขาย</label>
+                <div class="input-with-affix" style="width:76px;">
+                  <span class="affix-left" style="font-size:0.72rem;">฿</span>
+                  <input type="number" class="form-input ds-cfg-price-input" data-cup-id="${cupId}" value="${s.priceDefault ?? 0}" min="0" step="1" style="height:32px; text-align:center; font-size:0.82rem; font-weight:700;">
+                </div>
+              </div>
+              <div class="ds-cup-config-ml">
+                <label style="font-size:0.74rem; color:#64748b;">น้ำ/แก้ว</label>
+                <div class="input-with-affix" style="width:86px;">
+                  <input type="number" class="form-input ds-ml-input" data-cup-id="${cupId}" value="${cfg.mlPerCup}" min="0" step="10" style="height:32px; text-align:center; font-size:0.82rem; font-weight:600;">
+                  <span class="affix-right" style="font-size:0.7rem;">ml</span>
+                </div>
               </div>
             </div>
           </div>
           <div class="ds-cup-pkg-section">
             <label class="ds-bundled-toggle">
-              <input type="checkbox" class="ds-bundled-cb" data-size="${s.oz}"${bundledChecked}>
+              <input type="checkbox" class="ds-bundled-cb" data-cup-id="${cupId}"${bundledChecked}>
               <span>รวมแก้ว+ฝา+หลอดแล้ว (ชุดเดียว)</span>
             </label>
-            <div class="ds-pkg-fields" id="dsPkgFields${s.oz}">
+            <div class="ds-pkg-fields" id="dsPkgFields${cupId}">
               ${cfg.bundled ? `
                 <div class="form-group mb-1">
                   <label class="form-label" style="font-size:0.75rem;">📦 เลือกชุดบรรจุภัณฑ์</label>
-                  ${makeSelect(s.oz, 'bundledExpId', cfg.bundledExpId, 'ชุดบรรจุภัณฑ์')}
+                  ${makeSelect(cupId, 'bundledExpId', cfg.bundledExpId, 'ชุดบรรจุภัณฑ์')}
                 </div>
               ` : `
                 <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.4rem;">
                   <div class="form-group mb-1">
                     <label class="form-label" style="font-size:0.72rem;">🥤 แก้ว</label>
-                    ${makeSelect(s.oz, 'cupExpId', cfg.cupExpId, 'แก้ว')}
+                    ${makeSelect(cupId, 'cupExpId', cfg.cupExpId, 'แก้ว')}
                   </div>
                   <div class="form-group mb-1">
                     <label class="form-label" style="font-size:0.72rem;">🔵 ฝา</label>
-                    ${makeSelect(s.oz, 'lidExpId', cfg.lidExpId, 'ฝา')}
+                    ${makeSelect(cupId, 'lidExpId', cfg.lidExpId, 'ฝา')}
                   </div>
                   <div class="form-group mb-1">
                     <label class="form-label" style="font-size:0.72rem;">🥢 หลอด</label>
-                    ${makeSelect(s.oz, 'strawExpId', cfg.strawExpId, 'หลอด')}
+                    ${makeSelect(cupId, 'strawExpId', cfg.strawExpId, 'หลอด')}
                   </div>
                 </div>
               `}
             </div>
           </div>
-          <div class="ds-cup-pkg-cost" id="dsPkgCost${s.oz}" style="font-size:0.78rem; color:#64748b; padding:0.3rem 0.5rem; margin-top:0.3rem;"></div>
+          <div class="ds-cup-pkg-cost" id="dsPkgCost${cupId}" style="font-size:0.78rem; color:#64748b; padding:0.3rem 0.5rem; margin-top:0.3rem;"></div>
         </div>
       `;
   }).join('');
 
+  const addBarHtml = `
+    <div style="padding:0.75rem 1rem; background:#f8fafc; border-top:1px dashed #cbd5e1; display:flex; align-items:flex-end; gap:0.45rem; flex-wrap:wrap;">
+      <div style="width:68px;">
+        <label style="font-size:0.7rem; color:#64748b; font-weight:600; display:block; margin-bottom:2px;">ขนาด (oz)</label>
+        <input type="number" id="dsNewCupOz" class="form-input" placeholder="16" min="1" step="1" style="height:34px; font-size:0.82rem; text-align:center;">
+      </div>
+      <div style="flex:1.2; min-width:110px;">
+        <label style="font-size:0.7rem; color:#64748b; font-weight:600; display:block; margin-bottom:2px;">ชื่อ/รุ่นแก้ว (ถ้าซ้ำ)</label>
+        <input type="text" id="dsNewCupLabel" class="form-input" placeholder="เช่น แก้วแข็ง, แก้วปั่น" style="height:34px; font-size:0.82rem;">
+      </div>
+      <div style="width:72px;">
+        <label style="font-size:0.7rem; color:#64748b; font-weight:600; display:block; margin-bottom:2px;">ราคา (฿)</label>
+        <input type="number" id="dsNewCupPrice" class="form-input" placeholder="15" min="0" step="1" style="height:34px; font-size:0.82rem; text-align:center;">
+      </div>
+      <div style="width:76px;">
+        <label style="font-size:0.7rem; color:#64748b; font-weight:600; display:block; margin-bottom:2px;">น้ำ (ml)</label>
+        <input type="number" id="dsNewCupMl" class="form-input" placeholder="250" min="0" step="10" style="height:34px; font-size:0.82rem; text-align:center;">
+      </div>
+      <button type="button" class="btn-outline-fastwork btn-sm" onclick="app.addDsCupSize()" style="height:34px; padding:0 0.75rem; font-weight:700; white-space:nowrap;">
+        + เพิ่มแก้ว
+      </button>
+    </div>
+  `;
+
+  container.innerHTML = cardsHtml + addBarHtml;
+
   // Bind events
+  container.querySelectorAll('.ds-cfg-label-input').forEach(inp => {
+    inp.addEventListener('input', (e) => {
+      const cid = e.target.dataset.cupId;
+      const cupObj = this.dsCupSizes.find(c => String(c.id || c.oz) === String(cid));
+      if (cupObj) cupObj.label = e.target.value;
+      const rowLabel = document.getElementById(`dsCupRowLabel${cid}`);
+      if (rowLabel) {
+        const lbl = (e.target.value || '').trim();
+        rowLabel.textContent = lbl ? `(${lbl})` : '';
+      }
+      this.saveData();
+    });
+  });
+  container.querySelectorAll('.ds-cfg-price-input').forEach(inp => {
+    inp.addEventListener('input', (e) => {
+      const cid = e.target.dataset.cupId;
+      const val = parseFloat(e.target.value) || 0;
+      const cupObj = this.dsCupSizes.find(c => String(c.id || c.oz) === String(cid));
+      if (cupObj) cupObj.priceDefault = val;
+      const step2Price = document.getElementById(`dsCupPrice${cid}`);
+      if (step2Price) step2Price.value = val;
+      this.saveData();
+      this.calculateDrinkSalesCups();
+    });
+  });
   container.querySelectorAll('.ds-ml-input').forEach(inp => {
     inp.addEventListener('input', (e) => {
-      const sz = parseInt(e.target.dataset.size);
-      this.dsPackagingConfig[sz].mlPerCup = parseFloat(e.target.value) || 0;
-      this.updateDsPkgCostDisplay(sz);
+      const cid = e.target.dataset.cupId;
+      this.dsPackagingConfig[cid].mlPerCup = parseFloat(e.target.value) || 0;
+      this.saveData();
+      this.updateDsPkgCostDisplay(cid);
     });
   });
   container.querySelectorAll('.ds-bundled-cb').forEach(cb => {
     cb.addEventListener('change', (e) => {
-      const sz = parseInt(e.target.dataset.size);
-      this.dsPackagingConfig[sz].bundled = e.target.checked;
+      const cid = e.target.dataset.cupId;
+      this.dsPackagingConfig[cid].bundled = e.target.checked;
+      this.saveData();
       this.renderDsCupSizeCards();
     });
   });
   container.querySelectorAll('.ds-pkg-select').forEach(sel => {
     sel.addEventListener('change', (e) => {
-      const sz = parseInt(e.target.dataset.size);
+      const cid = e.target.dataset.cupId;
       const field = e.target.dataset.field;
-      this.dsPackagingConfig[sz][field] = e.target.value;
-      this.updateDsPkgCostDisplay(sz);
+      this.dsPackagingConfig[cid][field] = e.target.value;
+      this.saveData();
+      this.updateDsPkgCostDisplay(cid);
     });
   });
 
   // Show cost per cup for each size
-  this.dsCupSizes.forEach(s => this.updateDsPkgCostDisplay(s.oz));
+  this.dsCupSizes.forEach(s => this.updateDsPkgCostDisplay(String(s.id || s.oz)));
+  this.refreshLucide();
+}
+
+addDsCupSize() {
+  const oz = parseFloat(document.getElementById('dsNewCupOz')?.value);
+  const label = (document.getElementById('dsNewCupLabel')?.value || '').trim();
+  const price = parseFloat(document.getElementById('dsNewCupPrice')?.value);
+  const ml = parseFloat(document.getElementById('dsNewCupMl')?.value);
+  if (!oz || oz <= 0) {
+    this.showToast('กรุณาระบุขนาดแก้ว (oz)', 'warning');
+    return;
+  }
+  const newId = 'cup_' + Date.now() + Math.random().toString(36).substring(2, 5);
+  const sameOzCount = this.dsCupSizes.filter(s => Number(s.oz) === oz).length;
+  const effectiveLabel = label || (sameOzCount > 0 ? `แบบที่ ${sameOzCount + 1}` : '');
+  const newSize = {
+    id: newId,
+    oz,
+    label: effectiveLabel,
+    mlDefault: (!isNaN(ml) && ml >= 0) ? ml : Math.round(oz * 15),
+    priceDefault: (!isNaN(price) && price >= 0) ? price : 10
+  };
+  this.dsCupSizes.push(newSize);
+  this.dsCupSizes.sort((a, b) => Number(a.oz) - Number(b.oz));
+  this.dsPackagingConfig[newId] = { bundled: false, bundledExpId: '', cupExpId: '', lidExpId: '', strawExpId: '', mlPerCup: newSize.mlDefault };
+  this.saveData();
+  this.renderDsCupSizeCards();
+  this.renderDsCupCountRows();
+  this.showToast(`เพิ่มแก้ว ${oz} oz${effectiveLabel ? ` (${effectiveLabel})` : ''} เรียบร้อยแล้ว`, 'success');
+}
+
+removeDsCupSize(cupId) {
+  if (this.dsCupSizes.length <= 1) return;
+  const target = this.dsCupSizes.find(s => String(s.id || s.oz) === String(cupId));
+  const desc = target ? `${target.oz} oz${target.label ? ` (${target.label})` : ''}` : cupId;
+  if (!confirm(`ต้องการลบแก้ว ${desc} ออกจากรายการหรือไม่?`)) return;
+  this.data.dsCupSizes = this.dsCupSizes.filter(s => String(s.id || s.oz) !== String(cupId));
+  this.dsCupSizes = this.data.dsCupSizes;
+  this.saveData();
+  this.renderDsCupSizeCards();
+  this.renderDsCupCountRows();
+  this.calculateDrinkSalesCups();
+}
+
+renderDsCupCountRows() {
+  const tbody = document.getElementById('dsCupCountTbody');
+  if (!tbody) return;
+
+  // Preserve current before/after values while re-rendering
+  const prevValues = {};
+  (this.dsCupSizes || []).forEach(s => {
+    const cid = String(s.id || s.oz);
+    const bEl = document.getElementById(`dsCupBefore${cid}`);
+    const aEl = document.getElementById(`dsCupAfter${cid}`);
+    if (bEl || aEl) {
+      prevValues[cid] = { before: bEl?.value || '', after: aEl?.value || '' };
+    }
+  });
+
+  tbody.innerHTML = (this.dsCupSizes || []).map(s => {
+    const cid = String(s.id || s.oz);
+    const prev = prevValues[cid] || { before: '', after: '' };
+    return `
+      <div class="ds-cup-count-card">
+        <div class="ds-cup-count-top">
+          <div class="ds-cup-count-title">
+            <span class="ds-size-pill">${s.oz} oz</span>
+            <span id="dsCupRowLabel${cid}" class="ds-cup-count-sub">${s.label ? `(${this.escapeHtml(s.label)})` : ''}</span>
+          </div>
+          <div class="ds-cup-count-live">
+            <span class="ds-sold-pill" id="dsCupSold${cid}">0 แก้ว</span>
+            <span class="ds-rev-pill" id="dsCupRev${cid}">฿0</span>
+          </div>
+        </div>
+        <div class="ds-cup-count-inputs">
+          <div class="ds-cup-input-group">
+            <label for="dsCupPrice${cid}">ราคาขาย</label>
+            <div class="input-with-affix">
+              <span class="affix-left">฿</span>
+              <input type="number" id="dsCupPrice${cid}" class="form-input drink-sales-cup-price" data-cup-id="${cid}" value="${s.priceDefault ?? 0}" min="0" step="1">
+            </div>
+          </div>
+          <div class="ds-cup-input-group">
+            <label for="dsCupBefore${cid}">ก่อนขาย</label>
+            <input type="number" id="dsCupBefore${cid}" class="form-input drink-sales-cup-before" value="${this.escapeHtml(prev.before)}" placeholder="0" min="0" step="1">
+          </div>
+          <div class="ds-cup-input-group">
+            <label for="dsCupAfter${cid}">หลังขาย</label>
+            <input type="number" id="dsCupAfter${cid}" class="form-input drink-sales-cup-after" value="${this.escapeHtml(prev.after)}" placeholder="0" min="0" step="1">
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  tbody.querySelectorAll('.drink-sales-cup-before, .drink-sales-cup-after').forEach(input => {
+    input.addEventListener('input', () => this.calculateDrinkSalesCups());
+  });
+  tbody.querySelectorAll('.drink-sales-cup-price').forEach(input => {
+    input.addEventListener('input', (e) => {
+      const cid = e.target.dataset.cupId;
+      const val = parseFloat(e.target.value) || 0;
+      const cupObj = (this.dsCupSizes || []).find(c => String(c.id || c.oz) === String(cid));
+      if (cupObj) cupObj.priceDefault = val;
+      const cfgPrice = document.querySelector(`.ds-cfg-price-input[data-cup-id="${cid}"]`);
+      if (cfgPrice) cfgPrice.value = val;
+      this.saveData();
+      this.calculateDrinkSalesCups();
+    });
+  });
+
+  this.calculateDrinkSalesCups();
 }
 
 // ═══ Calculate & display packaging cost per cup for a size ═══
@@ -11461,8 +11699,7 @@ getDsPackagingCostPerCup(sizeOz) {
   if (!cfg) return 0;
   const pkgOptions = this.getDsPackagingOptions();
   const findCost = (expId) => {
-    if (!expId) return 0;
-    const opt = pkgOptions.find(o => String(o.id) === String(expId));
+    const opt = this.resolveLatestDsPackagingOption(pkgOptions, expId);
     return opt ? opt.costPerPiece : 0;
   };
   if (cfg.bundled) {
@@ -11531,28 +11768,28 @@ toggleDsRecipe(recipeId) {
   this.renderDsInlineRecipes();
 }
 
-// ═══ Calculate cups sold (unchanged logic, just recalc) ═══
+// ═══ Calculate cups sold (dynamic from configured cup sizes/variants) ═══
 calculateDrinkSalesCups() {
-  const sizes = ['10', '16', '28'];
   let totalSold = 0;
   let totalRevenue = 0;
   const cupData = {};
 
-  sizes.forEach(size => {
-    const before = parseInt(document.getElementById(`dsCupBefore${size}`)?.value) || 0;
-    const after = parseInt(document.getElementById(`dsCupAfter${size}`)?.value) || 0;
+  (this.dsCupSizes || []).forEach(s => {
+    const cid = String(s.id || s.oz);
+    const before = parseInt(document.getElementById(`dsCupBefore${cid}`)?.value) || 0;
+    const after = parseInt(document.getElementById(`dsCupAfter${cid}`)?.value) || 0;
     const sold = Math.max(0, before - after);
-    const price = parseFloat(document.getElementById(`dsCupPrice${size}`)?.value) || 0;
-    const soldEl = document.getElementById(`dsCupSold${size}`);
+    const price = parseFloat(document.getElementById(`dsCupPrice${cid}`)?.value) || 0;
+    const soldEl = document.getElementById(`dsCupSold${cid}`);
     if (soldEl) soldEl.textContent = `${sold} แก้ว`;
 
     const rev = sold * price;
-    const revEl = document.getElementById(`dsCupRev${size}`);
+    const revEl = document.getElementById(`dsCupRev${cid}`);
     if (revEl) revEl.textContent = `฿${rev.toFixed(0)}`;
 
     totalSold += sold;
     totalRevenue += rev;
-    cupData[`cup${size}`] = { size: `${size} oz`, price, before, after, sold, revenue: rev };
+    cupData[cid] = { id: cid, oz: s.oz, label: s.label || '', size: `${s.oz} oz`, price, before, after, sold, revenue: rev };
   });
 
   const totalSoldEl = document.getElementById('dsTotalCupsSold');
@@ -11600,20 +11837,21 @@ calculateDrinkSalesProfit() {
 
   // ─── Total water needed by cups sold ───
   let totalWaterNeededMl = 0;
-  const sizes = ['10', '16', '28'];
-  const perSizeBreakdown = sizes.map(size => {
-    const sizeOz = parseInt(size);
-    const cfg = this.dsPackagingConfig[sizeOz] || {};
+  const perSizeBreakdown = (this.dsCupSizes || []).map(s => {
+    const cid = String(s.id || s.oz);
+    const sizeOz = Number(s.oz);
+    const label = s.label || '';
+    const cfg = this.dsPackagingConfig[cid] || {};
     const mlPerCup = cfg.mlPerCup || 0;
-    const sold = cupData[`cup${size}`]?.sold || 0;
-    const price = cupData[`cup${size}`]?.price || 0;
+    const sold = cupData[cid]?.sold || 0;
+    const price = cupData[cid]?.price || 0;
     const revenue = sold * price;
 
     // Water cost per cup
     const waterCostPerCup = avgCostPerMl * mlPerCup;
 
     // Packaging cost per cup
-    const pkgCostPerCup = this.getDsPackagingCostPerCup(sizeOz);
+    const pkgCostPerCup = this.getDsPackagingCostPerCup(cid);
 
     // Total cost per cup
     const totalCostPerCup = waterCostPerCup + pkgCostPerCup;
@@ -11626,7 +11864,7 @@ calculateDrinkSalesProfit() {
 
     totalWaterNeededMl += mlPerCup * sold;
 
-    return { sizeOz, mlPerCup, sold, price, revenue, waterCostPerCup, pkgCostPerCup, totalCostPerCup, totalWaterCost, totalPkgCost, totalCostSize, profitSize };
+    return { cupId: cid, sizeOz, label, mlPerCup, sold, price, revenue, waterCostPerCup, pkgCostPerCup, totalCostPerCup, totalWaterCost, totalPkgCost, totalCostSize, profitSize };
   });
 
   // ─── Batch tracking per recipe (using actual jar sizes) ───
@@ -11669,11 +11907,7 @@ calculateDrinkSalesProfit() {
     actualUsedLiters,
     totalWaterNeededMl,
     perRecipeBatch,
-    cups: {
-      cup10: cupData.cup10 || {},
-      cup16: cupData.cup16 || {},
-      cup28: cupData.cup28 || {}
-    },
+    cups: cupData,
     perSizeBreakdown,
     recipes: recipeDetails.map(r => ({
       id: r.id, name: r.name, jarCost: r.jarCost, jarLiters: r.jarLiters, costPerMl: r.costPerMl, yieldCups: r.yieldCups
@@ -11689,7 +11923,7 @@ calculateDrinkSalesProfit() {
   // Per-size breakdown HTML
   const sizeBreakdownHtml = perSizeBreakdown.filter(b => b.sold > 0).map(b => `
       <div style="padding:0.5rem 0.75rem; background:#f8fafc; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:0.4rem;">
-        <div style="font-weight:600; font-size:0.85rem;">${b.sizeOz} oz — ขาย ${b.sold} แก้ว × ฿${b.price}</div>
+        <div style="font-weight:600; font-size:0.85rem;">${b.sizeOz} oz${b.label ? ` (${this.escapeHtml(b.label)})` : ''} — ขาย ${b.sold} แก้ว × ฿${b.price}</div>
         <div style="font-size:0.78rem; color:#64748b; display:flex; gap:0.8rem; flex-wrap:wrap; margin-top:0.2rem;">
           <span>น้ำ/แก้ว: ฿${b.waterCostPerCup.toFixed(2)} (${b.mlPerCup}ml)</span>
           <span>📦 บรรจุภัณฑ์/แก้ว: ฿${b.pkgCostPerCup.toFixed(2)}</span>
@@ -11775,6 +12009,92 @@ calculateDrinkSalesProfit() {
   this.refreshLucide();
 }
 
+// Helper: ลบยอดของ drinkSalesLog ออกจาก dailySales (ใช้ตอนแก้ไขหรือลบประวัติ)
+removeDrinkSaleFromDailySales(log) {
+  if (!log || !Array.isArray(this.data.dailySales)) return;
+  const idx = this.data.dailySales.findIndex(d => d && d.date === log.date);
+  if (idx === -1) return;
+  const ex = this.data.dailySales[idx];
+  const rev = Number(log.totalRevenue) || 0;
+  const cost = Number(log.totalCost) || 0;
+  const profit = Number(log.totalProfit) || 0;
+  ex.revenue = Math.max(0, parseFloat(((Number(ex.revenue) || 0) - rev).toFixed(2)));
+  ex.cost = Math.max(0, parseFloat(((Number(ex.cost) || 0) - cost).toFixed(2)));
+  if (ex.materialCost !== undefined) {
+    ex.materialCost = Math.max(0, parseFloat(((Number(ex.materialCost) || 0) - cost).toFixed(2)));
+  }
+  ex.profit = parseFloat(((Number(ex.profit) || 0) - profit).toFixed(2));
+  // Remove matching note entry if present
+  if (ex.note) {
+    const recNames = (log.recipes || []).map(r => r.name).join(', ') || 'น้ำชง';
+    const pStr = profit >= 0 ? `+฿${profit.toFixed(2)}` : `-฿${Math.abs(profit).toFixed(2)}`;
+    const exactDesc = `💰 ขายน้ำชง ${log.totalSold} แก้ว [${recNames}] (กำไร ${pStr})`;
+    ex.note = ex.note
+      .split(', ')
+      .filter(part => part.trim() !== exactDesc)
+      .join(', ')
+      .trim();
+  }
+  if ((Number(ex.revenue) || 0) === 0 && (Number(ex.materialCost) || 0) === 0 && !ex.note && (!ex.cupCount || ex.cupCount === 0)) {
+    this.data.dailySales.splice(idx, 1);
+  }
+}
+
+editDrinkSalesLog(logId) {
+  const log = (this.data.drinkSalesLogs || []).find(l => l && l.id === logId);
+  if (!log) return;
+
+  this.editingDrinkSalesLogId = log.id;
+
+  // 1. Restore cup inputs from log.cups
+  const cupsObj = log.cups || {};
+  (this.dsCupSizes || []).forEach(s => {
+    const cid = String(s.id || s.oz);
+    const saved = cupsObj[cid] || cupsObj[`cup${s.oz}`] || null;
+    const beforeEl = document.getElementById(`dsCupBefore${cid}`);
+    const afterEl = document.getElementById(`dsCupAfter${cid}`);
+    const priceEl = document.getElementById(`dsCupPrice${cid}`);
+    if (saved) {
+      if (priceEl && saved.price !== undefined) priceEl.value = saved.price;
+      if (beforeEl) beforeEl.value = saved.before ?? (saved.sold || 0);
+      if (afterEl) afterEl.value = saved.after ?? 0;
+    } else {
+      if (beforeEl) beforeEl.value = '';
+      if (afterEl) afterEl.value = '';
+    }
+  });
+
+  // 2. Restore selected recipes
+  this.drinkSalesSelectedRecipeIds = new Set((log.recipes || []).map(r => String(r.id)));
+  this.renderDsInlineRecipes();
+
+  // 3. Restore date
+  const saveDateEl = document.getElementById('drinkSalesSaveDate');
+  if (saveDateEl && log.date) saveDateEl.value = String(log.date).substring(0, 10);
+
+  // 4. Recalculate & show result
+  this.calculateDrinkSalesCups();
+  this.calculateDrinkSalesProfit();
+
+  // 5. Update Save button UI to Edit mode
+  const btnText = document.getElementById('btnSaveDrinkSalesLogText');
+  const cancelBtn = document.getElementById('btnCancelEditDrinkSalesLog');
+  if (btnText) btnText.textContent = 'อัปเดตประวัติยอดขาย';
+  if (cancelBtn) cancelBtn.style.display = 'inline-flex';
+
+  document.getElementById('tab-drink-sales')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  this.showToast(`📝 โหลดข้อมูลวันที่ ${this.formatThaiDate(log.date)} สำหรับแก้ไขแล้ว`, 'info');
+}
+
+cancelEditDrinkSalesLog() {
+  this.editingDrinkSalesLogId = null;
+  const btnText = document.getElementById('btnSaveDrinkSalesLogText');
+  const cancelBtn = document.getElementById('btnCancelEditDrinkSalesLog');
+  if (btnText) btnText.textContent = 'บันทึกประวัติยอดขาย';
+  if (cancelBtn) cancelBtn.style.display = 'none';
+  this.showToast('ยกเลิกการแก้ไขแล้ว', 'info');
+}
+
 saveDrinkSalesLog() {
   if (!this.lastDrinkSalesCalc || this.lastDrinkSalesCalc.totalSold <= 0) {
     this.showToast('กรุณากรอกจำนวนแก้วและคำนวณกำไรก่อนบันทึกประวัติ', 'warning');
@@ -11788,36 +12108,71 @@ saveDrinkSalesLog() {
   const calc = this.lastDrinkSalesCalc;
   const now = new Date();
   const selectedDate = document.getElementById('drinkSalesSaveDate')?.value || this.formatDate(now);
-  const newLog = {
-    id: 'dsl_' + Date.now() + Math.random().toString(36).substring(2, 5),
-    date: selectedDate,
-    time: now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
-    timestamp: Date.now(),
-    cups: calc.cups,
-    totalSold: calc.totalSold,
-    totalRevenue: calc.totalRevenue,
-    avgCostPerCup: calc.avgCostPerCup,
-    totalCost: calc.totalCost,
-    totalProfit: calc.totalProfit,
-    profitPerCup: calc.profitPerCup,
-    grandTotalWaterCost: calc.grandTotalWaterCost,
-    grandTotalPkgCost: calc.grandTotalPkgCost,
-    batchCount: calc.batchCount,
-    batchLeftover: calc.batchLeftover,
-    totalPreparedLiters: calc.totalPreparedLiters,
-    actualUsedLiters: calc.actualUsedLiters,
-    perRecipeBatch: calc.perRecipeBatch,
-    perSizeBreakdown: calc.perSizeBreakdown,
-    recipes: calc.recipes
-  };
+  const isEditing = Boolean(this.editingDrinkSalesLogId);
+  let oldDate = null;
 
-  this.data.drinkSalesLogs.unshift(newLog);
+  if (isEditing) {
+    const oldIdx = this.data.drinkSalesLogs.findIndex(l => l && l.id === this.editingDrinkSalesLogId);
+    if (oldIdx !== -1) {
+      const oldLog = this.data.drinkSalesLogs[oldIdx];
+      oldDate = oldLog.date;
+      this.removeDrinkSaleFromDailySales(oldLog);
+      this.data.drinkSalesLogs[oldIdx] = {
+        ...oldLog,
+        date: selectedDate,
+        cups: calc.cups,
+        totalSold: calc.totalSold,
+        totalRevenue: calc.totalRevenue,
+        avgCostPerCup: calc.avgCostPerCup,
+        totalCost: calc.totalCost,
+        totalProfit: calc.totalProfit,
+        profitPerCup: calc.profitPerCup,
+        grandTotalWaterCost: calc.grandTotalWaterCost,
+        grandTotalPkgCost: calc.grandTotalPkgCost,
+        batchCount: calc.batchCount,
+        batchLeftover: calc.batchLeftover,
+        totalPreparedLiters: calc.totalPreparedLiters,
+        actualUsedLiters: calc.actualUsedLiters,
+        perRecipeBatch: calc.perRecipeBatch,
+        perSizeBreakdown: calc.perSizeBreakdown,
+        recipes: calc.recipes
+      };
+    } else {
+      isEditing && (this.editingDrinkSalesLogId = null);
+    }
+  }
+
+  if (!isEditing) {
+    const newLog = {
+      id: 'dsl_' + Date.now() + Math.random().toString(36).substring(2, 5),
+      date: selectedDate,
+      time: now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
+      timestamp: Date.now(),
+      cups: calc.cups,
+      totalSold: calc.totalSold,
+      totalRevenue: calc.totalRevenue,
+      avgCostPerCup: calc.avgCostPerCup,
+      totalCost: calc.totalCost,
+      totalProfit: calc.totalProfit,
+      profitPerCup: calc.profitPerCup,
+      grandTotalWaterCost: calc.grandTotalWaterCost,
+      grandTotalPkgCost: calc.grandTotalPkgCost,
+      batchCount: calc.batchCount,
+      batchLeftover: calc.batchLeftover,
+      totalPreparedLiters: calc.totalPreparedLiters,
+      actualUsedLiters: calc.actualUsedLiters,
+      perRecipeBatch: calc.perRecipeBatch,
+      perSizeBreakdown: calc.perSizeBreakdown,
+      recipes: calc.recipes
+    };
+    this.data.drinkSalesLogs.unshift(newLog);
+  }
 
   // ─── บันทึกเข้า Daily Sales (ยอดขายประจำวัน) อัตโนมัติ เหมือนกำไรจากเบิกขายสำเร็จรูป/ลัง ───
   const totalRevenue = calc.totalRevenue || 0;
   const totalCost = calc.totalCost || 0;
   const totalProfit = calc.totalProfit || 0;
-  const saleDate = newLog.date;
+  const saleDate = selectedDate;
 
   if (totalRevenue > 0 || totalCost > 0) {
     if (!Array.isArray(this.data.dailySales)) {
@@ -11853,13 +12208,25 @@ saveDrinkSalesLog() {
     }
   }
 
+  this.editingDrinkSalesLogId = null;
+  const btnText = document.getElementById('btnSaveDrinkSalesLogText');
+  const cancelBtn = document.getElementById('btnCancelEditDrinkSalesLog');
+  if (btnText) btnText.textContent = 'บันทึกประวัติยอดขาย';
+  if (cancelBtn) cancelBtn.style.display = 'none';
+
   this.saveData();
   this.renderDrinkSalesHistory();
   this.renderDailyHistoryTable();
   this.renderDashboard();
   this.renderTodaySummary(saleDate);
+  if (oldDate && oldDate !== saleDate) this.renderTodaySummary(oldDate);
   this.renderCalendar();
-  this.showToast(`✅ บันทึกประวัติยอดขายน้ำชง (${this.formatThaiDate(saleDate)}) เรียบร้อยแล้ว!`, 'success');
+  this.showToast(
+    isEditing
+      ? `✅ อัปเดตประวัติยอดขายน้ำชง (${this.formatThaiDate(saleDate)}) เรียบร้อยแล้ว!`
+      : `✅ บันทึกประวัติยอดขายน้ำชง (${this.formatThaiDate(saleDate)}) เรียบร้อยแล้ว!`,
+    'success'
+  );
 }
 
 renderDrinkSalesHistory() {
@@ -11872,6 +12239,23 @@ renderDrinkSalesHistory() {
   }
   const logs = this.data.drinkSalesLogs;
   if (badge) badge.textContent = `${logs.length} รายการ`;
+
+  const sumSold = logs.reduce((s, l) => s + (Number(l.totalSold) || 0), 0);
+  const sumRev = logs.reduce((s, l) => s + (Number(l.totalRevenue) || 0), 0);
+  const sumProfit = logs.reduce((s, l) => s + (Number(l.totalProfit) || 0), 0);
+  const isProfit = sumProfit >= 0;
+
+  const heroSoldEl = document.getElementById('dsHeroTotalHistorySold');
+  if (heroSoldEl) heroSoldEl.textContent = `${sumSold.toLocaleString()} แก้ว`;
+
+  const heroRevEl = document.getElementById('dsHeroTotalHistoryRevenue');
+  if (heroRevEl) heroRevEl.textContent = `฿${sumRev.toLocaleString('th-TH', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+
+  const heroProfitEl = document.getElementById('dsHeroTotalHistoryProfit');
+  if (heroProfitEl) {
+    heroProfitEl.textContent = `${isProfit ? '+' : ''}฿${sumProfit.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    heroProfitEl.style.color = isProfit ? '#6ee7b7' : '#fca5a5';
+  }
 
   if (logs.length === 0) {
     listContainer.innerHTML = `
@@ -11886,44 +12270,87 @@ renderDrinkSalesHistory() {
   }
 
   listContainer.innerHTML = logs.map(log => {
-    const recNames = (log.recipes || []).map(r => r.name).join(', ') || 'ไม่ระบุสูตร';
-    const profitClass = log.totalProfit >= 0 ? 'color:#16a34a;' : 'color:#dc2626;';
+    const recList = log.recipes || [];
+    const profitClass = log.totalProfit >= 0 ? 'color:#15803d;' : 'color:#dc2626;';
     const profitSign = log.totalProfit >= 0 ? '+' : '';
 
-    // Per-size detail
+    // Per-size detail chips (clean spacing, no cramped parentheses)
     let perSizeHtml = '';
     if (log.perSizeBreakdown) {
-      perSizeHtml = log.perSizeBreakdown.filter(b => b.sold > 0).map(b =>
-        `<span class="dsh-cup-badge">${b.sizeOz}oz: <b>${b.sold}</b>×฿${b.price} (ทุน฿${b.totalCostPerCup.toFixed(1)})</span>`
-      ).join('');
+      perSizeHtml = log.perSizeBreakdown.filter(b => b.sold > 0).map(b => `
+        <div class="dsh-size-chip">
+          <span class="dsh-size-tag">${b.sizeOz}oz${b.label ? ` (${this.escapeHtml(b.label)})` : ''}</span>
+          <span class="dsh-size-qty"><b>${b.sold}</b> แก้ว</span>
+          <span class="dsh-size-meta">ขาย ฿${b.price} · ทุน ฿${b.totalCostPerCup.toFixed(1)}</span>
+        </div>
+      `).join('');
     } else {
-      perSizeHtml = `
-          <span class="dsh-cup-badge">10 oz: <b>${log.cups?.cup10?.sold ?? 0}</b> แก้ว</span>
-          <span class="dsh-cup-badge">16 oz: <b>${log.cups?.cup16?.sold ?? 0}</b> แก้ว</span>
-          <span class="dsh-cup-badge">28 oz: <b>${log.cups?.cup28?.sold ?? 0}</b> แก้ว</span>
-        `;
+      perSizeHtml = [
+        { sz: '10oz', qty: log.cups?.cup10?.sold ?? 0 },
+        { sz: '16oz', qty: log.cups?.cup16?.sold ?? 0 },
+        { sz: '28oz', qty: log.cups?.cup28?.sold ?? 0 }
+      ].filter(x => x.qty > 0).map(x => `
+        <div class="dsh-size-chip">
+          <span class="dsh-size-tag">${x.sz}</span>
+          <span class="dsh-size-qty"><b>${x.qty}</b> แก้ว</span>
+        </div>
+      `).join('');
     }
 
+    // Merge recipe names + batch count into clean pills (avoid repeating recipe list twice)
+    let recipePillsHtml = '';
+    if (log.perRecipeBatch && log.perRecipeBatch.length > 0) {
+      recipePillsHtml = log.perRecipeBatch.map(r =>
+        `<span class="dsh-recipe-pill">${this.escapeHtml(r.name)} <b>${r.batches}×${r.jarLiters}L</b></span>`
+      ).join('');
+    } else if (recList.length > 0) {
+      recipePillsHtml = recList.map(r =>
+        `<span class="dsh-recipe-pill">${this.escapeHtml(r.name)}</span>`
+      ).join('');
+    } else {
+      recipePillsHtml = `<span class="dsh-recipe-pill">ไม่ระบุสูตร</span>`;
+    }
+
+    const hasWaterStats = (log.perRecipeBatch && log.perRecipeBatch.length > 0) || log.batchCount;
+    const waterSummaryHtml = hasWaterStats ? `
+      <div class="dsh-water-bar">
+        <span>🫙 ชงรวม <b>${Number(log.totalPreparedLiters || 0).toFixed(1)}L</b></span>
+        <span class="dsh-dot">•</span>
+        <span>ใช้จริง <b>${Number(log.actualUsedLiters || 0).toFixed(1)}L</b></span>
+        <span class="dsh-dot">•</span>
+        <span style="color:#0284c7;">เหลือ <b>${Number(log.batchLeftover || 0).toFixed(1)}L</b></span>
+      </div>
+    ` : '';
+
     return `
-        <div class="drink-sales-history-card">
+        <div class="drink-sales-history-card dsh-card-clean">
           <div class="dsh-header">
             <div class="dsh-date">
               <i data-lucide="calendar" style="width:14px;height:14px;"></i>
-              <span>${this.formatThaiDate(log.date)} เวลา ${log.time || ''} น.</span>
+              <span>${this.formatThaiDate(log.date)} · ${log.time || ''} น.</span>
             </div>
-            <button type="button" class="icon-btn text-danger" title="ลบรายการนี้" onclick="app.deleteDrinkSalesLog('${log.id}')" style="width:28px;height:28px;color:#ef4444;">
-              <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
-            </button>
+            <div style="display:flex; align-items:center; gap:0.35rem;">
+              <span class="dsh-total-pill">รวม <b>${log.totalSold}</b> แก้ว</span>
+              <button type="button" class="icon-btn" title="แก้ไขรายการนี้" onclick="app.editDrinkSalesLog('${log.id}')" style="width:28px;height:28px;color:#2563eb;">
+                <i data-lucide="edit-3" style="width:14px;height:14px;"></i>
+              </button>
+              <button type="button" class="icon-btn text-danger" title="ลบรายการนี้" onclick="app.deleteDrinkSalesLog('${log.id}')" style="width:28px;height:28px;color:#ef4444;">
+                <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
+              </button>
+            </div>
           </div>
-          <div class="dsh-cups-row">
+
+          <div class="dsh-sizes-wrap">
             ${perSizeHtml}
-            <span class="dsh-cup-total">รวม <b>${log.totalSold}</b> แก้ว</span>
           </div>
-          <div class="dsh-recipes-row">
-            <span class="dsh-recipes-label">🏺 สูตรน้ำ:</span>
-            <span>${this.escapeHtml(recNames)}</span>
+
+          <div class="dsh-recipes-box">
+            <div class="dsh-recipes-pills">
+              ${recipePillsHtml}
+            </div>
+            ${waterSummaryHtml}
           </div>
-          ${log.perRecipeBatch && log.perRecipeBatch.length > 0 ? `<div style="font-size:0.75rem; color:#92400e; padding:0.2rem 0;">🫙 ${log.perRecipeBatch.map(r => `${this.escapeHtml(r.name)} ${r.batches}×${r.jarLiters}L`).join(', ')} (ชงรวม ${Number(log.totalPreparedLiters || 0).toFixed(1)}L → ใช้ ${Number(log.actualUsedLiters || 0).toFixed(1)}L เหลือ ${Number(log.batchLeftover || 0).toFixed(1)}L)</div>` : (log.batchCount ? `<div style="font-size:0.75rem; color:#92400e; padding:0.2rem 0;">🫙 ${log.batchCount} โหล (${Number(log.totalPreparedLiters || 0).toFixed(1)}L) → ใช้ ${Number(log.actualUsedLiters || 0).toFixed(1)}L เหลือ ${Number(log.batchLeftover || 0).toFixed(1)}L</div>` : '')}
+
           <div class="dsh-finance-grid">
             <div class="dsh-fin-item">
               <span class="dsh-fin-lbl">รายรับรวม</span>
@@ -11950,9 +12377,20 @@ renderDrinkSalesHistory() {
 deleteDrinkSalesLog(logId) {
   if (!confirm('คุณแน่ใจหรือไม่ว่าต้องการลบรายการประวัตินี้?')) return;
   if (!Array.isArray(this.data.drinkSalesLogs)) return;
+  const target = this.data.drinkSalesLogs.find(l => l && l.id === logId);
+  if (target) {
+    this.removeDrinkSaleFromDailySales(target);
+  }
+  if (this.editingDrinkSalesLogId === logId) {
+    this.cancelEditDrinkSalesLog();
+  }
   this.data.drinkSalesLogs = this.data.drinkSalesLogs.filter(l => l.id !== logId);
   this.saveData();
   this.renderDrinkSalesHistory();
+  this.renderDailyHistoryTable();
+  this.renderDashboard();
+  if (target?.date) this.renderTodaySummary(target.date);
+  this.renderCalendar();
   this.showToast('ลบรายการประวัติยอดขายน้ำเรียบร้อย', 'info');
 }
 
