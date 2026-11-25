@@ -9683,6 +9683,197 @@ body {
   margin-top: 0.1rem;
 }
 
+/* ═══ Stock Profit History Modal Redesign ═══ */
+.sph-filter-bar {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.sph-search-wrap {
+  flex: 1;
+  min-width: 170px;
+  position: relative;
+}
+.sph-search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 15px;
+  height: 15px;
+  color: #94a3b8;
+  pointer-events: none;
+}
+.sph-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.65rem;
+}
+.sph-stat-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.7rem 0.9rem;
+}
+.sph-stat-card.is-profit {
+  background: #f0fdf4;
+  border: 1.5px solid #a7f3d0;
+}
+.sph-stat-lbl {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #64748b;
+}
+.sph-stat-card.is-profit .sph-stat-lbl {
+  color: #047857;
+}
+.sph-stat-val {
+  font-size: 1.18rem;
+  font-weight: 800;
+  margin-top: 2px;
+}
+.sph-view-tabs {
+  display: flex;
+  gap: 0.4rem;
+  background: #f1f5f9;
+  padding: 0.28rem;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}
+.sph-tab-btn {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 0.45rem 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.sph-tab-btn.active {
+  background: #ffffff;
+  color: var(--primary);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+.sph-list-scroll {
+  max-height: 360px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-right: 2px;
+}
+#stockProfitHistoryItemsBody {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 0.55rem;
+  align-content: start;
+}
+.sph-day-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.75rem 0.9rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  transition: border-color 0.15s, background 0.15s;
+}
+.sph-day-card:hover {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+.sph-day-card.is-selected {
+  background: #f0fdf4;
+  border-color: #86efac;
+}
+.sph-day-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+.sph-day-date-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+.sph-day-date {
+  font-weight: 800;
+  font-size: 0.9rem;
+  color: #1e293b;
+}
+.sph-day-sub {
+  font-size: 0.78rem;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+.sph-day-right {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-left: auto;
+}
+.sph-day-profit {
+  font-weight: 800;
+  font-size: 1.02rem;
+}
+.sph-item-card {
+  padding: 0.65rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+}
+.sph-item-card.is-profit {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+.sph-item-card.is-loss {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+.sph-item-name {
+  font-weight: 700;
+  font-size: 0.84rem;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sph-item-mid {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.25rem;
+}
+.sph-item-profit {
+  font-weight: 800;
+  font-size: 0.92rem;
+}
+.sph-item-sub {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: #64748b;
+  margin-top: 2px;
+}
+@media (max-width: 540px) {
+  .sph-summary-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .sph-summary-grid .sph-stat-card.is-profit {
+    grid-column: 1 / -1;
+  }
+}
+
 .frc-actions-redesigned {
   display: flex;
   justify-content: space-between;
@@ -10076,7 +10267,198 @@ body {
     flex: 1;
   }
 
-  .frc-actions-redesigned {
+  /* ═══ Stock Profit History Modal Redesign ═══ */
+.sph-filter-bar {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.sph-search-wrap {
+  flex: 1;
+  min-width: 170px;
+  position: relative;
+}
+.sph-search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 15px;
+  height: 15px;
+  color: #94a3b8;
+  pointer-events: none;
+}
+.sph-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.65rem;
+}
+.sph-stat-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.7rem 0.9rem;
+}
+.sph-stat-card.is-profit {
+  background: #f0fdf4;
+  border: 1.5px solid #a7f3d0;
+}
+.sph-stat-lbl {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #64748b;
+}
+.sph-stat-card.is-profit .sph-stat-lbl {
+  color: #047857;
+}
+.sph-stat-val {
+  font-size: 1.18rem;
+  font-weight: 800;
+  margin-top: 2px;
+}
+.sph-view-tabs {
+  display: flex;
+  gap: 0.4rem;
+  background: #f1f5f9;
+  padding: 0.28rem;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}
+.sph-tab-btn {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 0.45rem 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.sph-tab-btn.active {
+  background: #ffffff;
+  color: var(--primary);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+.sph-list-scroll {
+  max-height: 360px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-right: 2px;
+}
+#stockProfitHistoryItemsBody {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 0.55rem;
+  align-content: start;
+}
+.sph-day-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.75rem 0.9rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  transition: border-color 0.15s, background 0.15s;
+}
+.sph-day-card:hover {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+.sph-day-card.is-selected {
+  background: #f0fdf4;
+  border-color: #86efac;
+}
+.sph-day-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+.sph-day-date-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+.sph-day-date {
+  font-weight: 800;
+  font-size: 0.9rem;
+  color: #1e293b;
+}
+.sph-day-sub {
+  font-size: 0.78rem;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+.sph-day-right {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-left: auto;
+}
+.sph-day-profit {
+  font-weight: 800;
+  font-size: 1.02rem;
+}
+.sph-item-card {
+  padding: 0.65rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+}
+.sph-item-card.is-profit {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+.sph-item-card.is-loss {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+.sph-item-name {
+  font-weight: 700;
+  font-size: 0.84rem;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sph-item-mid {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.25rem;
+}
+.sph-item-profit {
+  font-weight: 800;
+  font-size: 0.92rem;
+}
+.sph-item-sub {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: #64748b;
+  margin-top: 2px;
+}
+@media (max-width: 540px) {
+  .sph-summary-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .sph-summary-grid .sph-stat-card.is-profit {
+    grid-column: 1 / -1;
+  }
+}
+
+.frc-actions-redesigned {
   display: flex;
   justify-content: space-between;
   align-items: center;

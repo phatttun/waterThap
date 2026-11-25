@@ -3132,43 +3132,43 @@
     </div>
   </div>
 
-  <!-- Stock Profit History Modal (ดูประวัติสรุปกำไรย้อนหลังทุกวัน) -->
+  <!-- Stock Profit History Modal (Redesigned) -->
   <div class="modal-backdrop" id="stockProfitHistoryModal">
-    <div class="modal-dialog modal-lg" style="max-width: 720px;">
+    <div class="modal-dialog modal-lg" style="max-width: 740px;">
       <div class="modal-header">
-        <div style="display:flex; align-items:center; gap:0.6rem;">
-          <div class="icon-circle" style="background:#dcfce7; color:#15803d;">
-            <i data-lucide="history"></i>
+        <div style="display:flex; align-items:center; gap:0.65rem;">
+          <div style="width:36px; height:36px; border-radius:10px; background:#dcfce7; color:#15803d; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+            <i data-lucide="trending-up" style="width:18px;height:18px;"></i>
           </div>
           <div>
             <h3 class="modal-title" style="margin-bottom:0;">ประวัติสรุปกำไรน้ำในตู้</h3>
-            <span class="text-xs text-muted">แสดงประวัติรวมยอดกำไรแยกรายวัน สามารถคลิกดูรายละเอียดของแต่ละวันได้</span>
+            <span class="text-xs text-muted">สรุปยอดขาย ต้นทุน และกำไรรายวัน</span>
           </div>
         </div>
         <button class="close-modal-btn" data-close="stockProfitHistoryModal">&times;</button>
       </div>
-      <div class="modal-body">
+
+      <div class="modal-body" style="padding:1rem 1.25rem;">
         <!-- Search & Filter Bar -->
-        <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; margin-bottom:0.75rem;">
-          <div style="flex:1; min-width:180px; position:relative;">
-            <i data-lucide="search"
-              style="position:absolute; left:10px; top:50%; transform:translateY(-50%); width:16px; height:16px; color:#94a3b8; pointer-events:none;"></i>
-            <input type="text" id="stockProfitHistorySearch" class="form-input" placeholder="ค้นหาวันที่ / ยอดเงิน..."
+        <div class="sph-filter-bar mb-3">
+          <div class="sph-search-wrap">
+            <i data-lucide="search" class="sph-search-icon"></i>
+            <input type="text" id="stockProfitHistorySearch" class="form-input" placeholder="ค้นหาสินค้า, วันที่..."
               style="padding-left:34px; font-size:0.85rem; height:38px;" oninput="app.filterStockProfitHistory()">
           </div>
-          <div style="display:flex; gap:0.3rem; align-items:center;">
+          <div style="display:flex; gap:0.35rem; align-items:center;">
             <input type="date" id="stockProfitHistoryDatePicker" class="form-input"
-              style="width:auto; min-width:145px; font-size:0.85rem; height:38px;"
+              style="width:auto; min-width:140px; font-size:0.84rem; height:38px;"
               onchange="app.filterStockProfitHistory()" title="เลือกวันที่ต้องการดู">
             <button type="button" id="stockProfitHistoryDateClearBtn"
               onclick="if(this.previousElementSibling){this.previousElementSibling.value='';} app.filterStockProfitHistory();"
               title="ดูทุกวัน"
-              style="display:none; height:38px; padding:0 0.65rem; background:#f1f5f9; border:1px solid #cbd5e1; color:#475569; border-radius:var(--radius-sm); font-size:0.78rem; font-weight:600; cursor:pointer; white-space:nowrap;">
+              style="display:none; height:38px; padding:0 0.65rem; background:#f1f5f9; border:1px solid #cbd5e1; color:#475569; border-radius:8px; font-size:0.78rem; font-weight:600; cursor:pointer; white-space:nowrap;">
               ทุกวัน
             </button>
           </div>
           <select id="stockProfitHistoryFilter" class="form-input"
-            style="width:auto; min-width:120px; font-size:0.85rem; height:38px;"
+            style="width:auto; min-width:110px; font-size:0.84rem; height:38px;"
             onchange="app.filterStockProfitHistory()">
             <option value="ALL">ทั้งหมด</option>
             <option value="PROFIT">🟢 กำไร</option>
@@ -3176,49 +3176,45 @@
           </select>
         </div>
 
-        <!-- All-Time Profit Summary Cards -->
-        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:0.75rem; margin-bottom:1rem;"
-          class="stock-profit-modal-summary-grid">
-          <div
-            style="background:#f0fdf4; border:1.5px solid #a7f3d0; border-radius:var(--radius-sm); padding:0.75rem 1rem;">
-            <div class="text-xs text-muted font-bold" style="color:#047857;">กำไรสุทธิสะสมทั้งหมด</div>
-            <div class="font-bold" id="stockProfitHistAllTimeProfit"
-              style="font-size:1.35rem; color:#15803d; margin-top:2px;">+฿0.00</div>
+        <!-- Summary Cards -->
+        <div class="sph-summary-grid mb-3">
+          <div class="sph-stat-card is-profit">
+            <div class="sph-stat-lbl">กำไรสุทธิรวม</div>
+            <div class="sph-stat-val" id="stockProfitHistAllTimeProfit">+฿0.00</div>
           </div>
-          <div
-            style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:var(--radius-sm); padding:0.75rem 1rem;">
-            <div class="text-xs text-muted">ยอดขายสะสม</div>
-            <div class="font-bold text-main" id="stockProfitHistAllTimeRevenue"
-              style="font-size:1.2rem; margin-top:2px;">฿0.00</div>
+          <div class="sph-stat-card">
+            <div class="sph-stat-lbl">ยอดขายรวม</div>
+            <div class="sph-stat-val text-main" id="stockProfitHistAllTimeRevenue">฿0.00</div>
           </div>
-          <div
-            style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:var(--radius-sm); padding:0.75rem 1rem;">
-            <div class="text-xs text-muted">จำนวนวันที่มียอดเบิกขาย</div>
-            <div class="font-bold text-primary" id="stockProfitHistTotalDays" style="font-size:1.2rem; margin-top:2px;">
-              0 วัน</div>
+          <div class="sph-stat-card">
+            <div class="sph-stat-lbl">จำนวนวัน</div>
+            <div class="sph-stat-val text-primary" id="stockProfitHistTotalDays">0 วัน</div>
           </div>
         </div>
 
-        <!-- History Table -->
-        <div class="table-responsive"
-          style="max-height: 380px; overflow-y:auto; border:1px solid var(--border-color); border-radius:var(--radius-sm);">
-          <table class="fastwork-table">
-            <thead>
-              <tr>
-                <th>วันที่</th>
-                <th style="text-align:center;">จำนวนที่เบิกขาย</th>
-                <th style="text-align:right;">ยอดขายรวม</th>
-                <th style="text-align:right;">ต้นทุนรวม</th>
-                <th style="text-align:right;">กำไรสุทธิ</th>
-                <th style="text-align:center; width:90px;">เลือกดู</th>
-              </tr>
-            </thead>
-            <tbody id="stockProfitHistoryTableBody">
-              <!-- Rendered by JS -->
-            </tbody>
-          </table>
+        <!-- View Switcher Tabs (รายวัน vs แยกตามสินค้า) -->
+        <div class="sph-view-tabs mb-3">
+          <button type="button" class="sph-tab-btn active" id="btnSphTabDaily"
+            onclick="app.switchStockProfitHistoryTab('daily')">
+            📅 สรุปรายวัน
+          </button>
+          <button type="button" class="sph-tab-btn" id="btnSphTabItems"
+            onclick="app.switchStockProfitHistoryTab('items')">
+            📦 แยกตามสินค้า
+          </button>
+        </div>
+
+        <!-- Tab 1: Daily Cards List -->
+        <div id="stockProfitHistoryTableBody" class="sph-list-scroll">
+          <!-- Rendered by JS -->
+        </div>
+
+        <!-- Tab 2: Items Summary Grid -->
+        <div id="stockProfitHistoryItemsBody" class="sph-list-scroll" style="display:none;">
+          <!-- Rendered by JS -->
         </div>
       </div>
+
       <div class="modal-footer">
         <button type="button" class="btn-secondary" data-close="stockProfitHistoryModal">ปิดหน้าต่าง</button>
       </div>

@@ -9549,9 +9549,22 @@ class WaterFlowApp {
     this.renderStockProfitHistoryTable(datesList, itemsList, searchQuery);
   }
 
+  switchStockProfitHistoryTab(tab) {
+    const dailyEl = document.getElementById('stockProfitHistoryTableBody');
+    const itemsEl = document.getElementById('stockProfitHistoryItemsBody');
+    const btnDaily = document.getElementById('btnSphTabDaily');
+    const btnItems = document.getElementById('btnSphTabItems');
+    const showItems = tab === 'items';
+    if (dailyEl) dailyEl.style.display = showItems ? 'none' : 'flex';
+    if (itemsEl) itemsEl.style.display = showItems ? 'grid' : 'none';
+    if (btnDaily) btnDaily.classList.toggle('active', !showItems);
+    if (btnItems) btnItems.classList.toggle('active', showItems);
+  }
+
   renderStockProfitHistoryTable(datesList, itemsList, searchQuery) {
-    const tbody = document.getElementById('stockProfitHistoryTableBody');
-    if (!tbody) return;
+    const dailyWrap = document.getElementById('stockProfitHistoryTableBody');
+    const itemsWrap = document.getElementById('stockProfitHistoryItemsBody');
+    if (!dailyWrap) return;
 
     // Summary totals
     let allTimeProfit = 0;
@@ -9572,82 +9585,78 @@ class WaterFlowApp {
     if (allRevEl) allRevEl.textContent = this.formatCurrency(allTimeRevenue);
     if (allDaysEl) allDaysEl.textContent = `${datesList.length} วัน`;
 
-    // Item profit summary (show when searching or always if items exist)
-    let itemSummaryHtml = '';
-    if (itemsList && itemsList.length > 0) {
-      itemSummaryHtml = `
-        <tr>
-          <td colspan="6" style="padding:0; border:none;">
-            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:var(--radius-sm); padding:0.75rem; margin-bottom:0.5rem;">
-              <div style="font-weight:700; font-size:0.85rem; color:#334155; margin-bottom:0.5rem; display:flex; align-items:center; gap:0.35rem;">
-                <span>📦</span>
-                <span>สรุปกำไรแยกตามสินค้า${searchQuery ? ' (ผลค้นหา)' : ''}</span>
-                <span class="pill-tag" style="font-size:0.7rem; background:#e2e8f0; color:#475569;">${itemsList.length} รายการ</span>
-              </div>
-              <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:0.5rem;">
-                ${itemsList.map(item => {
-        const isProfit = item.totalProfit >= 0;
-        return `
-                    <div style="background:${isProfit ? '#f0fdf4' : '#fef2f2'}; border:1px solid ${isProfit ? '#bbf7d0' : '#fecaca'}; border-radius:var(--radius-sm); padding:0.5rem 0.65rem;">
-                      <div style="font-weight:700; font-size:0.82rem; color:#1e293b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${this.escapeHtml(item.name)}">${this.escapeHtml(item.name)}</div>
-                      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.25rem;">
-                        <span style="font-size:0.75rem; color:#64748b;">${item.count} ครั้ง · ${item.totalQty} ชิ้น</span>
-                        <span style="font-weight:800; font-size:0.9rem; color:${isProfit ? '#15803d' : '#dc2626'};">${isProfit ? '+' : ''}${this.formatCurrency(item.totalProfit)}</span>
-                      </div>
-                      <div style="display:flex; justify-content:space-between; font-size:0.7rem; color:#94a3b8; margin-top:2px;">
-                        <span>ขาย ${this.formatCurrency(item.totalRevenue)}</span>
-                        <span>ทุน ${this.formatCurrency(item.totalCost)}</span>
-                      </div>
-                    </div>
-                  `;
-      }).join('')}
-              </div>
-            </div>
-          </td>
-        </tr>
-      `;
-    }
-
+    // Render Tab 1: Clean responsive day cards (no horizontal table scroll)
     if (datesList.length === 0) {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="6" class="text-center text-muted py-4">
-            ${this._stockProfitRawLogs && this._stockProfitRawLogs.length > 0 ? 'ไม่พบรายการที่ตรงกับการค้นหา' : 'ยังไม่มีประวัติการเบิกขายสำเร็จรูปในระบบ (เมื่อเริ่มมีการตัดสต๊อกสำเร็จรูป/ลัง ระบบจะสรุปแยกวันให้อัตโนมัติ)'}
-          </td>
-        </tr>
+      dailyWrap.innerHTML = `
+        <div class="figma-tx-empty" style="padding:2rem 1rem;">
+          <div class="figma-tx-empty-icon"><i data-lucide="inbox"></i></div>
+          <div class="figma-tx-empty-title">${this._stockProfitRawLogs && this._stockProfitRawLogs.length > 0 ? 'ไม่พบรายการที่ตรงกับเงื่อนไข' : 'ยังไม่มีประวัติการเบิกขาย'}</div>
+          <div class="figma-tx-empty-desc">ลองเปลี่ยนวันที่หรือคำค้นหา</div>
+        </div>
       `;
     } else {
-      tbody.innerHTML = itemSummaryHtml + datesList.map(row => {
+      const todayStr = this.formatDate(new Date());
+      dailyWrap.innerHTML = datesList.map(row => {
         const isCurrentSelected = (row.date === this.selectedStockProfitDate);
-        const profitColor = row.totalProfit >= 0 ? '#15803d' : '#dc2626';
-        const profitSign = row.totalProfit >= 0 ? '+' : '';
+        const isProfit = row.totalProfit >= 0;
+        const profitColor = isProfit ? '#15803d' : '#dc2626';
+        const profitSign = isProfit ? '+' : '';
 
         return `
-          <tr style="${isCurrentSelected ? 'background:#f0fdf4;' : ''}">
-            <td>
-              <div class="font-bold text-main" style="font-size:0.9rem;">${this.formatThaiDate(row.date)}</div>
-              <div class="text-xs text-muted">${row.date === this.formatDate(new Date()) ? '🌟 วันนี้' : ''}</div>
-            </td>
-            <td style="text-align:center;">
-              <span class="pill-tag blue-tag" style="font-weight:700;">${row.itemsCount} รายการ (${row.totalQty} ชิ้น/ลัง)</span>
-            </td>
-            <td style="text-align:right;" class="font-bold text-main">
-              ${this.formatCurrency(row.totalRevenue)}
-            </td>
-            <td style="text-align:right;" class="font-bold text-muted">
-              ${this.formatCurrency(row.totalCost)}
-            </td>
-            <td style="text-align:right;" class="font-bold" style="color:${profitColor}; font-size:1rem;">
-              <span style="color:${profitColor};">${profitSign}${this.formatCurrency(row.totalProfit)}</span>
-            </td>
-            <td style="text-align:center;">
-              <button type="button" class="btn-outline-fastwork btn-sm" onclick="app.selectDateFromProfitHistory('${row.date}')" style="padding:0.25rem 0.55rem; font-size:0.75rem;">
-                ${isCurrentSelected ? '✓ กำลังดู' : 'เลือกดู'}
+          <div class="sph-day-card ${isCurrentSelected ? 'is-selected' : ''}">
+            <div class="sph-day-left">
+              <div class="sph-day-date-row">
+                <span class="sph-day-date">${this.formatThaiDate(row.date)}</span>
+                ${row.date === todayStr ? '<span class="pill-tag green-tag" style="font-size:0.68rem; padding:0.08rem 0.4rem;">วันนี้</span>' : ''}
+                <span class="pill-tag blue-tag" style="font-size:0.7rem; padding:0.08rem 0.45rem;">${row.itemsCount} รายการ · ${row.totalQty} ชิ้น</span>
+              </div>
+              <div class="sph-day-sub">
+                <span>ขาย <b>${this.formatCurrency(row.totalRevenue)}</b></span>
+                <span style="color:#cbd5e1;">•</span>
+                <span>ทุน <b>${this.formatCurrency(row.totalCost)}</b></span>
+              </div>
+            </div>
+            <div class="sph-day-right">
+              <div class="sph-day-profit" style="color:${profitColor};">
+                ${profitSign}${this.formatCurrency(row.totalProfit)}
+              </div>
+              <button type="button" class="btn-outline-fastwork btn-sm" onclick="app.selectDateFromProfitHistory('${row.date}')"
+                style="padding:0.28rem 0.65rem; font-size:0.76rem; font-weight:700; ${isCurrentSelected ? 'background:#16a34a; color:#fff; border-color:#16a34a;' : ''}">
+                ${isCurrentSelected ? '✓ กำลังดู' : 'ดูรายละเอียด'}
               </button>
-            </td>
-          </tr>
+            </div>
+          </div>
         `;
       }).join('');
+    }
+
+    // Render Tab 2: Items breakdown grid
+    if (itemsWrap) {
+      if (!itemsList || itemsList.length === 0) {
+        itemsWrap.innerHTML = `
+          <div class="figma-tx-empty" style="padding:2rem 1rem; grid-column:1 / -1;">
+            <div class="figma-tx-empty-icon"><i data-lucide="package"></i></div>
+            <div class="figma-tx-empty-title">ไม่มีรายการสินค้า</div>
+          </div>
+        `;
+      } else {
+        itemsWrap.innerHTML = itemsList.map(item => {
+          const isProfit = item.totalProfit >= 0;
+          return `
+            <div class="sph-item-card ${isProfit ? 'is-profit' : 'is-loss'}">
+              <div class="sph-item-name" title="${this.escapeHtml(item.name)}">${this.escapeHtml(item.name)}</div>
+              <div class="sph-item-mid">
+                <span class="text-xs text-muted">${item.count} ครั้ง · ${item.totalQty} ชิ้น</span>
+                <span class="sph-item-profit" style="color:${isProfit ? '#15803d' : '#dc2626'};">${isProfit ? '+' : ''}${this.formatCurrency(item.totalProfit)}</span>
+              </div>
+              <div class="sph-item-sub">
+                <span>ขาย ${this.formatCurrency(item.totalRevenue)}</span>
+                <span>ทุน ${this.formatCurrency(item.totalCost)}</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
     }
 
     this.refreshLucide();
