@@ -98,11 +98,11 @@
         <div class="nav-sub-group">
           <button class="nav-item nav-item-sub" data-tab="pack-sell">
             <i data-lucide="package"></i>
-            <span>📦 แพ็คขาย</span>
+            <span>แพ็คขาย</span>
           </button>
           <button class="nav-item nav-item-sub" data-tab="drink-sales">
             <i data-lucide="coffee"></i>
-            <span>💰 น้ำชง</span>
+            <span>น้ำชง</span>
           </button>
         </div>
 
@@ -1679,7 +1679,8 @@
           <!-- Compact Hero Header -->
           <div class="ds-hero-banner mb-4">
             <div class="ds-hero-left">
-              <div class="ds-hero-icon" style="background:rgba(245,158,11,0.2); border-color:rgba(251,191,36,0.45); color:#fcd34d;">
+              <div class="ds-hero-icon"
+                style="background:rgba(245,158,11,0.2); border-color:rgba(251,191,36,0.45); color:#fcd34d;">
                 <i data-lucide="package"></i>
               </div>
               <div>
@@ -1704,7 +1705,8 @@
                     <i data-lucide="layers"></i>
                     <span>เลือกวัตถุดิบ</span>
                   </div>
-                  <span class="pill-tag blue-tag" id="packSellMatCountBadge" style="font-size:0.74rem; font-weight:700;">0 รายการ</span>
+                  <span class="pill-tag blue-tag" id="packSellMatCountBadge"
+                    style="font-size:0.74rem; font-weight:700;">0 รายการ</span>
                 </div>
                 <div class="card-body" style="padding:1rem;">
                   <button type="button" class="btn-outline-fastwork ps-picker-btn" id="btnOpenPackSellMatModal"
@@ -1715,7 +1717,8 @@
                     </span>
                     <i data-lucide="chevron-right" style="width:16px;height:16px;color:#94a3b8;"></i>
                   </button>
-                  <div id="packSellMaterialInfo" class="pack-sell-info-box" style="display:none; margin-top:0.65rem;"></div>
+                  <div id="packSellMaterialInfo" class="pack-sell-info-box" style="display:none; margin-top:0.65rem;">
+                  </div>
                 </div>
               </div>
 
@@ -1727,7 +1730,8 @@
                     <i data-lucide="box"></i>
                     <span>เลือกบรรจุภัณฑ์</span>
                   </div>
-                  <span class="pill-tag orange-tag" id="packSellPkgCountBadge" style="font-size:0.74rem; font-weight:700;">0 รายการ</span>
+                  <span class="pill-tag orange-tag" id="packSellPkgCountBadge"
+                    style="font-size:0.74rem; font-weight:700;">0 รายการ</span>
                 </div>
                 <div class="card-body" style="padding:1rem;">
                   <button type="button" class="btn-outline-fastwork ps-picker-btn" id="btnOpenPackSellPkgModal"
@@ -1738,7 +1742,8 @@
                     </span>
                     <i data-lucide="chevron-right" style="width:16px;height:16px;color:#94a3b8;"></i>
                   </button>
-                  <div id="packSellPackagingInfo" class="pack-sell-info-box" style="display:none; margin-top:0.65rem;"></div>
+                  <div id="packSellPackagingInfo" class="pack-sell-info-box" style="display:none; margin-top:0.65rem;">
+                  </div>
                 </div>
               </div>
 
@@ -1755,15 +1760,15 @@
                   <div class="ps-qty-price-grid">
                     <div>
                       <label class="form-label text-sm font-bold" for="packSellQty">จำนวนที่แพ็คได้ (ชิ้น)</label>
-                      <input type="number" id="packSellQty" class="form-input font-bold" placeholder="เช่น 20" min="1" step="1"
-                        style="height:42px; text-align:center;">
+                      <input type="number" id="packSellQty" class="form-input font-bold" placeholder="เช่น 20" min="1"
+                        step="1" style="height:42px; text-align:center;">
                     </div>
                     <div>
                       <label class="form-label text-sm font-bold" for="packSellPrice">ราคาขายต่อชิ้น (บาท)</label>
                       <div class="input-with-affix">
                         <span class="affix-left">฿</span>
-                        <input type="number" id="packSellPrice" class="form-input font-bold text-primary" placeholder="เช่น 15" min="0"
-                          step="0.5" style="height:42px; text-align:center;">
+                        <input type="number" id="packSellPrice" class="form-input font-bold text-primary"
+                          placeholder="เช่น 15" min="0" step="0.5" style="height:42px; text-align:center;">
                       </div>
                     </div>
                   </div>
@@ -1833,13 +1838,41 @@
                 <div class="pack-sell-summary-banner" id="packSellSummaryBanner" style="margin-top:0.75rem;"></div>
 
                 <!-- ปุ่มบันทึกเข้าสต๊อกร้านค้า -->
-                <button type="button" class="btn-fastwork ds-save-btn" id="btnSavePackSellToStock"
-                  style="width:100%; margin-top:1rem; height:44px; font-size:0.95rem;">
-                  <i data-lucide="boxes" style="width:18px;height:18px;"></i>
-                  <span>บันทึกเข้าสต๊อกร้านค้า</span>
-                </button>
+                <div style="display:flex; gap:0.5rem; margin-top:1rem; flex-wrap:wrap;">
+                  <button type="button" class="btn-fastwork ds-save-btn" id="btnSavePackSellToStock"
+                    style="flex:1; min-width:200px; height:44px; font-size:0.95rem;">
+                    <i data-lucide="boxes" style="width:18px;height:18px;"></i>
+                    <span id="btnSavePackSellToStockText">บันทึกเข้าสต๊อกร้านค้า</span>
+                  </button>
+                  <button type="button" class="btn-secondary" id="btnCancelEditPackSellLog"
+                    onclick="app.cancelEditPackSellLog()"
+                    style="display:none; height:44px; padding:0 0.9rem; font-size:0.85rem; font-weight:600;">
+                    ยกเลิกแก้ไข
+                  </button>
+                </div>
               </div>
 
+            </div>
+          </div>
+
+          <!-- ประวัติของแพ็คขาย (Full Width) -->
+          <div class="card ds-section-card mt-2 mb-3">
+            <div class="card-header ds-card-header space-between">
+              <div class="card-header-title">
+                <i data-lucide="history"></i>
+                <span>ประวัติของแพ็คขาย</span>
+              </div>
+              <span class="pill-tag blue-tag" id="packSellHistoryCount" style="font-size:0.75rem; font-weight:700;">0
+                รายการ</span>
+            </div>
+            <div class="card-body" style="padding:1rem;">
+              <div id="packSellHistoryList" class="ds-history-grid">
+                <div class="figma-tx-empty" style="padding:1.5rem 1rem; grid-column:1 / -1;">
+                  <div class="figma-tx-empty-icon"><i data-lucide="inbox"></i></div>
+                  <div class="figma-tx-empty-title">ยังไม่มีประวัติของแพ็คขาย</div>
+                  <div class="figma-tx-empty-desc">คำนวณแล้วกด "บันทึกเข้าสต๊อกร้านค้า" เพื่อเก็บประวัติที่นี่</div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -1864,8 +1897,10 @@
               </div>
             </div>
             <div class="ds-hero-stats">
-              <div class="ds-hero-stat-pill" style="background:rgba(255,255,255,0.14); border-color:rgba(255,255,255,0.28);">
-                <label class="ds-hero-stat-lbl" for="drinkSalesSaveDate" style="color:#e2e8f0; cursor:pointer;">📅 วันที่บันทึก</label>
+              <div class="ds-hero-stat-pill"
+                style="background:rgba(255,255,255,0.14); border-color:rgba(255,255,255,0.28);">
+                <label class="ds-hero-stat-lbl" for="drinkSalesSaveDate" style="color:#e2e8f0; cursor:pointer;">📅
+                  วันที่บันทึก</label>
                 <input type="date" id="drinkSalesSaveDate" class="form-input"
                   style="height:30px; margin-top:3px; padding:0.15rem 0.45rem; font-size:0.82rem; font-weight:700; background:#ffffff; color:#0f172a; border:none; border-radius:7px; min-width:136px;">
               </div>
@@ -1925,7 +1960,8 @@
                   <div id="dsCupCountTbody" class="ds-cup-count-list">
                     <!-- Rendered dynamically from Step 1 cup sizes -->
                   </div>
-                  <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.75rem; padding:0.55rem 0.85rem; background:#eff6ff; border-radius:8px; border:1px solid #bfdbfe;">
+                  <div
+                    style="display:flex; justify-content:space-between; align-items:center; margin-top:0.75rem; padding:0.55rem 0.85rem; background:#eff6ff; border-radius:8px; border:1px solid #bfdbfe;">
                     <div style="font-size:0.84rem;">
                       <span style="color:#64748b;">ขายรอบนี้:</span>
                       <strong id="dsTotalCupsSold" style="margin-left:0.25rem;">0 แก้ว</strong>
@@ -2280,195 +2316,197 @@
         <h3 class="modal-title" id="expenseModalTitle">บันทึกค่าใช้จ่าย & ต้นทุนวัตถุดิบ</h3>
         <button class="close-modal-btn" data-close="expenseModal">&times;</button>
       </div>
-      <form id="expenseForm" style="display:flex; flex-direction:column; flex:1; min-height:0; overflow:hidden;" novalidate>
+      <form id="expenseForm" style="display:flex; flex-direction:column; flex:1; min-height:0; overflow:hidden;"
+        novalidate>
         <div class="modal-body">
           <input type="hidden" id="expenseEditId">
 
-        <div class="form-row two-col mb-3">
-          <div class="form-group">
-            <label class="form-label font-bold" for="expDateInput">📅 วันที่ซื้อ / รับของเข้า</label>
-            <input type="date" id="expDateInput" class="form-input" required>
-          </div>
-          <div class="form-group">
-            <label class="form-label font-bold" for="expCategory">🏷️ หมวดหมู่สินค้า</label>
-            <select id="expCategory" class="form-input">
-              <option value="INGREDIENT">🍵 วัตถุดิบชงน้ำ</option>
-              <option value="PACKAGING">🥤 บรรจุภัณฑ์</option>
-              <option value="FRIDGE_DRINK">🧊 น้ำขายในตู้</option>
-              <option value="STOCK">📦 สินค้าสำเร็จรูป</option>
-              <option value="OTHER">🛠️ ค่าใช้จ่ายอื่นๆ</option>
-              <option value="PACK_SELL">📦 ของแพ็คขาย</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="form-group mb-3">
-          <label class="form-label font-bold" for="expTitle">
-            ชื่อรายการสินค้า / วัตถุดิบ <span class="text-danger">*</span>
-          </label>
-          <input type="text" id="expTitle" class="form-input font-bold" placeholder="" required>
-          <span class="field-hint">หากพิมพ์ตรงกับสินค้าเดิมในสต๊อก ระบบจะบวกเพิ่มจำนวนและอัปเดตต้นทุนให้อัตโนมัติ</span>
-        </div>
-
-        <!-- Section: ยอดเงินและจำนวนรับเข้าสต๊อก + หน่วยนับ (แบบแถวเชื่อมต่อตามสไตล์สูตรแก้ว) -->
-        <div class="form-row two-col mb-3">
-          <div class="form-group mb-0">
-            <label class="form-label font-bold" for="expAmount">
-              💰 ยอดเงินรวมที่จ่ายซื้อ (บาท) <span class="text-danger">*</span>
-            </label>
-            <div class="input-with-affix">
-              <span class="affix-left">฿</span>
-              <input type="number" id="expAmount" class="form-input font-bold text-primary" placeholder="" min="0"
-                step="any" required>
+          <div class="form-row two-col mb-3">
+            <div class="form-group">
+              <label class="form-label font-bold" for="expDateInput">📅 วันที่ซื้อ / รับของเข้า</label>
+              <input type="date" id="expDateInput" class="form-input" required>
             </div>
-            <span class="field-hint" id="expUnitCostHint">ยอดเงินในบิลรวมทั้งหมด</span>
-          </div>
-
-          <div class="form-group mb-0">
-            <label class="form-label font-bold" for="expPackSize">
-              📦 จำนวนที่รับเข้าสต๊อก <span class="text-danger">*</span>
-            </label>
-            <div style="display:flex; gap:0.4rem; align-items:stretch;">
-              <input type="number" id="expPackSize" class="form-input font-bold text-primary"
-                style="flex: 1.1; min-width: 0;" placeholder="จำนวน เช่น 24, 10" min="0.01" step="any" required>
-              <select id="expPackUnit" class="form-input font-bold"
-                style="flex: 1.2; min-width: 130px; cursor:pointer; background-color:#ffffff;" title="เลือกหน่วยนับ"
-                required>
-                <option value="ลัง" selected>ลัง (ยกลัง)</option>
-                <option value="ขวด">ขวด</option>
-                <option value="กระป๋อง">กระป๋อง</option>
-                <option value="ถุง">ถุง</option>
-                <option value="ชุด">ชุด</option>
-                <option value="ใบ">ใบ</option>
-                <option value="แก้ว">แก้ว</option>
-                <option value="ชิ้น">ชิ้น</option>
-                <option value="กล่อง">กล่อง</option>
-                <option value="แพ็ค">แพ็ค</option>
-                <option value="ม้วน">ม้วน</option>
-                <option value="มัด">มัด</option>
-                <option value="g">กรัม (g)</option>
-                <option value="kg">กิโลกรัม (kg)</option>
-                <option value="ml">มล. (ml)</option>
-                <option value="ลิตร">ลิตร</option>
-                <option value="CUSTOM">➕ อื่นๆ...</option>
+            <div class="form-group">
+              <label class="form-label font-bold" for="expCategory">🏷️ หมวดหมู่สินค้า</label>
+              <select id="expCategory" class="form-input">
+                <option value="INGREDIENT">🍵 วัตถุดิบชงน้ำ</option>
+                <option value="PACKAGING">🥤 บรรจุภัณฑ์</option>
+                <option value="FRIDGE_DRINK">🧊 น้ำขายในตู้</option>
+                <option value="STOCK">📦 สินค้าสำเร็จรูป</option>
+                <option value="OTHER">🛠️ ค่าใช้จ่ายอื่นๆ</option>
+                <option value="PACK_SELL">📦 ของแพ็คขาย</option>
               </select>
             </div>
-            <input type="text" id="expPackUnitCustom" class="form-input mt-1" style="display:none;"
-              placeholder="พิมพ์ระบุหน่วย เช่น ถัง, แกลลอน">
-            <span class="field-hint" id="expPackUnitHint">ระบุจำนวนและเลือกหน่วยนับสต๊อก</span>
           </div>
-        </div>
 
-        <!-- Section: ขนาด/น้ำหนัก/ปริมาตรบรรจุต่อชิ้น/ห่อ (เพื่อช่วยคำนวณสูตรชงน้ำได้แม่นยำ เช่น ถุงละ 400g, กระป๋องละ 388g, ขวดละ 1000ml) -->
-        <div id="expNetWeightContainer" class="form-group mb-3"
-          style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:var(--radius-md); padding:0.6rem 0.85rem; margin-top:0.75rem;">
-          <label class="form-label font-bold mb-1" for="expNetWeight"
-            style="font-size:0.85rem; color:var(--primary); display:flex; justify-content:space-between; align-items:center;">
-            <span>⚖️ ปริมาณ/ขนาดบรรจุต่อชิ้น (สำหรับคำนวณสูตรชงน้ำ)</span>
-            <span style="font-size:0.75rem; font-weight:normal; color:var(--text-muted);">(ระบุหรือไม่ก็ได้)</span>
-          </label>
-          <div style="display:flex; gap:0.4rem; align-items:center;">
-            <div class="input-with-affix" style="flex:1.2;">
-              <input type="number" id="expNetWeight" class="form-input font-bold" placeholder="เช่น 400, 388, 1000"
-                min="0" step="any">
-            </div>
-            <select id="expNetUnit" class="form-input font-bold"
-              style="flex:1; min-width:110px; cursor:pointer; background:#ffffff;">
-              <option value="g" selected>กรัม (g)</option>
-              <option value="ml">มล. (ml)</option>
-              <option value="kg">กิโลกรัม (kg)</option>
-              <option value="ลิตร">ลิตร (L)</option>
-              <option value="oz">ออนซ์ (oz)</option>
-              <option value="ลูก">ลูก (ผลไม้/ผลแช่แข็ง)</option>
-              <option value="ชิ้น">ชิ้น/ใบ</option>
-            </select>
+          <div class="form-group mb-3">
+            <label class="form-label font-bold" for="expTitle">
+              ชื่อรายการสินค้า / วัตถุดิบ <span class="text-danger">*</span>
+            </label>
+            <input type="text" id="expTitle" class="form-input font-bold" placeholder="" required>
+            <span class="field-hint">หากพิมพ์ตรงกับสินค้าเดิมในสต๊อก
+              ระบบจะบวกเพิ่มจำนวนและอัปเดตต้นทุนให้อัตโนมัติ</span>
           </div>
-          <span class="field-hint" style="font-size:0.75rem; color:var(--text-muted); margin-top:0.3rem;">
-            💡 เช่น ซื้อชาตรามือ 1 ถุง ระบุ <strong>400 กรัม</strong> หรือสตรอว์เบอร์รี/มะนาว 1 ถุง ระบุ <strong>20
-              ลูก</strong>
-          </span>
-        </div>
 
-        <!-- Section: กรณีเลือกหน่วยเป็น "ลัง / แพ็ค / กล่อง" -> กรอกจำนวนขวด/ชิ้นใน 1 ลัง/แพ็ค/กล่อง เพื่อคำนวณต้นทุนต่อหน่วยบรรจุจริง -->
-        <div id="expCrateBottlesContainer"
-          style="display:none; background:#eff6ff; border:1.5px dashed #93c5fd; border-radius:var(--radius-md); padding:0.75rem 1rem; margin-bottom:1rem;">
-          <div class="form-row two-col mb-0" style="align-items:center;">
+          <!-- Section: ยอดเงินและจำนวนรับเข้าสต๊อก + หน่วยนับ (แบบแถวเชื่อมต่อตามสไตล์สูตรแก้ว) -->
+          <div class="form-row two-col mb-3">
             <div class="form-group mb-0">
-              <label class="form-label font-bold" for="expCrateBottles" style="color:#1d4ed8; font-size:0.85rem;"
-                id="expSubUnitsLabel">
-                🍾 จำนวนขวดใน 1 ลัง <span class="text-danger">*</span>
+              <label class="form-label font-bold" for="expAmount">
+                💰 ยอดเงินรวมที่จ่ายซื้อ (บาท) <span class="text-danger">*</span>
               </label>
               <div class="input-with-affix">
-                <input type="number" id="expCrateBottles" class="form-input font-bold" style="color:#1d4ed8;"
-                  placeholder="เช่น 12 หรือ 24" min="1" step="1" value="12">
-                <span class="affix-right" id="expSubUnitsAffix">ขวด/ลัง</span>
+                <span class="affix-left">฿</span>
+                <input type="number" id="expAmount" class="form-input font-bold text-primary" placeholder="" min="0"
+                  step="any" required>
               </div>
-              <span class="field-hint" style="color:#3b82f6;" id="expSubUnitsHint">ระบุจำนวนชิ้น/ขวดต่อลัง
-                เพื่อคำนวณราคาต้นทุนต่อหน่วยบรรจุจริง</span>
+              <span class="field-hint" id="expUnitCostHint">ยอดเงินในบิลรวมทั้งหมด</span>
             </div>
-            <div
-              style="background:#ffffff; border-radius:var(--radius-sm); padding:0.6rem 0.85rem; border:1px solid #bfdbfe;">
-              <div style="font-size:0.75rem; color:#64748b; font-weight:600;">สรุปต้นทุนต่อหน่วยบรรจุจริง:</div>
-              <div id="expCrateTotalBottlesSummary" style="font-size:0.95rem; font-weight:700; color:#1d4ed8;">
-                (ตกขวดละ ฿0.00)
+
+            <div class="form-group mb-0">
+              <label class="form-label font-bold" for="expPackSize">
+                📦 จำนวนที่รับเข้าสต๊อก <span class="text-danger">*</span>
+              </label>
+              <div style="display:flex; gap:0.4rem; align-items:stretch;">
+                <input type="number" id="expPackSize" class="form-input font-bold text-primary"
+                  style="flex: 1.1; min-width: 0;" placeholder="จำนวน เช่น 24, 10" min="0.01" step="any" required>
+                <select id="expPackUnit" class="form-input font-bold"
+                  style="flex: 1.2; min-width: 130px; cursor:pointer; background-color:#ffffff;" title="เลือกหน่วยนับ"
+                  required>
+                  <option value="ลัง" selected>ลัง (ยกลัง)</option>
+                  <option value="ขวด">ขวด</option>
+                  <option value="กระป๋อง">กระป๋อง</option>
+                  <option value="ถุง">ถุง</option>
+                  <option value="ชุด">ชุด</option>
+                  <option value="ใบ">ใบ</option>
+                  <option value="แก้ว">แก้ว</option>
+                  <option value="ชิ้น">ชิ้น</option>
+                  <option value="กล่อง">กล่อง</option>
+                  <option value="แพ็ค">แพ็ค</option>
+                  <option value="ม้วน">ม้วน</option>
+                  <option value="มัด">มัด</option>
+                  <option value="g">กรัม (g)</option>
+                  <option value="kg">กิโลกรัม (kg)</option>
+                  <option value="ml">มล. (ml)</option>
+                  <option value="ลิตร">ลิตร</option>
+                  <option value="CUSTOM">➕ อื่นๆ...</option>
+                </select>
+              </div>
+              <input type="text" id="expPackUnitCustom" class="form-input mt-1" style="display:none;"
+                placeholder="พิมพ์ระบุหน่วย เช่น ถัง, แกลลอน">
+              <span class="field-hint" id="expPackUnitHint">ระบุจำนวนและเลือกหน่วยนับสต๊อก</span>
+            </div>
+          </div>
+
+          <!-- Section: ขนาด/น้ำหนัก/ปริมาตรบรรจุต่อชิ้น/ห่อ (เพื่อช่วยคำนวณสูตรชงน้ำได้แม่นยำ เช่น ถุงละ 400g, กระป๋องละ 388g, ขวดละ 1000ml) -->
+          <div id="expNetWeightContainer" class="form-group mb-3"
+            style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:var(--radius-md); padding:0.6rem 0.85rem; margin-top:0.75rem;">
+            <label class="form-label font-bold mb-1" for="expNetWeight"
+              style="font-size:0.85rem; color:var(--primary); display:flex; justify-content:space-between; align-items:center;">
+              <span>⚖️ ปริมาณ/ขนาดบรรจุต่อชิ้น (สำหรับคำนวณสูตรชงน้ำ)</span>
+              <span style="font-size:0.75rem; font-weight:normal; color:var(--text-muted);">(ระบุหรือไม่ก็ได้)</span>
+            </label>
+            <div style="display:flex; gap:0.4rem; align-items:center;">
+              <div class="input-with-affix" style="flex:1.2;">
+                <input type="number" id="expNetWeight" class="form-input font-bold" placeholder="เช่น 400, 388, 1000"
+                  min="0" step="any">
+              </div>
+              <select id="expNetUnit" class="form-input font-bold"
+                style="flex:1; min-width:110px; cursor:pointer; background:#ffffff;">
+                <option value="g" selected>กรัม (g)</option>
+                <option value="ml">มล. (ml)</option>
+                <option value="kg">กิโลกรัม (kg)</option>
+                <option value="ลิตร">ลิตร (L)</option>
+                <option value="oz">ออนซ์ (oz)</option>
+                <option value="ลูก">ลูก (ผลไม้/ผลแช่แข็ง)</option>
+                <option value="ชิ้น">ชิ้น/ใบ</option>
+              </select>
+            </div>
+            <span class="field-hint" style="font-size:0.75rem; color:var(--text-muted); margin-top:0.3rem;">
+              💡 เช่น ซื้อชาตรามือ 1 ถุง ระบุ <strong>400 กรัม</strong> หรือสตรอว์เบอร์รี/มะนาว 1 ถุง ระบุ <strong>20
+                ลูก</strong>
+            </span>
+          </div>
+
+          <!-- Section: กรณีเลือกหน่วยเป็น "ลัง / แพ็ค / กล่อง" -> กรอกจำนวนขวด/ชิ้นใน 1 ลัง/แพ็ค/กล่อง เพื่อคำนวณต้นทุนต่อหน่วยบรรจุจริง -->
+          <div id="expCrateBottlesContainer"
+            style="display:none; background:#eff6ff; border:1.5px dashed #93c5fd; border-radius:var(--radius-md); padding:0.75rem 1rem; margin-bottom:1rem;">
+            <div class="form-row two-col mb-0" style="align-items:center;">
+              <div class="form-group mb-0">
+                <label class="form-label font-bold" for="expCrateBottles" style="color:#1d4ed8; font-size:0.85rem;"
+                  id="expSubUnitsLabel">
+                  🍾 จำนวนขวดใน 1 ลัง <span class="text-danger">*</span>
+                </label>
+                <div class="input-with-affix">
+                  <input type="number" id="expCrateBottles" class="form-input font-bold" style="color:#1d4ed8;"
+                    placeholder="เช่น 12 หรือ 24" min="1" step="1" value="12">
+                  <span class="affix-right" id="expSubUnitsAffix">ขวด/ลัง</span>
+                </div>
+                <span class="field-hint" style="color:#3b82f6;" id="expSubUnitsHint">ระบุจำนวนชิ้น/ขวดต่อลัง
+                  เพื่อคำนวณราคาต้นทุนต่อหน่วยบรรจุจริง</span>
+              </div>
+              <div
+                style="background:#ffffff; border-radius:var(--radius-sm); padding:0.6rem 0.85rem; border:1px solid #bfdbfe;">
+                <div style="font-size:0.75rem; color:#64748b; font-weight:600;">สรุปต้นทุนต่อหน่วยบรรจุจริง:</div>
+                <div id="expCrateTotalBottlesSummary" style="font-size:0.95rem; font-weight:700; color:#1d4ed8;">
+                  (ตกขวดละ ฿0.00)
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <!-- Section: เกณฑ์แจ้งเตือนสต๊อกต่ำ -->
-        <div class="form-group mb-3">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.35rem;">
-            <label class="form-label font-bold mb-0" for="expMinQty" id="expMinQtyLabel" style="color:var(--danger);">
-              ⚠️ เกณฑ์เตือนสั่งซื้อขั้นต่ำ (Min Qty)
+          <!-- Section: เกณฑ์แจ้งเตือนสต๊อกต่ำ -->
+          <div class="form-group mb-3">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.35rem;">
+              <label class="form-label font-bold mb-0" for="expMinQty" id="expMinQtyLabel" style="color:var(--danger);">
+                ⚠️ เกณฑ์เตือนสั่งซื้อขั้นต่ำ (Min Qty)
+              </label>
+              <label
+                style="display:inline-flex; align-items:center; gap:0.35rem; font-size:0.8rem; font-weight:600; color:var(--text-muted); cursor:pointer;">
+                <input type="checkbox" id="expNoAlertCheckbox" style="cursor:pointer; accent-color:var(--primary);">
+                <span>ไม่ต้องเตือนซื้อ (ของใช้/ตกแต่งร้าน)</span>
+              </label>
+            </div>
+            <input type="number" id="expMinQty" class="form-input font-bold"
+              style="color:var(--danger); border-color:#fecaca; background:#fffbfb;" placeholder="เช่น 5 หรือ 10"
+              min="0" step="any">
+            <span class="field-hint" id="expMinQtyHint">หากคงเหลือต่ำกว่าเกณฑ์นี้ ระบบจะเตือนสั่งซื้อ (หรือติ๊ก
+              "ไม่ต้องเตือนซื้อ" สำหรับของใช้ถาวร)</span>
+          </div>
+
+          <!-- Live Stock & Unit Cost Auto-Calculation Preview -->
+          <div class="calc-preview-card mb-3"
+            style="background:linear-gradient(135deg, rgba(0,80,240,0.04) 0%, rgba(16,185,129,0.05) 100%); border:1.5px solid var(--border-color); border-radius:var(--radius-md); padding:0.75rem 1rem;">
+            <div class="calc-preview-row mb-1">
+              <span style="font-size:0.85rem; color:var(--text-muted);">ต้นทุนเฉลี่ยต่อหน่วยที่ได้:</span>
+              <span class="font-bold text-primary" id="expCalculatedUnitCostPreview" style="font-size:1.05rem;">฿0.00 /
+                หน่วย</span>
+            </div>
+            <div class="calc-preview-row">
+              <span style="font-size:0.85rem; color:var(--text-muted);">การอัปเดตสต๊อกร้านค้า:</span>
+              <span id="expStockStatusSyncPreview" class="pill-tag green-tag"
+                style="font-size:0.75rem; font-weight:700;">พร้อมซิงค์เข้าคลังอัตโนมัติ</span>
+            </div>
+          </div>
+
+          <div class="form-group mb-3">
+            <label class="form-label font-bold" for="expSupplier">
+              🛒 ซื้อจาก (ร้านค้า / แหล่งซื้อ)
             </label>
-            <label
-              style="display:inline-flex; align-items:center; gap:0.35rem; font-size:0.8rem; font-weight:600; color:var(--text-muted); cursor:pointer;">
-              <input type="checkbox" id="expNoAlertCheckbox" style="cursor:pointer; accent-color:var(--primary);">
-              <span>ไม่ต้องเตือนซื้อ (ของใช้/ตกแต่งร้าน)</span>
-            </label>
+            <input type="text" id="expSupplier" class="form-input" list="expSupplierSuggestions"
+              placeholder="เช่น Makro, Shopee, Lazada, ตลาดสด, โลตัส, ไทวัสดุ">
+            <datalist id="expSupplierSuggestions">
+              <option value="Makro (แม็คโคร)">
+              <option value="Shopee">
+              <option value="Lazada">
+              <option value="Lotus's (โลตัส)">
+              <option value="Big C">
+              <option value="ตลาดสด / ร้านค้าส่ง">
+              <option value="7-Eleven">
+              <option value="โรงงาน / ร้านผลิตส่ง">
+            </datalist>
+            <span class="field-hint">ระบุแหล่งซื้อ เช่น Makro หรือ Shopee
+              เพื่อช่วยสรุปรายการเตือนสั่งซื้อแยกตามร้าน</span>
           </div>
-          <input type="number" id="expMinQty" class="form-input font-bold"
-            style="color:var(--danger); border-color:#fecaca; background:#fffbfb;" placeholder="เช่น 5 หรือ 10" min="0"
-            step="any">
-          <span class="field-hint" id="expMinQtyHint">หากคงเหลือต่ำกว่าเกณฑ์นี้ ระบบจะเตือนสั่งซื้อ (หรือติ๊ก
-            "ไม่ต้องเตือนซื้อ" สำหรับของใช้ถาวร)</span>
-        </div>
-
-        <!-- Live Stock & Unit Cost Auto-Calculation Preview -->
-        <div class="calc-preview-card mb-3"
-          style="background:linear-gradient(135deg, rgba(0,80,240,0.04) 0%, rgba(16,185,129,0.05) 100%); border:1.5px solid var(--border-color); border-radius:var(--radius-md); padding:0.75rem 1rem;">
-          <div class="calc-preview-row mb-1">
-            <span style="font-size:0.85rem; color:var(--text-muted);">ต้นทุนเฉลี่ยต่อหน่วยที่ได้:</span>
-            <span class="font-bold text-primary" id="expCalculatedUnitCostPreview" style="font-size:1.05rem;">฿0.00 /
-              หน่วย</span>
-          </div>
-          <div class="calc-preview-row">
-            <span style="font-size:0.85rem; color:var(--text-muted);">การอัปเดตสต๊อกร้านค้า:</span>
-            <span id="expStockStatusSyncPreview" class="pill-tag green-tag"
-              style="font-size:0.75rem; font-weight:700;">พร้อมซิงค์เข้าคลังอัตโนมัติ</span>
-          </div>
-        </div>
-
-        <div class="form-group mb-3">
-          <label class="form-label font-bold" for="expSupplier">
-            🛒 ซื้อจาก (ร้านค้า / แหล่งซื้อ)
-          </label>
-          <input type="text" id="expSupplier" class="form-input" list="expSupplierSuggestions"
-            placeholder="เช่น Makro, Shopee, Lazada, ตลาดสด, โลตัส, ไทวัสดุ">
-          <datalist id="expSupplierSuggestions">
-            <option value="Makro (แม็คโคร)">
-            <option value="Shopee">
-            <option value="Lazada">
-            <option value="Lotus's (โลตัส)">
-            <option value="Big C">
-            <option value="ตลาดสด / ร้านค้าส่ง">
-            <option value="7-Eleven">
-            <option value="โรงงาน / ร้านผลิตส่ง">
-          </datalist>
-          <span class="field-hint">ระบุแหล่งซื้อ เช่น Makro หรือ Shopee
-            เพื่อช่วยสรุปรายการเตือนสั่งซื้อแยกตามร้าน</span>
-        </div>
 
           <div class="form-group mb-0">
             <label class="form-label" for="expNote">หมายเหตุเพิ่มเติม</label>
