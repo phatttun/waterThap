@@ -11018,9 +11018,12 @@ initPackSell() {
 }
 
 getPackSellAvailableExpenses(kind) {
-  const cat = kind === 'PACKAGING' ? 'PACKAGING' : 'PACK_SELL';
   const available = (this.data.expenses || [])
-    .filter(e => e && e.category === cat)
+    .filter(e => {
+      if (!e) return false;
+      if (kind === 'PACKAGING') return e.category === 'PACKAGING';
+      return e.category !== 'FRIDGE_DRINK' && e.category !== 'PACKAGING';
+    })
     .filter(exp => this.isExpenseAvailableForSelection(exp));
 
   const sorted = [...available].sort((a, b) => {
@@ -11218,6 +11221,7 @@ renderPackSellSelectedSummary(kind) {
 
 calculatePackSell() {
   const resultSection = document.getElementById('packSellResultSection');
+  const emptySection = document.getElementById('packSellResultEmpty');
   const qty = parseInt(document.getElementById('packSellQty')?.value) || 0;
   const price = parseFloat(document.getElementById('packSellPrice')?.value) || 0;
   const mats = this.selectedPackSellMats || [];
@@ -11225,6 +11229,7 @@ calculatePackSell() {
 
   if (mats.length === 0 || qty <= 0 || price <= 0) {
     if (resultSection) resultSection.style.display = 'none';
+    if (emptySection) emptySection.style.display = 'flex';
     return;
   }
 
@@ -11236,6 +11241,7 @@ calculatePackSell() {
   const profitPer = price - totalCostPer;
   const totalProfit = profitPer * qty;
 
+  if (emptySection) emptySection.style.display = 'none';
   if (resultSection) resultSection.style.display = 'block';
 
   const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = `฿${val.toFixed(2)}`; };

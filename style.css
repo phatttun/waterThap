@@ -2240,7 +2240,9 @@ body {
   width: 100%;
   max-width: 540px;
   max-height: 90vh;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .modal-dialog.modal-lg {
@@ -2253,6 +2255,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .modal-title {
@@ -2271,19 +2274,28 @@ body {
 
 .modal-body {
   padding: 1.5rem;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
 }
 
 .modal-footer {
   display: flex;
   justify-content: flex-end;
   gap: 0.75rem;
-  padding: 1rem 1.5rem;
+  padding: 1rem 1.5rem calc(1rem + env(safe-area-inset-bottom, 0px));
   border-top: 1px solid var(--border-subtle);
   background: #ffffff;
+  flex-shrink: 0;
+}
+
+/* Fallback if a form places .modal-footer inside .modal-body */
+.modal-body > .modal-footer {
   position: sticky;
-  bottom: 0;
+  bottom: -1.5rem;
+  margin: 1rem -1.5rem -1.5rem;
   z-index: 20;
-  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .calc-preview-card {
@@ -2922,35 +2934,46 @@ body {
     white-space: nowrap;
   }
 
-  /* Modals on Phones (Bottom-sheet style) */
+  /* Modals on Phones (Centered Modal) */
   .modal-backdrop {
-    padding: 0;
-    align-items: flex-end;
+    padding: 1rem;
+    align-items: center;
+    justify-content: center;
   }
 
   .modal-dialog {
-    max-height: 90vh;
-    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-    margin: 0;
+    max-height: 86vh;
+    max-height: 86dvh;
+    border-radius: 18px;
+    margin: auto;
     width: 100%;
+    max-width: calc(100vw - 2rem);
+    box-shadow: 0 20px 45px rgba(15, 23, 42, 0.28);
   }
 
   .modal-header {
-    padding: 1rem 1.25rem;
+    padding: 0.95rem 1.15rem;
   }
 
   .modal-body {
-    padding: 1rem 1.25rem;
+    padding: 0.95rem 1.15rem;
   }
 
   .modal-footer {
-    padding: 0.85rem 1.25rem;
+    padding: 0.85rem 1.15rem calc(0.85rem + env(safe-area-inset-bottom, 0px));
     flex-direction: column-reverse;
-    position: sticky;
-    bottom: 0;
+    gap: 0.5rem;
     background: #ffffff;
+    border-top: 1px solid var(--border-subtle);
+    border-radius: 0 0 18px 18px;
+    box-shadow: none;
+  }
+
+  .modal-body > .modal-footer {
+    position: sticky;
+    bottom: -0.95rem;
+    margin: 0.85rem -1.15rem -0.95rem;
     z-index: 20;
-    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05);
   }
 
   .modal-footer button {
@@ -7610,14 +7633,16 @@ body {
    ------------------------------------------------------------- */
 @media (max-width: 640px) {
   .modal-holiday-redesign {
-    max-height: 94vh !important;
-    border-radius: 20px 20px 0 0 !important;
+    max-height: 88vh !important;
+    max-height: 88dvh !important;
+    border-radius: 18px !important;
     width: 100% !important;
-    margin: 0 !important;
+    max-width: calc(100vw - 2rem) !important;
+    margin: auto !important;
   }
 
   .modal-mobile-handle {
-    display: block;
+    display: none !important;
   }
 
   .holiday-modal-header {
@@ -9227,6 +9252,69 @@ body {
   margin-top: 0.1rem;
 }
 
+/* ═══ Pack Sell Redesign ═══ */
+.ps-picker-btn {
+  width: 100%;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0.9rem;
+  background: #ffffff;
+  border-radius: 10px;
+  transition: border-color 0.15s, background 0.15s, transform 0.1s;
+}
+.ps-picker-btn:hover {
+  background: #f8fafc;
+  border-color: var(--primary);
+}
+.ps-qty-price-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+.ps-empty-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2.5rem 1.5rem;
+  background: #f8fafc;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 14px;
+  color: #64748b;
+  min-height: 240px;
+}
+.ps-empty-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: #e2e8f0;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.75rem;
+}
+.ps-empty-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #334155;
+  margin-bottom: 0.25rem;
+}
+.ps-empty-desc {
+  font-size: 0.8rem;
+  color: #64748b;
+  max-width: 280px;
+  line-height: 1.45;
+}
+@media (max-width: 480px) {
+  .ps-qty-price-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .ds-history-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
@@ -9337,7 +9425,70 @@ body {
   .ds-hero-stat-pill {
     flex: 1;
   }
-  .ds-history-grid {
+  /* ═══ Pack Sell Redesign ═══ */
+.ps-picker-btn {
+  width: 100%;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0.9rem;
+  background: #ffffff;
+  border-radius: 10px;
+  transition: border-color 0.15s, background 0.15s, transform 0.1s;
+}
+.ps-picker-btn:hover {
+  background: #f8fafc;
+  border-color: var(--primary);
+}
+.ps-qty-price-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+.ps-empty-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2.5rem 1.5rem;
+  background: #f8fafc;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 14px;
+  color: #64748b;
+  min-height: 240px;
+}
+.ps-empty-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: #e2e8f0;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.75rem;
+}
+.ps-empty-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #334155;
+  margin-bottom: 0.25rem;
+}
+.ps-empty-desc {
+  font-size: 0.8rem;
+  color: #64748b;
+  max-width: 280px;
+  line-height: 1.45;
+}
+@media (max-width: 480px) {
+  .ps-qty-price-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ds-history-grid {
     grid-template-columns: 1fr;
   }
   .ds-recipe-inline-list {

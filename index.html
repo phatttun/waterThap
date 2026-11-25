@@ -1635,7 +1635,7 @@
                 <input type="date" id="stockLogDateFilter" class="form-input-sm" onchange="app.renderStockHistory()"
                   title="เลือกดูเฉพาะวันที่">
                 <button type="button" id="stockLogDateClearBtn"
-                  onclick="const d=document.getElementById('stockLogDateFilter'); if(d){d.value=''; app.renderStockHistory();}"
+                  onclick="if(this.previousElementSibling){this.previousElementSibling.value='';} app.renderStockHistory();"
                   title="ดูทุกวัน"
                   style="display:none; background:#f1f5f9; border:1px solid #cbd5e1; color:#475569; border-radius:var(--radius-sm); padding:0.25rem 0.5rem; font-size:0.75rem; cursor:pointer; font-weight:600;">
                   ทุกวัน
@@ -1674,100 +1674,119 @@
 
       <!-- TAB: PACK SELL (คำนวณการขาย / 📦 แพ็คขาย) -->
       <section id="tab-pack-sell" class="tab-pane">
-        <div class="figma-mobile-container">
+        <div class="ds-page-container">
 
-          <div class="section-header mb-3">
-            <div>
-              <h2 class="page-title">📦 คำนวณการขาย</h2>
-              <p class="page-desc">คำนวณต้นทุนสินค้าที่นำมาแบ่งแพ็คเพื่อจำหน่าย โดยดึงข้อมูลจากหน้าบันทึกต้นทุน &
-                วัตถุดิบ</p>
+          <!-- Compact Hero Header -->
+          <div class="ds-hero-banner mb-4">
+            <div class="ds-hero-left">
+              <div class="ds-hero-icon" style="background:rgba(245,158,11,0.2); border-color:rgba(251,191,36,0.45); color:#fcd34d;">
+                <i data-lucide="package"></i>
+              </div>
+              <div>
+                <div class="ds-hero-eyebrow" style="color:#fcd34d;">PACK SELL &amp; COST CALCULATOR</div>
+                <h2 class="ds-hero-title">📦 แพ็คขาย &amp; คำนวณต้นทุน</h2>
+                <p class="ds-hero-sub">เลือกวัตถุดิบและบรรจุภัณฑ์ คำนวณกำไรต่อชิ้น แล้วนำเข้าสต๊อกได้ทันที</p>
+              </div>
             </div>
           </div>
 
-          <!-- 📦 แพ็คขาย Section -->
-          <div class="card mb-3">
-            <div class="card-header">
-              <div class="card-header-title">
-                <i data-lucide="package"></i>
-                <span>📦 แพ็คขาย</span>
-              </div>
-            </div>
-            <div class="card-body">
+          <!-- Responsive 2-Column Workspace -->
+          <div class="ds-workspace-grid">
+
+            <!-- Left Column: Steps 1, 2, 3 -->
+            <div class="ds-col">
 
               <!-- Step 1: เลือกวัตถุดิบ -->
-              <div class="form-group mb-3">
-                <label class="form-label font-bold" style="display:flex; align-items:center; gap:0.3rem;">
-                  <span
-                    style="background:var(--primary); color:#fff; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:700;">1</span>
-                  เลือกวัตถุดิบ
-                </label>
-                <button type="button" class="btn-outline-fastwork" id="btnOpenPackSellMatModal"
-                  onclick="app.openPackSellPickerModal('MATERIAL')"
-                  style="width:100%; height:42px; display:flex; align-items:center; justify-content:space-between; padding:0 0.85rem; background:#ffffff;">
-                  <span style="display:inline-flex; align-items:center; gap:0.45rem; font-weight:600;">
-                    <i data-lucide="list-plus" style="width:16px;height:16px;color:var(--primary);"></i>
-                    <span>เลือกวัตถุดิบ (เลือกได้หลายรายการ)</span>
-                  </span>
+              <div class="card ds-section-card mb-3">
+                <div class="card-header ds-card-header space-between">
+                  <div class="card-header-title">
+                    <span class="ds-step-badge">1</span>
+                    <i data-lucide="layers"></i>
+                    <span>เลือกวัตถุดิบ</span>
+                  </div>
                   <span class="pill-tag blue-tag" id="packSellMatCountBadge" style="font-size:0.74rem; font-weight:700;">0 รายการ</span>
-                </button>
-                <div id="packSellMaterialInfo" class="pack-sell-info-box" style="display:none; margin-top:0.5rem;">
-                  <!-- จะแสดงข้อมูลวัตถุดิบที่เลือก -->
+                </div>
+                <div class="card-body" style="padding:1rem;">
+                  <button type="button" class="btn-outline-fastwork ps-picker-btn" id="btnOpenPackSellMatModal"
+                    onclick="app.openPackSellPickerModal('MATERIAL')">
+                    <span style="display:inline-flex; align-items:center; gap:0.45rem; font-weight:600;">
+                      <i data-lucide="list-plus" style="width:16px;height:16px;color:var(--primary);"></i>
+                      <span>เลือกวัตถุดิบ (เลือกได้หลายรายการ)</span>
+                    </span>
+                    <i data-lucide="chevron-right" style="width:16px;height:16px;color:#94a3b8;"></i>
+                  </button>
+                  <div id="packSellMaterialInfo" class="pack-sell-info-box" style="display:none; margin-top:0.65rem;"></div>
                 </div>
               </div>
 
               <!-- Step 2: เลือกบรรจุภัณฑ์ -->
-              <div class="form-group mb-3">
-                <label class="form-label font-bold" style="display:flex; align-items:center; gap:0.3rem;">
-                  <span
-                    style="background:var(--primary); color:#fff; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:700;">2</span>
-                  เลือกบรรจุภัณฑ์
-                </label>
-                <button type="button" class="btn-outline-fastwork" id="btnOpenPackSellPkgModal"
-                  onclick="app.openPackSellPickerModal('PACKAGING')"
-                  style="width:100%; height:42px; display:flex; align-items:center; justify-content:space-between; padding:0 0.85rem; background:#ffffff;">
-                  <span style="display:inline-flex; align-items:center; gap:0.45rem; font-weight:600;">
-                    <i data-lucide="package-plus" style="width:16px;height:16px;color:#d97706;"></i>
-                    <span>เลือกบรรจุภัณฑ์ (เลือกได้หลายรายการ)</span>
-                  </span>
+              <div class="card ds-section-card mb-3">
+                <div class="card-header ds-card-header space-between">
+                  <div class="card-header-title">
+                    <span class="ds-step-badge">2</span>
+                    <i data-lucide="box"></i>
+                    <span>เลือกบรรจุภัณฑ์</span>
+                  </div>
                   <span class="pill-tag orange-tag" id="packSellPkgCountBadge" style="font-size:0.74rem; font-weight:700;">0 รายการ</span>
-                </button>
-                <div id="packSellPackagingInfo" class="pack-sell-info-box" style="display:none; margin-top:0.5rem;">
-                  <!-- จะแสดงข้อมูลบรรจุภัณฑ์ -->
+                </div>
+                <div class="card-body" style="padding:1rem;">
+                  <button type="button" class="btn-outline-fastwork ps-picker-btn" id="btnOpenPackSellPkgModal"
+                    onclick="app.openPackSellPickerModal('PACKAGING')">
+                    <span style="display:inline-flex; align-items:center; gap:0.45rem; font-weight:600;">
+                      <i data-lucide="package-plus" style="width:16px;height:16px;color:#d97706;"></i>
+                      <span>เลือกบรรจุภัณฑ์ (เลือกได้หลายรายการ)</span>
+                    </span>
+                    <i data-lucide="chevron-right" style="width:16px;height:16px;color:#94a3b8;"></i>
+                  </button>
+                  <div id="packSellPackagingInfo" class="pack-sell-info-box" style="display:none; margin-top:0.65rem;"></div>
                 </div>
               </div>
 
-              <!-- Step 3: กรอกจำนวนแพ็ค -->
-              <div class="form-group mb-3">
-                <label class="form-label font-bold" style="display:flex; align-items:center; gap:0.3rem;">
-                  <span
-                    style="background:var(--primary); color:#fff; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:700;">3</span>
-                  กรอกจำนวนแพ็คและราคาขาย
-                </label>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem;">
-                  <div>
-                    <label class="form-label text-sm" for="packSellQty">จำนวนที่แพ็คได้ทั้งหมด (ชิ้น)</label>
-                    <input type="number" id="packSellQty" class="form-input" placeholder="เช่น 20" min="1" step="1"
-                      style="height:40px;">
+              <!-- Step 3: กรอกจำนวนแพ็คและราคาขาย -->
+              <div class="card ds-section-card mb-3">
+                <div class="card-header ds-card-header">
+                  <div class="card-header-title">
+                    <span class="ds-step-badge">3</span>
+                    <i data-lucide="calculator"></i>
+                    <span>จำนวนที่แพ็คได้ &amp; ราคาขาย</span>
                   </div>
-                  <div>
-                    <label class="form-label text-sm" for="packSellPrice">ราคาขายต่อชิ้น (บาท)</label>
-                    <div class="input-with-affix">
-                      <span class="affix-left">฿</span>
-                      <input type="number" id="packSellPrice" class="form-input" placeholder="เช่น 15" min="0"
-                        step="0.5" style="height:40px;">
+                </div>
+                <div class="card-body" style="padding:1rem;">
+                  <div class="ps-qty-price-grid">
+                    <div>
+                      <label class="form-label text-sm font-bold" for="packSellQty">จำนวนที่แพ็คได้ (ชิ้น)</label>
+                      <input type="number" id="packSellQty" class="form-input font-bold" placeholder="เช่น 20" min="1" step="1"
+                        style="height:42px; text-align:center;">
+                    </div>
+                    <div>
+                      <label class="form-label text-sm font-bold" for="packSellPrice">ราคาขายต่อชิ้น (บาท)</label>
+                      <div class="input-with-affix">
+                        <span class="affix-left">฿</span>
+                        <input type="number" id="packSellPrice" class="form-input font-bold text-primary" placeholder="เช่น 15" min="0"
+                          step="0.5" style="height:42px; text-align:center;">
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
 
+            </div>
+
+            <!-- Right Column: Step 4 Live Result -->
+            <div class="ds-col">
+
+              <!-- Placeholder before input -->
+              <div id="packSellResultEmpty" class="ps-empty-card">
+                <div class="ps-empty-icon"><i data-lucide="calculator"></i></div>
+                <div class="ps-empty-title">พร้อมคำนวณต้นทุน &amp; กำไร</div>
+                <div class="ps-empty-desc">เลือกวัตถุดิบ และกรอกจำนวนแพ็ค + ราคาขาย เพื่อดูผลลัพธ์ทันที</div>
+              </div>
+
               <!-- Step 4: ผลคำนวณ -->
-              <div id="packSellResultSection" style="display:none;">
-                <div class="form-group mb-2">
-                  <label class="form-label font-bold" style="display:flex; align-items:center; gap:0.3rem;">
-                    <span
-                      style="background:#16a34a; color:#fff; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:700;">4</span>
-                    ผลคำนวณต้นทุนและกำไร
-                  </label>
+              <div id="packSellResultSection" class="ds-result-card" style="display:none;">
+                <div class="ds-result-header">
+                  <span class="ds-result-check">4</span>
+                  <span>ผลคำนวณต้นทุนและกำไร</span>
                 </div>
 
                 <div class="pack-sell-result-grid">
@@ -1775,32 +1794,32 @@
                   <div class="pack-sell-result-card cost-card">
                     <div class="pack-sell-result-title">💰 ต้นทุน</div>
                     <div class="pack-sell-result-row">
-                      <span>ต้นทุนวัตถุดิบต่อแพ็ค</span>
+                      <span>วัตถุดิบ / ชิ้น</span>
                       <strong id="psResMaterialCostPer">฿0.00</strong>
                     </div>
                     <div class="pack-sell-result-row">
-                      <span>ต้นทุนบรรจุภัณฑ์ต่อแพ็ค</span>
+                      <span>บรรจุภัณฑ์ / ชิ้น</span>
                       <strong id="psResPackagingCostPer">฿0.00</strong>
                     </div>
                     <div class="pack-sell-result-row highlight">
-                      <span>ต้นทุนรวมต่อแพ็ค</span>
+                      <span>ต้นทุนรวม / ชิ้น</span>
                       <strong id="psResTotalCostPer">฿0.00</strong>
                     </div>
                   </div>
 
                   <!-- รายรับ & กำไร -->
                   <div class="pack-sell-result-card profit-card">
-                    <div class="pack-sell-result-title">📈 รายรับ & กำไร</div>
+                    <div class="pack-sell-result-title">📈 รายรับ &amp; กำไร</div>
                     <div class="pack-sell-result-row">
-                      <span>ราคาขายต่อแพ็ค</span>
+                      <span>ราคาขาย / ชิ้น</span>
                       <strong id="psResSellPricePer">฿0.00</strong>
                     </div>
                     <div class="pack-sell-result-row">
-                      <span>รายรับรวมจากการขายทั้งหมด</span>
+                      <span>รายรับรวม</span>
                       <strong id="psResTotalRevenue" class="text-primary">฿0.00</strong>
                     </div>
                     <div class="pack-sell-result-row highlight">
-                      <span>กำไรต่อแพ็ค</span>
+                      <span>กำไร / ชิ้น</span>
                       <strong id="psResProfitPer" class="text-green">฿0.00</strong>
                     </div>
                     <div class="pack-sell-result-row highlight-total">
@@ -1811,22 +1830,14 @@
                 </div>
 
                 <!-- สรุปภาพรวม -->
-                <div class="pack-sell-summary-banner" id="packSellSummaryBanner">
-                  <!-- Dynamic summary banner -->
-                </div>
+                <div class="pack-sell-summary-banner" id="packSellSummaryBanner" style="margin-top:0.75rem;"></div>
 
                 <!-- ปุ่มบันทึกเข้าสต๊อกร้านค้า -->
-                <div style="margin-top:1.25rem; display:flex; flex-direction:column; gap:0.5rem;">
-                  <button type="button" class="btn-fastwork" id="btnSavePackSellToStock"
-                    style="width:100%; height:44px; font-size:0.95rem; display:flex; align-items:center; justify-content:center; gap:0.5rem; background:#16a34a; border-color:#16a34a;">
-                    <i data-lucide="boxes" style="width:18px;height:18px;"></i>
-                    <span>บันทึกเป็นสินค้าเข้าสต๊อกร้านค้า</span>
-                  </button>
-                  <span class="field-hint text-center" style="font-size:0.78rem;">
-                    💡 เมื่อกดบันทึก สินค้าที่แพ็คเสร็จจะถูกนำเข้าสู่ระบบสต๊อกร้านค้า & วัตถุดิบ โดยอัตโนมัติ
-                    (พร้อมต้นทุนและราคาขาย)
-                  </span>
-                </div>
+                <button type="button" class="btn-fastwork ds-save-btn" id="btnSavePackSellToStock"
+                  style="width:100%; margin-top:1rem; height:44px; font-size:0.95rem;">
+                  <i data-lucide="boxes" style="width:18px;height:18px;"></i>
+                  <span>บันทึกเข้าสต๊อกร้านค้า</span>
+                </button>
               </div>
 
             </div>
@@ -2269,8 +2280,9 @@
         <h3 class="modal-title" id="expenseModalTitle">บันทึกค่าใช้จ่าย & ต้นทุนวัตถุดิบ</h3>
         <button class="close-modal-btn" data-close="expenseModal">&times;</button>
       </div>
-      <form id="expenseForm" class="modal-body" novalidate>
-        <input type="hidden" id="expenseEditId">
+      <form id="expenseForm" style="display:flex; flex-direction:column; flex:1; min-height:0; overflow:hidden;" novalidate>
+        <div class="modal-body">
+          <input type="hidden" id="expenseEditId">
 
         <div class="form-row two-col mb-3">
           <div class="form-group">
@@ -2458,10 +2470,11 @@
             เพื่อช่วยสรุปรายการเตือนสั่งซื้อแยกตามร้าน</span>
         </div>
 
-        <div class="form-group mb-3">
-          <label class="form-label" for="expNote">หมายเหตุเพิ่มเติม</label>
-          <textarea id="expNote" class="form-input" rows="2"
-            placeholder="เช่น ล็อตโปรโมชั่น, เบอร์ติดต่อร้าน"></textarea>
+          <div class="form-group mb-0">
+            <label class="form-label" for="expNote">หมายเหตุเพิ่มเติม</label>
+            <textarea id="expNote" class="form-input" rows="2"
+              placeholder="เช่น ล็อตโปรโมชั่น, เบอร์ติดต่อร้าน"></textarea>
+          </div>
         </div>
 
         <div class="modal-footer">
@@ -3106,7 +3119,7 @@
               style="width:auto; min-width:145px; font-size:0.85rem; height:38px;"
               onchange="app.filterStockProfitHistory()" title="เลือกวันที่ต้องการดู">
             <button type="button" id="stockProfitHistoryDateClearBtn"
-              onclick="const d=document.getElementById('stockProfitHistoryDatePicker'); if(d){d.value=''; app.filterStockProfitHistory();}"
+              onclick="if(this.previousElementSibling){this.previousElementSibling.value='';} app.filterStockProfitHistory();"
               title="ดูทุกวัน"
               style="display:none; height:38px; padding:0 0.65rem; background:#f1f5f9; border:1px solid #cbd5e1; color:#475569; border-radius:var(--radius-sm); font-size:0.78rem; font-weight:600; cursor:pointer; white-space:nowrap;">
               ทุกวัน
