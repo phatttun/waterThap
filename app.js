@@ -1471,7 +1471,7 @@ class WaterFlowApp {
       backdrop.addEventListener('click', (e) => {
         if (e.target === backdrop) {
           // ป้องกันไม่ให้คลิกด้านนอกแล้ว modal ปิดเองโดยไม่ได้ตั้งใจ (ต้องกดยกเลิก หรือบันทึกข้อมูลเท่านั้น)
-          if (backdrop.id === 'recipeModal' || backdrop.id === 'expenseModal' || backdrop.id === 'stockItemModal' || backdrop.id === 'quickRestockModal') {
+          if (backdrop.id === 'recipeModal' || backdrop.id === 'expenseModal' || backdrop.id === 'stockItemModal' || backdrop.id === 'quickRestockModal' || backdrop.id === 'packSellPickerModal') {
             return;
           }
           backdrop.classList.remove('active');
@@ -11005,178 +11005,232 @@ copyShoppingListToClipboard(lowItems, supplierMap = null) {
 // =========================================================================
 
 initPackSell() {
-  const matSelect = document.getElementById('packSellMaterialSelect');
-  const pkgSelect = document.getElementById('packSellPackagingSelect');
+  if (!Array.isArray(this.selectedPackSellMats)) this.selectedPackSellMats = [];
+  if (!Array.isArray(this.selectedPackSellPkgs)) this.selectedPackSellPkgs = [];
+
   const qtyInput = document.getElementById('packSellQty');
   const priceInput = document.getElementById('packSellPrice');
-  const btnConfirmPkg = document.getElementById('btnPackSellConfirmPkg');
-  const btnCancelPkg = document.getElementById('btnPackSellCancelPkg');
-  const btnChangePkg = document.getElementById('btnPackSellChangePkg');
   const btnSave = document.getElementById('btnSavePackSellToStock');
 
-  if (matSelect) matSelect.addEventListener('change', () => this.selectPackSellMaterial());
-  if (pkgSelect) pkgSelect.addEventListener('change', () => this.selectPackSellPackaging());
   if (qtyInput) qtyInput.addEventListener('input', () => this.calculatePackSell());
   if (priceInput) priceInput.addEventListener('input', () => this.calculatePackSell());
-
-  if (btnConfirmPkg) btnConfirmPkg.addEventListener('click', () => {
-    const sel = document.getElementById('packSellPackagingSelect');
-    if (!sel || !sel.value) { this.showToast('กรุณาเลือกบรรจุภัณฑ์ก่อน', 'error'); return; }
-    const name = sel.options[sel.selectedIndex]?.text || '';
-    const confirmedEl = document.getElementById('packSellPackagingConfirmed');
-    const confirmRow = document.getElementById('packSellPackagingConfirmRow');
-    const nameEl = document.getElementById('packSellPkgConfirmedName');
-    if (confirmedEl) confirmedEl.style.display = 'flex';
-    if (confirmRow) confirmRow.style.display = 'none';
-    if (nameEl) nameEl.textContent = name;
-    sel.disabled = true;
-    this.packSellPkgConfirmed = true;
-    this.calculatePackSell();
-  });
-
-  if (btnCancelPkg) btnCancelPkg.addEventListener('click', () => {
-    const sel = document.getElementById('packSellPackagingSelect');
-    if (sel) { sel.value = ''; sel.disabled = false; }
-    const infoBox = document.getElementById('packSellPackagingInfo');
-    const confirmRow = document.getElementById('packSellPackagingConfirmRow');
-    const confirmedEl = document.getElementById('packSellPackagingConfirmed');
-    if (infoBox) infoBox.style.display = 'none';
-    if (confirmRow) confirmRow.style.display = 'none';
-    if (confirmedEl) confirmedEl.style.display = 'none';
-    this.packSellPkgConfirmed = false;
-    this.selectedPackSellPkg = null;
-    this.calculatePackSell();
-  });
-
-  if (btnChangePkg) btnChangePkg.addEventListener('click', () => {
-    const sel = document.getElementById('packSellPackagingSelect');
-    if (sel) sel.disabled = false;
-    const confirmRow = document.getElementById('packSellPackagingConfirmRow');
-    const confirmedEl = document.getElementById('packSellPackagingConfirmed');
-    if (confirmRow) confirmRow.style.display = 'flex';
-    if (confirmedEl) confirmedEl.style.display = 'none';
-    this.packSellPkgConfirmed = false;
-  });
-
   if (btnSave) btnSave.addEventListener('click', () => this.savePackSellToStock());
 }
 
-populatePackSellDropdowns() {
-  const matSelect = document.getElementById('packSellMaterialSelect');
-  const pkgSelect = document.getElementById('packSellPackagingSelect');
-  if (!matSelect || !pkgSelect) return;
+getPackSellAvailableExpenses(kind) {
+  const cat = kind === 'PACKAGING' ? 'PACKAGING' : 'PACK_SELL';
+  const available = (this.data.expenses || [])
+    .filter(e => e && e.category === cat)
+    .filter(exp => this.isExpenseAvailableForSelection(exp));
 
-  // Material: only PACK_SELL category
-  const materials = (this.data.expenses || []).filter(e => e.category === 'PACK_SELL').filter(exp => this.isExpenseAvailableForSelection(exp));
-  matSelect.innerHTML = '<option value="">-- เลือกวัตถุดิบที่ต้องการแพ็คขาย --</option>';
+  const sorted = [...available].sort((a, b) => {
+    const dateCmp = String(b.date || '').localeCompare(String(a.date || ''));
+    if (dateCmp !== 0) return dateCmp;
+    return String(b.id || '').localeCompare(String(a.id || ''));
+  });
+
   const seen = new Set();
-  materials.forEach(exp => {
-    const key = String(exp.title || '').toLowerCase();
+  const deduped = [];
+  sorted.forEach(exp => {
+    const key = exp.stockItemId ? `stk_${exp.stockItemId}` : `name_${this.normalizeProductName(exp.title)}`;
     if (seen.has(key)) return;
     seen.add(key);
-    const pricing = this.getExpenseUnitPricing(exp);
-    const costInfo = pricing ? ` (ทุน ฿${pricing.costPerPiece.toFixed(2)}/${pricing.pieceName})` : ` (฿${Number(exp.amount).toFixed(0)})`;
-    const opt = document.createElement('option');
-    opt.value = exp.id;
-    opt.textContent = `${exp.title || 'ไม่ระบุ'}${costInfo}`;
-    matSelect.appendChild(opt);
+    deduped.push(exp);
   });
-
-  // Packaging: PACKAGING category only
-  const packagings = (this.data.expenses || []).filter(e => e.category === 'PACKAGING').filter(exp => this.isExpenseAvailableForSelection(exp));
-  pkgSelect.innerHTML = '<option value="">-- เลือกบรรจุภัณฑ์ --</option>';
-  const seenPkg = new Set();
-  packagings.forEach(exp => {
-    const key = String(exp.title || '').toLowerCase();
-    if (seenPkg.has(key)) return;
-    seenPkg.add(key);
-    const pricing = this.getExpenseUnitPricing(exp);
-    const costInfo = pricing ? ` (ทุน ฿${pricing.costPerPiece.toFixed(2)}/${pricing.pieceName})` : ` (฿${Number(exp.amount).toFixed(0)})`;
-    const opt = document.createElement('option');
-    opt.value = exp.id;
-    opt.textContent = `${exp.title || 'ไม่ระบุ'}${costInfo}`;
-    pkgSelect.appendChild(opt);
-  });
+  return deduped;
 }
 
-selectPackSellMaterial() {
-  const sel = document.getElementById('packSellMaterialSelect');
-  const infoBox = document.getElementById('packSellMaterialInfo');
-  if (!sel || !infoBox) return;
+populatePackSellDropdowns() {
+  // Refresh selected items display if needed
+  this.renderPackSellSelectedSummary('MATERIAL');
+  this.renderPackSellSelectedSummary('PACKAGING');
+}
 
-  if (!sel.value) { infoBox.style.display = 'none'; this.selectedPackSellMat = null; this.calculatePackSell(); return; }
+openPackSellPickerModal(kind) {
+  const modal = document.getElementById('packSellPickerModal');
+  if (!modal) return;
+  this._packSellPickerKind = kind;
+  const currentList = kind === 'PACKAGING' ? (this.selectedPackSellPkgs || []) : (this.selectedPackSellMats || []);
+  this._packSellPickerDraftIds = new Set(currentList.map(x => String(x.exp.id)));
 
-  const exp = (this.data.expenses || []).find(e => String(e.id) === String(sel.value));
-  if (!exp) { infoBox.style.display = 'none'; return; }
+  const titleEl = document.getElementById('packSellPickerTitle');
+  const iconWrap = document.getElementById('packSellPickerIconWrap');
+  const searchEl = document.getElementById('packSellPickerSearch');
+  if (titleEl) {
+    titleEl.textContent = kind === 'PACKAGING' ? 'เลือกบรรจุภัณฑ์ (เลือกได้หลายรายการ)' : 'เลือกวัตถุดิบแพ็คขาย (เลือกได้หลายรายการ)';
+  }
+  if (iconWrap) {
+    iconWrap.style.background = kind === 'PACKAGING' ? '#fef3c7' : '#eff6ff';
+    iconWrap.style.color = kind === 'PACKAGING' ? '#d97706' : 'var(--primary)';
+  }
+  if (searchEl) searchEl.value = '';
 
-  const pricing = this.getExpenseUnitPricing(exp);
-  const totalCost = Number(exp.amount) || 0;
-  const pSize = Number(exp.packSize) || 1;
-  const pUnit = exp.packUnit || 'หน่วย';
-  const costPerPiece = pricing ? pricing.costPerPiece : (totalCost / pSize);
-  const pieceName = pricing ? pricing.pieceName : pUnit;
+  this.renderPackSellPickerList();
+  modal.classList.add('active');
+  this.refreshLucide();
+}
 
-  this.selectedPackSellMat = { exp, pricing, totalCost, costPerPiece, pieceName, pSize, pUnit };
+renderPackSellPickerList() {
+  const listEl = document.getElementById('packSellPickerList');
+  const countEl = document.getElementById('packSellPickerSelectedCount');
+  if (!listEl) return;
 
-  infoBox.style.display = 'block';
-  infoBox.innerHTML = `
-      <div style="display:flex; align-items:center; gap:0.5rem; padding:0.6rem 0.8rem; background:#eff6ff; border-radius:8px; border:1px solid #bfdbfe;">
-        <i data-lucide="info" style="width:16px;height:16px;color:#3b82f6;flex-shrink:0;"></i>
-        <div style="font-size:0.85rem; line-height:1.5;">
-          <strong>${this.escapeHtml(exp.title)}</strong> — ${pSize} ${pUnit}<br>
-          ต้นทุนรวม: <strong>฿${totalCost.toFixed(2)}</strong> | ต้นทุนต่อ${pieceName}: <strong style="color:#dc2626;">฿${costPerPiece.toFixed(2)}</strong>
+  const kind = this._packSellPickerKind || 'MATERIAL';
+  const q = (document.getElementById('packSellPickerSearch')?.value || '').trim().toLowerCase();
+  const items = this.getPackSellAvailableExpenses(kind).filter(exp => {
+    if (!q) return true;
+    return String(exp.title || '').toLowerCase().includes(q);
+  });
+
+  if (countEl) {
+    countEl.textContent = `เลือกแล้ว ${this._packSellPickerDraftIds?.size || 0} รายการ`;
+  }
+
+  if (items.length === 0) {
+    listEl.innerHTML = `<div style="text-align:center; padding:1.5rem; color:#94a3b8; font-size:0.85rem;">ไม่พบรายการที่พร้อมใช้งาน</div>`;
+    return;
+  }
+
+  listEl.innerHTML = items.map(exp => {
+    const isChecked = this._packSellPickerDraftIds.has(String(exp.id));
+    const pricing = this.getExpenseUnitPricing(exp);
+    const totalCost = Number(exp.amount) || 0;
+    const pSize = Number(exp.packSize) || 1;
+    const costPerPiece = pricing ? pricing.costPerPiece : (totalCost / pSize);
+    const pieceName = pricing ? pricing.pieceName : (exp.packUnit || 'ชิ้น');
+    const subText = kind === 'PACKAGING'
+      ? `ต้นทุนต่อ${pieceName}: ฿${costPerPiece.toFixed(2)}`
+      : `ยอดรวมบิล: ฿${totalCost.toFixed(2)} (฿${costPerPiece.toFixed(2)}/${pieceName})`;
+
+    return `
+      <div onclick="app.togglePackSellPickerItem('${exp.id}')"
+        style="display:flex; align-items:center; gap:0.7rem; padding:0.65rem 0.8rem; border-radius:10px; border:1.5px solid ${isChecked ? 'var(--primary)' : '#e2e8f0'}; background:${isChecked ? '#eff6ff' : '#ffffff'}; cursor:pointer; transition:all 0.15s;">
+        <input type="checkbox" ${isChecked ? 'checked' : ''} onclick="event.stopPropagation(); app.togglePackSellPickerItem('${exp.id}')" style="width:17px; height:17px; accent-color:var(--primary); cursor:pointer;">
+        <div style="flex:1; min-width:0;">
+          <div style="font-weight:700; font-size:0.88rem; color:#1e293b;">${this.escapeHtml(exp.title || 'ไม่ระบุ')}</div>
+          <div style="font-size:0.76rem; color:#64748b; margin-top:2px;">${this.escapeHtml(subText)}</div>
         </div>
+        <span class="pill-tag ${isChecked ? 'blue-tag' : ''}" style="font-size:0.74rem; font-weight:700; ${isChecked ? '' : 'background:#f1f5f9; color:#475569;'}">
+          ฿${(kind === 'PACKAGING' ? costPerPiece : totalCost).toFixed(2)}
+        </span>
       </div>
     `;
-  this.refreshLucide();
+  }).join('');
+}
+
+togglePackSellPickerItem(expId) {
+  if (!this._packSellPickerDraftIds) this._packSellPickerDraftIds = new Set();
+  const key = String(expId);
+  if (this._packSellPickerDraftIds.has(key)) {
+    this._packSellPickerDraftIds.delete(key);
+  } else {
+    this._packSellPickerDraftIds.add(key);
+  }
+  this.renderPackSellPickerList();
+}
+
+clearPackSellPickerDraft() {
+  this._packSellPickerDraftIds = new Set();
+  this.renderPackSellPickerList();
+}
+
+confirmPackSellPickerModal() {
+  const kind = this._packSellPickerKind || 'MATERIAL';
+  const available = this.getPackSellAvailableExpenses(kind);
+  const picked = available.filter(exp => this._packSellPickerDraftIds.has(String(exp.id)));
+
+  if (kind === 'PACKAGING') {
+    this.selectedPackSellPkgs = picked.map(exp => {
+      const pricing = this.getExpenseUnitPricing(exp);
+      const totalCost = Number(exp.amount) || 0;
+      const pSize = Number(exp.packSize) || 1;
+      const costPerPiece = pricing ? pricing.costPerPiece : (totalCost / pSize);
+      const pieceName = pricing ? pricing.pieceName : (exp.packUnit || 'ชิ้น');
+      return { exp, pricing, costPerPiece, pieceName };
+    });
+  } else {
+    this.selectedPackSellMats = picked.map(exp => {
+      const pricing = this.getExpenseUnitPricing(exp);
+      const totalCost = Number(exp.amount) || 0;
+      const pSize = Number(exp.packSize) || 1;
+      const pUnit = exp.packUnit || 'หน่วย';
+      const costPerPiece = pricing ? pricing.costPerPiece : (totalCost / pSize);
+      const pieceName = pricing ? pricing.pieceName : pUnit;
+      return { exp, pricing, totalCost, costPerPiece, pieceName, pSize, pUnit };
+    });
+  }
+
+  this.renderPackSellSelectedSummary(kind);
+  document.getElementById('packSellPickerModal')?.classList.remove('active');
   this.calculatePackSell();
 }
 
-selectPackSellPackaging() {
-  const sel = document.getElementById('packSellPackagingSelect');
-  const infoBox = document.getElementById('packSellPackagingInfo');
-  const confirmRow = document.getElementById('packSellPackagingConfirmRow');
-  if (!sel || !infoBox) return;
+removePackSellSelectedItem(kind, expId) {
+  if (kind === 'PACKAGING') {
+    this.selectedPackSellPkgs = (this.selectedPackSellPkgs || []).filter(p => String(p.exp.id) !== String(expId));
+  } else {
+    this.selectedPackSellMats = (this.selectedPackSellMats || []).filter(m => String(m.exp.id) !== String(expId));
+  }
+  this.renderPackSellSelectedSummary(kind);
+  this.calculatePackSell();
+}
 
-  if (!sel.value) { infoBox.style.display = 'none'; if (confirmRow) confirmRow.style.display = 'none'; this.selectedPackSellPkg = null; this.calculatePackSell(); return; }
+renderPackSellSelectedSummary(kind) {
+  const isPkg = kind === 'PACKAGING';
+  const list = isPkg ? (this.selectedPackSellPkgs || []) : (this.selectedPackSellMats || []);
+  const infoBox = document.getElementById(isPkg ? 'packSellPackagingInfo' : 'packSellMaterialInfo');
+  const countBadge = document.getElementById(isPkg ? 'packSellPkgCountBadge' : 'packSellMatCountBadge');
+  if (countBadge) countBadge.textContent = `${list.length} รายการ`;
+  if (!infoBox) return;
 
-  const exp = (this.data.expenses || []).find(e => String(e.id) === String(sel.value));
-  if (!exp) { infoBox.style.display = 'none'; return; }
+  if (list.length === 0) {
+    infoBox.style.display = 'none';
+    infoBox.innerHTML = '';
+    return;
+  }
 
-  const pricing = this.getExpenseUnitPricing(exp);
-  const totalCost = Number(exp.amount) || 0;
-  const pSize = Number(exp.packSize) || 1;
-  const costPerPiece = pricing ? pricing.costPerPiece : (totalCost / pSize);
-  const pieceName = pricing ? pricing.pieceName : (exp.packUnit || 'ชิ้น');
+  const totalSum = isPkg
+    ? list.reduce((s, p) => s + p.costPerPiece, 0)
+    : list.reduce((s, m) => s + m.totalCost, 0);
 
-  this.selectedPackSellPkg = { exp, pricing, costPerPiece, pieceName };
+  const bg = isPkg ? '#fefce8' : '#eff6ff';
+  const border = isPkg ? '#fde68a' : '#bfdbfe';
+  const accent = isPkg ? '#b45309' : '#1d4ed8';
 
   infoBox.style.display = 'block';
   infoBox.innerHTML = `
-      <div style="display:flex; align-items:center; gap:0.5rem; padding:0.6rem 0.8rem; background:#fefce8; border-radius:8px; border:1px solid #fde68a;">
-        <i data-lucide="box" style="width:16px;height:16px;color:#d97706;flex-shrink:0;"></i>
-        <div style="font-size:0.85rem; line-height:1.5;">
-          <strong>${this.escapeHtml(exp.title)}</strong><br>
-          ต้นทุนต่อชิ้น: <strong style="color:#d97706;">฿${costPerPiece.toFixed(2)}</strong>/${pieceName}
+    <div style="padding:0.65rem 0.75rem; background:${bg}; border-radius:10px; border:1px solid ${border}; display:flex; flex-direction:column; gap:0.4rem;">
+      ${list.map(item => `
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:0.5rem; background:#ffffff; padding:0.35rem 0.55rem; border-radius:7px; border:1px solid ${border}; font-size:0.82rem;">
+          <span style="font-weight:700; color:#1e293b; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${this.escapeHtml(item.exp.title)}</span>
+          <div style="display:flex; align-items:center; gap:0.45rem; flex-shrink:0;">
+            <span style="font-weight:700; color:${accent};">฿${(isPkg ? item.costPerPiece : item.totalCost).toFixed(2)}${isPkg ? `/${item.pieceName}` : ''}</span>
+            <button type="button" onclick="app.removePackSellSelectedItem('${kind}', '${item.exp.id}')" title="นำออก" style="background:none; border:none; color:#ef4444; cursor:pointer; font-weight:800; font-size:0.9rem; line-height:1; padding:0 2px;">&times;</button>
+          </div>
         </div>
+      `).join('')}
+      <div style="font-size:0.78rem; font-weight:700; color:${accent}; text-align:right; padding-top:2px;">
+        ${isPkg ? `รวมต้นทุนบรรจุภัณฑ์/ชิ้น: ฿${totalSum.toFixed(2)}` : `รวมต้นทุนวัตถุดิบทั้งหมด: ฿${totalSum.toFixed(2)}`}
       </div>
-    `;
-  if (confirmRow) confirmRow.style.display = 'flex';
-  this.refreshLucide();
+    </div>
+  `;
 }
 
 calculatePackSell() {
   const resultSection = document.getElementById('packSellResultSection');
   const qty = parseInt(document.getElementById('packSellQty')?.value) || 0;
   const price = parseFloat(document.getElementById('packSellPrice')?.value) || 0;
+  const mats = this.selectedPackSellMats || [];
+  const pkgs = this.selectedPackSellPkgs || [];
 
-  if (!this.selectedPackSellMat || qty <= 0 || price <= 0) {
+  if (mats.length === 0 || qty <= 0 || price <= 0) {
     if (resultSection) resultSection.style.display = 'none';
     return;
   }
 
-  const matCostPer = this.selectedPackSellMat.totalCost / qty;
-  const pkgCostPer = (this.selectedPackSellPkg && this.packSellPkgConfirmed) ? this.selectedPackSellPkg.costPerPiece : 0;
+  const totalMatCost = mats.reduce((s, m) => s + m.totalCost, 0);
+  const matCostPer = totalMatCost / qty;
+  const pkgCostPer = pkgs.reduce((s, p) => s + p.costPerPiece, 0);
   const totalCostPer = matCostPer + pkgCostPer;
   const totalRevenue = price * qty;
   const profitPer = price - totalCostPer;
@@ -11196,8 +11250,8 @@ calculatePackSell() {
   // Summary banner
   const banner = document.getElementById('packSellSummaryBanner');
   if (banner) {
-    const matName = this.selectedPackSellMat.exp.title || 'วัตถุดิบ';
-    const pkgName = (this.selectedPackSellPkg && this.packSellPkgConfirmed) ? this.selectedPackSellPkg.exp.title : '-';
+    const matName = mats.map(m => m.exp.title).join(' + ') || 'วัตถุดิบ';
+    const pkgName = pkgs.length > 0 ? pkgs.map(p => p.exp.title).join(' + ') : '-';
     const profitClass = totalProfit >= 0 ? 'color:#16a34a;' : 'color:#dc2626;';
     banner.innerHTML = `
         <div style="padding:0.75rem 1rem; background:linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%); border-radius:10px; border:1px solid #bbf7d0; font-size:0.85rem; line-height:1.6;">
@@ -11211,8 +11265,8 @@ calculatePackSell() {
 
   // Store for save
   this.packSellCalcResult = {
-    matName: this.selectedPackSellMat.exp.title || 'วัตถุดิบ',
-    pkgName: (this.selectedPackSellPkg && this.packSellPkgConfirmed) ? this.selectedPackSellPkg.exp.title : '',
+    matName: mats.map(m => m.exp.title).join(' + ') || 'วัตถุดิบ',
+    pkgName: pkgs.map(p => p.exp.title).join(' + '),
     qty, price, matCostPer, pkgCostPer, totalCostPer, totalRevenue, profitPer, totalProfit
   };
 }

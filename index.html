@@ -1701,10 +1701,16 @@
                     style="background:var(--primary); color:#fff; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:700;">1</span>
                   เลือกวัตถุดิบ
                 </label>
-                <select id="packSellMaterialSelect" class="form-input" style="height:42px;">
-                  <option value="">-- เลือกวัตถุดิบที่ต้องการแพ็คขาย --</option>
-                </select>
-                <div id="packSellMaterialInfo" class="pack-sell-info-box" style="display:none;">
+                <button type="button" class="btn-outline-fastwork" id="btnOpenPackSellMatModal"
+                  onclick="app.openPackSellPickerModal('MATERIAL')"
+                  style="width:100%; height:42px; display:flex; align-items:center; justify-content:space-between; padding:0 0.85rem; background:#ffffff;">
+                  <span style="display:inline-flex; align-items:center; gap:0.45rem; font-weight:600;">
+                    <i data-lucide="list-plus" style="width:16px;height:16px;color:var(--primary);"></i>
+                    <span>เลือกวัตถุดิบ (เลือกได้หลายรายการ)</span>
+                  </span>
+                  <span class="pill-tag blue-tag" id="packSellMatCountBadge" style="font-size:0.74rem; font-weight:700;">0 รายการ</span>
+                </button>
+                <div id="packSellMaterialInfo" class="pack-sell-info-box" style="display:none; margin-top:0.5rem;">
                   <!-- จะแสดงข้อมูลวัตถุดิบที่เลือก -->
                 </div>
               </div>
@@ -1716,26 +1722,17 @@
                     style="background:var(--primary); color:#fff; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:700;">2</span>
                   เลือกบรรจุภัณฑ์
                 </label>
-                <select id="packSellPackagingSelect" class="form-input" style="height:42px;">
-                  <option value="">-- เลือกบรรจุภัณฑ์ --</option>
-                </select>
-                <div id="packSellPackagingInfo" class="pack-sell-info-box" style="display:none;">
+                <button type="button" class="btn-outline-fastwork" id="btnOpenPackSellPkgModal"
+                  onclick="app.openPackSellPickerModal('PACKAGING')"
+                  style="width:100%; height:42px; display:flex; align-items:center; justify-content:space-between; padding:0 0.85rem; background:#ffffff;">
+                  <span style="display:inline-flex; align-items:center; gap:0.45rem; font-weight:600;">
+                    <i data-lucide="package-plus" style="width:16px;height:16px;color:#d97706;"></i>
+                    <span>เลือกบรรจุภัณฑ์ (เลือกได้หลายรายการ)</span>
+                  </span>
+                  <span class="pill-tag orange-tag" id="packSellPkgCountBadge" style="font-size:0.74rem; font-weight:700;">0 รายการ</span>
+                </button>
+                <div id="packSellPackagingInfo" class="pack-sell-info-box" style="display:none; margin-top:0.5rem;">
                   <!-- จะแสดงข้อมูลบรรจุภัณฑ์ -->
-                </div>
-                <div id="packSellPackagingConfirmRow"
-                  style="display:none; margin-top:0.5rem; display:flex; gap:0.5rem;">
-                  <button type="button" class="btn-fastwork" id="btnPackSellConfirmPkg"
-                    style="font-size:0.85rem; padding:0.4rem 1rem;">
-                    <i data-lucide="check" style="width:14px;height:14px;"></i> ตกลง
-                  </button>
-                  <button type="button" class="btn-outline-fastwork" id="btnPackSellCancelPkg"
-                    style="font-size:0.85rem; padding:0.4rem 1rem;">
-                    <i data-lucide="x" style="width:14px;height:14px;"></i> ยกเลิก
-                  </button>
-                </div>
-                <div id="packSellPackagingConfirmed" class="pack-sell-confirmed-badge" style="display:none;">
-                  ✅ เลือกบรรจุภัณฑ์แล้ว: <span id="packSellPkgConfirmedName"></span>
-                  <button type="button" class="pack-sell-change-btn" id="btnPackSellChangePkg">เปลี่ยน</button>
                 </div>
               </div>
 
@@ -3169,6 +3166,46 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn-secondary" data-close="stockProfitHistoryModal">ปิดหน้าต่าง</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pack Sell Multi-Select Picker Modal (เลือกวัตถุดิบ / บรรจุภัณฑ์หลายรายการ) -->
+  <div class="modal-backdrop" id="packSellPickerModal">
+    <div class="modal-dialog modal-lg" style="max-width: 560px;">
+      <div class="modal-header">
+        <div style="display:flex; align-items:center; gap:0.6rem;">
+          <div class="icon-circle" id="packSellPickerIconWrap" style="background:#eff6ff; color:var(--primary);">
+            <i data-lucide="package"></i>
+          </div>
+          <div>
+            <h3 class="modal-title" id="packSellPickerTitle" style="margin-bottom:0;">เลือกรายการ</h3>
+            <span class="text-xs text-muted">แตะเลือกรายการที่ต้องการได้มากกว่า 1 รายการ</span>
+          </div>
+        </div>
+        <button class="close-modal-btn" data-close="packSellPickerModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="position:relative; margin-bottom:0.75rem;">
+          <i data-lucide="search"
+            style="position:absolute; left:10px; top:50%; transform:translateY(-50%); width:16px; height:16px; color:#94a3b8; pointer-events:none;"></i>
+          <input type="text" id="packSellPickerSearch" class="form-input" placeholder="ค้นหาชื่อรายการ..."
+            style="padding-left:34px; height:38px; font-size:0.86rem;" oninput="app.renderPackSellPickerList()">
+        </div>
+        <div id="packSellPickerList"
+          style="max-height: 360px; overflow-y:auto; display:flex; flex-direction:column; gap:0.45rem; padding-right:2px;">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+      <div class="modal-footer" style="justify-content:space-between; flex-wrap:wrap; gap:0.5rem;">
+        <span class="text-sm font-bold text-primary" id="packSellPickerSelectedCount">เลือกแล้ว 0 รายการ</span>
+        <div style="display:flex; gap:0.5rem;">
+          <button type="button" class="btn-secondary" onclick="app.clearPackSellPickerDraft()">ล้างที่เลือก</button>
+          <button type="button" class="btn-fastwork" onclick="app.confirmPackSellPickerModal()">
+            <i data-lucide="check" style="width:15px;height:15px;"></i>
+            <span>ยืนยันการเลือก</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>
