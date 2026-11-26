@@ -1191,17 +1191,37 @@
               </div>
             </div>
 
-            <!-- Total Expense & Category Pills -->
+            <!-- Total Expense, Stock Value & Category Pills -->
             <div style="padding-top:0.95rem;">
-              <div class="feh-top" style="margin-bottom:0.35rem;">
-                <div class="feh-label" style="color:#e2e8f0;">
-                  <i data-lucide="receipt"></i>
-                  <span>ยอดจ่ายรวมทั้งหมด (จากบิลซื้อของเข้าสต๊อก)</span>
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(230px, 1fr)); gap:0.85rem; margin-bottom:0.85rem; align-items:stretch;">
+                <!-- ยอดจ่ายรวมทั้งหมด -->
+                <div style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:12px; padding:0.75rem 0.95rem;">
+                  <div class="feh-top" style="margin-bottom:0.35rem;">
+                    <div class="feh-label" style="color:#e2e8f0;">
+                      <i data-lucide="receipt"></i>
+                      <span>ยอดจ่ายรวมทั้งหมด (จากบิลซื้อของเข้าสต๊อก)</span>
+                    </div>
+                    <span class="feh-count-badge" id="stockExpTotalCount">0 รายการ</span>
+                  </div>
+                  <div class="feh-amount-wrap" style="margin-bottom:0;">
+                    <span class="feh-amount" id="stockExpCategoryTotal">฿0</span>
+                  </div>
                 </div>
-                <span class="feh-count-badge" id="stockExpTotalCount">0 รายการ</span>
-              </div>
-              <div class="feh-amount-wrap" style="margin-bottom:0.75rem;">
-                <span class="feh-amount" id="stockExpCategoryTotal">฿0</span>
+
+                <!-- มูลค่าสต๊อกในร้านรวม -->
+                <div onclick="app.setStockFilter('all')" title="คลิกเพื่อดูสินค้าทั้งหมด"
+                  style="background:rgba(139,92,246,0.14); border:1px solid rgba(196,181,253,0.28); border-radius:12px; padding:0.75rem 0.95rem; cursor:pointer; display:flex; flex-direction:column; justify-content:space-between;">
+                  <div class="feh-top" style="margin-bottom:0.35rem;">
+                    <div class="feh-label" style="color:#ede9fe;">
+                      <i data-lucide="banknote"></i>
+                      <span>มูลค่าสต๊อกในร้านรวม</span>
+                    </div>
+                    <span class="feh-count-badge" style="background:rgba(139,92,246,0.28); color:#ede9fe; border-color:rgba(196,181,253,0.35);">คำนวณตามต้นทุนจริง</span>
+                  </div>
+                  <div class="feh-amount-wrap" style="margin-bottom:0;">
+                    <span class="feh-amount" id="kpiStockTotalValue" style="color:#ddd6fe;">฿0</span>
+                  </div>
+                </div>
               </div>
               <div class="feh-breakdown-row">
                 <div class="feh-stat-pill" onclick="app.setStockFilter('INGREDIENT')">
@@ -1233,8 +1253,8 @@
             </div>
           </div>
 
-          <!-- Section 2: 4 KPI Metric Stats -->
-          <div class="stats-grid four-col"
+          <!-- Section 2: 3 KPI Metric Stats -->
+          <div class="stats-grid three-col"
             style="padding:1rem 1.25rem; background:#f8fafc; border-bottom:1px solid #e2e8f0; margin-bottom:0;">
             <div class="stat-card" id="cardKpiStockLow"
               style="border-top: 4px solid var(--danger); background: linear-gradient(180deg, #fff5f5 0%, #ffffff 60%); cursor:pointer;"
@@ -1273,19 +1293,6 @@
                 <div class="stat-label">สถานะสต๊อกปกติ</div>
                 <div class="stat-value text-green" id="kpiStockNormalCount">0 รายการ</div>
                 <div class="stat-subtext">เพียงพอต่อการชงขาย</div>
-              </div>
-            </div>
-
-            <div class="stat-card" id="cardKpiStockValue"
-              style="border-top: 4px solid var(--purple); background: linear-gradient(180deg, #f5f3ff 0%, #ffffff 60%); cursor:pointer;"
-              onclick="app.setStockFilter('all')" title="คลิกเพื่อดูสินค้าทั้งหมด">
-              <div class="stat-icon-wrapper purple">
-                <i data-lucide="banknote"></i>
-              </div>
-              <div class="stat-meta">
-                <div class="stat-label">มูลค่าสต๊อกในร้านรวม</div>
-                <div class="stat-value text-purple" id="kpiStockTotalValue">฿0</div>
-                <div class="stat-subtext">คำนวณตามต้นทุนจริง</div>
               </div>
             </div>
           </div>

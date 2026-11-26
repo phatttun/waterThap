@@ -6992,14 +6992,14 @@ body {
      - 2x2 grid layout (perfect balance on portrait phones)
      - Compact padding, distinct accents, and prominent numbers
      ------------------------------------------------------------- */
-  #tab-stock .stats-grid.four-col {
+  #tab-stock .stats-grid.three-col {
     display: grid !important;
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 0.65rem !important;
     margin-bottom: 1rem !important;
   }
 
-  #tab-stock .stats-grid.four-col .stat-card {
+  #tab-stock .stats-grid.three-col .stat-card {
     padding: 0.75rem 0.85rem !important;
     border-radius: var(--radius-md) !important;
     display: flex !important;
@@ -7010,34 +7010,35 @@ body {
     transition: transform 0.15s ease, box-shadow 0.15s ease !important;
   }
 
-  #tab-stock .stats-grid.four-col .stat-card:active {
+  #tab-stock .stats-grid.three-col .stat-card:active {
     transform: scale(0.98);
   }
 
   /* Make critical alert card visually pop out */
-  #tab-stock .stats-grid.four-col .stat-card:first-child {
+  #tab-stock .stats-grid.three-col .stat-card:first-child {
+    grid-column: 1 / -1 !important;
     border: 1.5px solid #fecaca !important;
     border-top: 4px solid #ef4444 !important;
     box-shadow: 0 4px 12px rgba(239, 68, 68, 0.08) !important;
   }
 
-  #tab-stock .stats-grid.four-col .stat-card .stat-icon-wrapper {
+  #tab-stock .stats-grid.three-col .stat-card .stat-icon-wrapper {
     width: 32px !important;
     height: 32px !important;
     border-radius: 8px !important;
     margin-bottom: 0.35rem !important;
   }
 
-  #tab-stock .stats-grid.four-col .stat-card .stat-icon-wrapper i {
+  #tab-stock .stats-grid.three-col .stat-card .stat-icon-wrapper i {
     width: 16px !important;
     height: 16px !important;
   }
 
-  #tab-stock .stats-grid.four-col .stat-card .stat-meta {
+  #tab-stock .stats-grid.three-col .stat-card .stat-meta {
     width: 100% !important;
   }
 
-  #tab-stock .stats-grid.four-col .stat-card .stat-label {
+  #tab-stock .stats-grid.three-col .stat-card .stat-label {
     font-size: 0.725rem !important;
     line-height: 1.25 !important;
     margin-bottom: 0.2rem !important;
@@ -7046,14 +7047,14 @@ body {
     text-overflow: ellipsis !important;
   }
 
-  #tab-stock .stats-grid.four-col .stat-card .stat-value {
+  #tab-stock .stats-grid.three-col .stat-card .stat-value {
     font-size: 1.25rem !important;
     font-weight: 800 !important;
     line-height: 1.2 !important;
     margin-bottom: 0.15rem !important;
   }
 
-  #tab-stock .stats-grid.four-col .stat-card .stat-subtext {
+  #tab-stock .stats-grid.three-col .stat-card .stat-subtext {
     font-size: 0.65rem !important;
     line-height: 1.2 !important;
     white-space: nowrap !important;
