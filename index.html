@@ -1366,9 +1366,27 @@
                   <!-- Day Items Mini List Feed -->
                   <div>
                     <div
-                      style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.35rem;">
+                      style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.45rem;">
                       <span class="text-xs font-bold text-muted">รายการเบิกขายในวันดังกล่าว:</span>
-                      <span class="text-xs text-muted" id="stockProfitDayItemsDetailBadge">0 ชิ้น</span>
+                      <div style="display:flex; align-items:center; gap:0.45rem; flex:1; justify-content:flex-end; min-width:170px;">
+                        <div style="position:relative; flex:1; max-width:210px; min-width:130px;">
+                          <i data-lucide="search"
+                            style="position:absolute; left:8px; top:50%; transform:translateY(-50%); width:13px; height:13px; color:#94a3b8; pointer-events:none;"></i>
+                          <input type="text" id="stockProfitDaySearchInput" class="form-input-sm"
+                            placeholder="ค้นหาชื่อสินค้า..."
+                            oninput="app.renderStockProfitCard()"
+                            onchange="app.renderStockProfitCard()"
+                            onsearch="app.renderStockProfitCard()"
+                            style="height:28px; width:100%; padding-left:1.65rem; padding-right:1.5rem; font-size:0.75rem; background:#ffffff;">
+                          <button type="button" id="stockProfitDaySearchClearBtn"
+                            onclick="app.clearSearchInput('stockProfitDaySearchInput', 'renderStockProfitCard')"
+                            title="ล้างคำค้นหา"
+                            style="display:none; position:absolute; right:4px; top:50%; transform:translateY(-50%); background:none; border:none; color:#94a3b8; cursor:pointer; font-size:0.8rem; line-height:1; padding:1px 4px;">
+                            ✕
+                          </button>
+                        </div>
+                        <span class="text-xs text-muted" id="stockProfitDayItemsDetailBadge" style="white-space:nowrap;">0 ชิ้น</span>
+                      </div>
                     </div>
                     <div id="stockProfitDayItemsList"
                       style="max-height:165px; overflow-y:auto; display:flex; flex-direction:column; gap:0.35rem;">
@@ -1567,7 +1585,7 @@
                   onsearch="app.renderLowStockAlertView()"
                   style="height:32px; width:100%; padding-left:1.85rem; padding-right:1.65rem; font-size:0.8rem; background:#ffffff; border:1px solid #fecaca;">
                 <button type="button" id="lowStockSearchClearBtn"
-                  onclick="const el=document.getElementById('lowStockSearchInput'); if(el){el.value=''; app.renderLowStockAlertView(); el.focus();}"
+                  onclick="app.clearSearchInput('lowStockSearchInput', 'renderLowStockAlertView')"
                   title="ล้างคำค้นหา"
                   style="display:none; position:absolute; right:5px; top:50%; transform:translateY(-50%); background:none; border:none; color:#94a3b8; cursor:pointer; font-size:0.85rem; line-height:1; padding:2px 4px;">
                   ✕
@@ -1669,7 +1687,7 @@
                   placeholder="ค้นหาชื่อสินค้า, หมายเหตุ, วันที่..." oninput="app.renderStockHistory()"
                   style="padding-left:2rem; padding-right:1.75rem; width:100%; min-width:220px;">
                 <button type="button" id="stockLogSearchClearBtn"
-                  onclick="const el=document.getElementById('stockLogSearchInput'); if(el){el.value=''; app.renderStockHistory(); el.focus();}"
+                  onclick="app.clearSearchInput('stockLogSearchInput', 'renderStockHistory')"
                   title="ล้างคำค้นหา"
                   style="display:none; position:absolute; right:6px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:0.9rem; line-height:1; padding:2px 4px;">
                   ✕

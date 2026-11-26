@@ -9349,10 +9349,30 @@ class WaterFlowApp {
       marginEl.className = data.totalProfit >= 0 ? 'text-success' : 'text-danger';
     }
 
+    const searchInput = document.getElementById('stockProfitDaySearchInput');
+    const searchClearBtn = document.getElementById('stockProfitDaySearchClearBtn');
+    const searchQuery = (searchInput?.value || '').trim().toLowerCase();
+    if (searchClearBtn) {
+      searchClearBtn.style.display = searchQuery ? 'block' : 'none';
+    }
+
+    const filteredItems = searchQuery
+      ? data.items.filter(item => {
+          const name = String(item.itemName || '').toLowerCase();
+          const unit = String(item.unit || '').toLowerCase();
+          const time = String(item.time || '').toLowerCase();
+          return name.includes(searchQuery) || unit.includes(searchQuery) || time.includes(searchQuery);
+        })
+      : data.items;
+
     if (revEl) revEl.textContent = this.formatCurrency(data.totalRevenue);
     if (costEl) costEl.textContent = this.formatCurrency(data.totalCost);
     if (countEl) countEl.textContent = `${data.items.length} รายการ`;
-    if (detailBadge) detailBadge.textContent = `รวม ${data.totalQty} ชิ้น/ลัง`;
+    if (detailBadge) {
+      detailBadge.textContent = searchQuery
+        ? `พบ ${filteredItems.length}/${data.items.length} รายการ`
+        : `รวม ${data.totalQty} ชิ้น/ลัง`;
+    }
 
     // Render Mini List of Items for the Day
     if (listEl) {
@@ -9364,8 +9384,20 @@ class WaterFlowApp {
             <span style="font-size:0.75rem; color:#64748b;">(คิดกำไรเฉพาะ <b>น้ำขายในตู้</b> และ <b>ของแพ็คขาย/สำเร็จรูป</b> ไม่รวมบรรจุภัณฑ์และวัตถุดิบ)</span>
           </div>
         `;
+      } else if (filteredItems.length === 0) {
+        listEl.innerHTML = `
+          <div class="text-center text-muted py-3 px-2" style="font-size:0.8rem; background:#fffbeb; border:1px dashed #fcd34d; border-radius:var(--radius-sm); line-height:1.5;">
+            ไม่พบรายการที่ตรงกับ "${this.escapeHtml(searchInput.value.trim())}"
+            <div style="margin-top:0.35rem;">
+              <button type="button" class="btn-outline-fastwork btn-sm" style="font-size:0.72rem; padding:0.15rem 0.55rem;"
+                onclick="app.clearSearchInput('stockProfitDaySearchInput', 'renderStockProfitCard')">
+                ล้างคำค้นหา
+              </button>
+            </div>
+          </div>
+        `;
       } else {
-        listEl.innerHTML = data.items.map(item => {
+        listEl.innerHTML = filteredItems.map(item => {
           const profitColor = item.profit >= 0 ? '#15803d' : '#dc2626';
           const profitSign = item.profit >= 0 ? '+' : '';
           return `
@@ -10737,6 +10769,19 @@ class WaterFlowApp {
       btn.classList.toggle('active', btn.dataset.cat === this.currentLowStockCategoryFilter);
     });
     this.renderLowStockAlertView();
+  }
+
+  clearSearchInput(inputId, renderMethod) {
+    const el = document.getElementById(inputId);
+    if (el) {
+      el.value = '';
+      if (renderMethod && typeof this[renderMethod] === 'function') {
+        this[renderMethod]();
+      }
+      el.focus();
+    } else if (renderMethod && typeof this[renderMethod] === 'function') {
+      this[renderMethod]();
+    }
   }
 
   resetLowStockFilters() {
