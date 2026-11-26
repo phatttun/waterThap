@@ -1473,7 +1473,7 @@ class WaterFlowApp {
       backdrop.addEventListener('click', (e) => {
         if (e.target === backdrop) {
           // ป้องกันไม่ให้คลิกด้านนอกแล้ว modal ปิดเองโดยไม่ได้ตั้งใจ (ต้องกดยกเลิก หรือบันทึกข้อมูลเท่านั้น)
-          if (backdrop.id === 'recipeModal' || backdrop.id === 'expenseModal' || backdrop.id === 'stockItemModal' || backdrop.id === 'quickRestockModal' || backdrop.id === 'packSellPickerModal') {
+          if (backdrop.id === 'recipeModal' || backdrop.id === 'expenseModal' || backdrop.id === 'stockItemModal' || backdrop.id === 'quickRestockModal' || backdrop.id === 'packSellPickerModal' || backdrop.id === 'recipeExpensePickerModal') {
             return;
           }
           backdrop.classList.remove('active');
@@ -3420,7 +3420,6 @@ class WaterFlowApp {
     const sortEl = document.getElementById('expenseSortOrder');
     const sortOrder = sortEl?.dataset?.order || sortEl?.value || 'newest';
     const sorted = [...list].sort((a, b) => {
-      // เปรียบเทียบตามวันที่ และ id (timestamp)
       const dateCmp = (a.date || '').localeCompare(b.date || '');
       const idA = String(a.id || '');
       const idB = String(b.id || '');
@@ -3428,155 +3427,196 @@ class WaterFlowApp {
       if (sortOrder === 'oldest') {
         return dateCmp !== 0 ? dateCmp : idCmp;
       }
-      // default: newest
       return dateCmp !== 0 ? -dateCmp : -idCmp;
     });
 
-    // Render Unified Cards Feed (Matching Figma Mobile Design System)
+    // รวมรายการเติมสต๊อก/บิลซื้อของสินค้าชนิดเดียวกันให้อยู่ในการ์ดเดียว
+    const groupsMap = new Map();
+    sorted.forEach(exp => {
+      const normTitle = this.normalizeProductName(exp.title);
+      const groupKey = normTitle || (exp.stockItemId ? `stk:${exp.stockItemId}` : `id:${exp.id}`);
+      if (!groupsMap.has(groupKey)) {
+        groupsMap.set(groupKey, {
+          key: groupKey,
+          title: exp.title || 'ไม่ระบุชื่อ',
+          category: exp.category || 'INGREDIENT',
+          bills: [],
+          totalSpent: 0
+        });
+      }
+      const grp = groupsMap.get(groupKey);
+      grp.bills.push(exp);
+      grp.totalSpent += (Number(exp.amount) || 0);
+    });
+
+    const groups = Array.from(groupsMap.values());
+    if (countBadge) countBadge.textContent = `${groups.length} รายการ (${list.length} บิล)`;
+
+    const catMetaMap = {
+      INGREDIENT: { badgeClass: 'ingredient', catName: 'วัตถุดิบชงน้ำ' },
+      PACKAGING: { badgeClass: 'packaging', catName: 'บรรจุภัณฑ์/แก้ว' },
+      FRIDGE_DRINK: { badgeClass: 'fridge', catName: 'น้ำขายในตู้' },
+      STOCK: { badgeClass: 'stock', catName: 'ซื้อยกลัง/สำเร็จรูป' },
+      OTHER: { badgeClass: 'other', catName: 'อื่นๆ / น้ำแข็ง' },
+      PACK_SELL: { badgeClass: 'stock', catName: 'ของแพ็คขาย' }
+    };
+
+    // Render Unified Product Cards Feed (1 Card per Product + Latest Restock Preview + View All History)
     if (feedWrap) {
-      feedWrap.innerHTML = sorted.map(exp => {
-        let badgeClass = 'ingredient';
-        let catName = 'วัตถุดิบชงน้ำ';
-        let avatarClass = 'cat-ingredient';
-        let iconName = 'shopping-cart';
+      feedWrap.innerHTML = groups.map(grp => {
+        // หาบิลล่าสุดเสมอเพื่อแสดงเป็นตัวอย่างใน card
+        const billsNewestFirst = [...grp.bills].sort((a, b) => {
+          const dCmp = (b.date || '').localeCompare(a.date || '');
+          return dCmp !== 0 ? dCmp : String(b.id || '').localeCompare(String(a.id || ''));
+        });
+        const latestBill = billsNewestFirst[0];
+        const meta = catMetaMap[latestBill.category || grp.category] || { badgeClass: 'other', catName: 'อื่นๆ' };
 
-        if (exp.category === 'INGREDIENT') {
-          badgeClass = 'ingredient';
-          catName = 'วัตถุดิบชงน้ำ';
-          avatarClass = 'cat-ingredient';
-          iconName = 'shopping-cart';
-        } else if (exp.category === 'PACKAGING') {
-          badgeClass = 'packaging';
-          catName = 'บรรจุภัณฑ์/แก้ว';
-          avatarClass = 'cat-packaging';
-          iconName = 'box';
-        } else if (exp.category === 'FRIDGE_DRINK') {
-          badgeClass = 'fridge';
-          catName = 'น้ำขายในตู้';
-          avatarClass = 'cat-fridge';
-          iconName = 'snowflake';
-        } else if (exp.category === 'STOCK') {
-          badgeClass = 'stock';
-          catName = 'ซื้อยกลัง/สำเร็จรูป';
-          avatarClass = 'cat-stock';
-          iconName = 'archive';
-        } else if (exp.category === 'OTHER') {
-          badgeClass = 'other';
-          catName = 'อื่นๆ / น้ำแข็ง';
-          avatarClass = 'cat-other';
-          iconName = 'more-horizontal';
-        } else if (exp.category === 'PACK_SELL') {
-          badgeClass = 'stock';
-          catName = 'ของแพ็คขาย';
-          avatarClass = 'cat-stock';
-          iconName = 'package';
-        }
+        const latestPricing = this.getExpenseUnitPricing(latestBill);
+        const latestIsBulk = latestPricing ? latestPricing.isBulk : false;
+        const latestSize = Number(latestBill.packSize) || 0;
+        const latestUnit = latestBill.packUnit || 'หน่วย';
+        const latestPieceUnit = latestPricing ? latestPricing.pieceName : latestUnit;
+        const latestReceivedQty = (latestPricing && latestIsBulk && latestPricing.itemsPerBulk > 1)
+          ? latestPricing.totalPieces
+          : latestSize;
+        const latestUnitCostNum = latestPricing
+          ? latestPricing.costPerPiece
+          : (latestSize > 0 ? (Number(latestBill.amount) || 0) / latestSize : (Number(latestBill.amount) || 0));
 
-        const pSize = Number(exp.packSize) || 0;
-        const pUnit = exp.packUnit || '';
-        const pricing = this.getExpenseUnitPricing(exp);
-        const isBulk = pricing ? pricing.isBulk : false;
-
-        let unitPriceStr = '';
-        if (pricing && isBulk && pricing.itemsPerBulk > 1) {
-          const crateCost = pSize > 0 ? (exp.amount / pSize) : exp.amount;
-          unitPriceStr = `(฿${this.formatUnitCost(pricing.costPerPiece)}/${pricing.pieceName} | ${pUnit}ละ ฿${crateCost.toFixed(0)})`;
-        } else if (pSize > 0 && exp.amount > 0) {
-          const uCost = exp.amount / pSize;
-          unitPriceStr = uCost < 1 ? `(฿${uCost.toFixed(2)}/${pUnit})` : `(฿${uCost.toFixed(1)}/${pUnit})`;
-        }
-
-        let qtyDisplay = exp.qtyDesc || (pSize > 0 ? `${pSize} ${pUnit}` : '');
-        if (pricing && isBulk && pricing.itemsPerBulk > 1) {
-          qtyDisplay = `${pSize} ${pUnit} (รวม ${pricing.totalPieces} ${pricing.pieceName} @ ${pricing.itemsPerBulk} ${pricing.pieceName}/${pUnit})`;
-        }
-
-        // ค้นหาข้อมูลสต๊อกคงเหลือปัจจุบันที่เชื่อมโยงกับรายการนี้
-        const expTitleNorm = this.normalizeProductName(exp.title);
+        // ค้นหาข้อมูลสต๊อกคงเหลือปัจจุบันที่เชื่อมโยงกับสินค้านี้
+        const normTitle = this.normalizeProductName(grp.title);
         const matchedStock = (this.data.stockItems || []).find(s => {
           if (!s || !s.name) return false;
-          if (exp.stockItemId && String(s.id) === String(exp.stockItemId)) return true;
-          return this.normalizeProductName(s.name) === expTitleNorm;
+          if (latestBill.stockItemId && String(s.id) === String(latestBill.stockItemId)) return true;
+          return this.normalizeProductName(s.name) === normTitle;
         });
 
-        let stockBalanceBadge = '';
+        let statusBadgeHtml = '';
+        let stockUnit = latestPieceUnit || 'หน่วย';
+        let leftKpiLabel = 'คงเหลือ';
+        let leftKpiValue = `${latestReceivedQty} ${this.escapeHtml(stockUnit)}`;
+        let avgCostNum = latestUnitCostNum;
+
         if (matchedStock) {
           const curQty = Number(matchedStock.qty) || 0;
           const minQ = Number(matchedStock.minQty) || 0;
-          const stockUnit = matchedStock.unit || (pricing ? pricing.pieceName : pUnit) || 'หน่วย';
-          const isLow = minQ > 0 && curQty <= minQ;
-          const badgeClass = isLow ? 'stock-badge-low' : 'stock-badge-normal';
-          const badgeIcon = isLow ? '⚠️' : '📊';
-          const badgeStyle = isLow
-            ? 'background:#fef2f2; color:#dc2626; border:1px solid #fecaca; font-weight:700; border-radius:9999px; padding:0.15rem 0.5rem; font-size:0.75rem; display:inline-flex; align-items:center; gap:0.25rem;'
-            : 'background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; font-weight:700; border-radius:9999px; padding:0.15rem 0.5rem; font-size:0.75rem; display:inline-flex; align-items:center; gap:0.25rem;';
-
-          let crateEquivText = '';
-          const crateCap = Number(matchedStock.crateBottles) || (pricing && pricing.itemsPerBulk > 1 ? pricing.itemsPerBulk : 0);
-          if (crateCap > 1) {
-            const equiv = (curQty / crateCap).toFixed(2).replace(/\.?0+$/, '');
-            crateEquivText = ` (~${equiv} ${matchedStock.rawUnit || pUnit || 'ลัง'})`;
+          stockUnit = matchedStock.unit || stockUnit;
+          leftKpiValue = `${curQty} ${this.escapeHtml(stockUnit)}`;
+          if (Number(matchedStock.unitCost) > 0) {
+            avgCostNum = Number(matchedStock.unitCost);
           }
-          stockBalanceBadge = `<span style="${badgeStyle}" title="ปริมาณคงเหลือในสต๊อกปัจจุบัน">${badgeIcon} คงเหลือในสต๊อก: <strong>${curQty} ${this.escapeHtml(stockUnit)}</strong>${crateEquivText}</span>`;
+
+          if (curQty <= 0) {
+            statusBadgeHtml = `<span style="background:#fef2f2; color:#dc2626; border:1px solid #fecaca; border-radius:9999px; padding:0.2rem 0.65rem; font-size:0.75rem; font-weight:700; white-space:nowrap;">หมดสต๊อก</span>`;
+          } else if (minQ > 0 && curQty <= minQ) {
+            statusBadgeHtml = `<span style="background:#fffbeb; color:#d97706; border:1px solid #fde68a; border-radius:9999px; padding:0.2rem 0.65rem; font-size:0.75rem; font-weight:700; white-space:nowrap;">ใกล้หมด</span>`;
+          } else {
+            statusBadgeHtml = `<span style="background:#dcfce7; color:#15803d; border:1px solid #bbf7d0; border-radius:9999px; padding:0.2rem 0.65rem; font-size:0.75rem; font-weight:700; white-space:nowrap;">มีสินค้าในสต๊อก</span>`;
+          }
+        } else {
+          leftKpiLabel = 'ยอดรวมจ่าย';
+          leftKpiValue = this.formatCurrency(grp.totalSpent);
+          statusBadgeHtml = `<span class="fec-badge ${meta.badgeClass}" style="white-space:nowrap;">${meta.catName}</span>`;
         }
 
+        const supParsed = latestBill.supplier ? this.parseSupplier(latestBill.supplier) : null;
+        const supText = supParsed && supParsed.name ? supParsed.name : (latestBill.supplier || '');
+        const subParts = [];
+        if (supText) subParts.push(this.escapeHtml(supText));
+        if (latestReceivedQty > 0) subParts.push(`รับเข้า ${latestReceivedQty} ${this.escapeHtml(latestPieceUnit)}`);
+        if (latestUnitCostNum > 0) subParts.push(`฿${this.formatUnitCost(latestUnitCostNum)}/${this.escapeHtml(latestPieceUnit)}`);
+
+        const escapedKey = this.escapeHtml(grp.key).replace(/'/g, "\\'");
+        const hasMultipleBills = grp.bills.length > 1;
+        const isExpanded = this.expandedExpenseGroupKeys && this.expandedExpenseGroupKeys.has(grp.key);
+
+        const renderBillMiniBox = (bill) => {
+          const bPricing = this.getExpenseUnitPricing(bill);
+          const bIsBulk = bPricing ? bPricing.isBulk : false;
+          const bSize = Number(bill.packSize) || 0;
+          const bUnit = bill.packUnit || 'หน่วย';
+          const bPieceUnit = bPricing ? bPricing.pieceName : bUnit;
+          const bReceivedQty = (bPricing && bIsBulk && bPricing.itemsPerBulk > 1) ? bPricing.totalPieces : bSize;
+          const bUnitCostNum = bPricing
+            ? bPricing.costPerPiece
+            : (bSize > 0 ? (Number(bill.amount) || 0) / bSize : (Number(bill.amount) || 0));
+          const bSupParsed = bill.supplier ? this.parseSupplier(bill.supplier) : null;
+          const bSupText = bSupParsed && bSupParsed.name ? bSupParsed.name : (bill.supplier || '');
+          const bParts = [];
+          if (bSupText) bParts.push(this.escapeHtml(bSupText));
+          if (bReceivedQty > 0) bParts.push(`รับเข้า ${bReceivedQty} ${this.escapeHtml(bPieceUnit)}`);
+          if (bUnitCostNum > 0) bParts.push(`฿${this.formatUnitCost(bUnitCostNum)}/${this.escapeHtml(bPieceUnit)}`);
+          return `
+            <div style="background:#f8fafc; border:1px solid #f1f5f9; border-radius:var(--radius-sm); padding:0.7rem 0.85rem; display:flex; justify-content:space-between; align-items:center; gap:0.75rem;">
+              <div style="min-width:0; flex:1;">
+                <div style="font-size:0.92rem; font-weight:700; color:var(--text-main);">${this.formatThaiDate(bill.date)}</div>
+                <div class="text-xs text-muted" style="margin-top:0.18rem; line-height:1.35;">${bParts.join(' &middot; ') || '-'}</div>
+              </div>
+              <div style="font-size:0.95rem; font-weight:700; color:var(--text-main); white-space:nowrap;">${this.formatCurrency(bill.amount)}</div>
+            </div>
+          `;
+        };
+
+        const olderBillsHtml = hasMultipleBills
+          ? billsNewestFirst.slice(1).map(renderBillMiniBox).join('')
+          : '';
+
         return `
-          <div class="figma-exp-card">
-            <!-- Top Row: Icon + Title/Meta + Amount -->
-            <div class="fec-top-row">
-              <div class="fec-left">
-                <div class="fec-avatar ${avatarClass}">
-                  <i data-lucide="${iconName}"></i>
-                </div>
-                <div class="fec-title-wrap">
-                  <div class="fec-title" title="${this.escapeHtml(exp.title)}">${this.escapeHtml(exp.title)}</div>
-                  <div class="fec-meta-row" style="flex-wrap:wrap; gap:0.35rem; align-items:center;">
-                    <span class="fec-date">${this.formatThaiDate(exp.date)}</span>
-                    <span class="fec-badge ${badgeClass}">${catName}</span>
-                    ${(() => {
-            if (!exp.supplier) return '';
-            const sup = this.parseSupplier(exp.supplier);
-            if (sup.isUrl) {
-              return `<a href="${this.escapeHtml(sup.url)}" target="_blank" rel="noopener noreferrer" 
-                          class="pill-tag orange-tag" 
-                          style="font-size:0.7rem; padding:0.1rem 0.45rem; text-decoration:none; display:inline-flex; align-items:center; gap:0.25rem; background:#ffedd5; color:#c2410c; border:1px solid #fed7aa; border-radius:9999px;" 
-                          title="เปิดลิ้งก์สั่งซื้อ ${this.escapeHtml(sup.domain)}">
-                          🛒 ${this.escapeHtml(sup.name)} <i data-lucide="external-link" style="width:10px;height:10px;"></i>
-                        </a>`;
-            }
-            return `<span class="pill-tag orange-tag" style="font-size:0.7rem; padding:0.1rem 0.45rem; background:#ffedd5; color:#c2410c; border:1px solid #fed7aa; border-radius:9999px;">🛒 ${this.escapeHtml(exp.supplier)}</span>`;
-          })()}
+          <div class="figma-exp-card" style="background:#ffffff; border:1px solid var(--border-color); border-radius:var(--radius-md); padding:1.05rem 1.2rem; display:flex; flex-direction:column; gap:0.85rem;">
+            <!-- Header: Product Name + Stock Status Pill -->
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:0.75rem;">
+              <div style="min-width:0;">
+                <div style="font-size:1.05rem; font-weight:800; color:var(--text-main); line-height:1.3;" title="${this.escapeHtml(grp.title)}">${this.escapeHtml(grp.title)}</div>
+              </div>
+              ${statusBadgeHtml}
+            </div>
+
+            <!-- KPI Summary Row: คงเหลือ | ต้นทุนเฉลี่ย -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; padding-bottom:0.85rem; border-bottom:1px solid #f1f5f9;">
+              <div>
+                <div class="text-xs text-muted" style="margin-bottom:0.2rem;">${leftKpiLabel}</div>
+                <div style="font-size:1.25rem; font-weight:800; color:var(--text-main); line-height:1.2;">${leftKpiValue}</div>
+              </div>
+              <div>
+                <div class="text-xs text-muted" style="margin-bottom:0.2rem;">ต้นทุนเฉลี่ย</div>
+                <div style="font-size:1.25rem; font-weight:800; color:var(--text-main); line-height:1.2;">฿${this.formatUnitCost(avgCostNum)}</div>
+                <div class="text-xs text-muted" style="margin-top:0.15rem;">ต่อ${this.escapeHtml(stockUnit)}</div>
+              </div>
+            </div>
+
+            <!-- Restock History Preview + Collapsible Multi-Bill Toggle -->
+            <div>
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem; margin-bottom:0.55rem;">
+                <span class="text-xs text-muted" style="font-weight:600;">ประวัติเติมสต๊อก ${grp.bills.length} รายการ</span>
+                ${hasMultipleBills ? `
+                  <button type="button"
+                    onclick="app.toggleExpenseGroupInlineHistory('${escapedKey}', this)"
+                    data-count="${grp.bills.length}"
+                    style="background:#eff6ff; color:#0284c7; border:1px solid #bae6fd; border-radius:9999px; padding:0.18rem 0.65rem; font-size:0.72rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:0.25rem;">
+                    <span>${isExpanded ? 'ซ่อนรายการ ▴' : `ดู ${grp.bills.length} รายการ ▾`}</span>
+                  </button>
+                ` : `
+                  <span style="background:#f1f5f9; color:#334155; border-radius:9999px; padding:0.15rem 0.6rem; font-size:0.72rem; font-weight:700;">1 รายการ</span>
+                `}
+              </div>
+              <div style="display:flex; flex-direction:column; gap:0.45rem;">
+                ${renderBillMiniBox(latestBill)}
+                ${hasMultipleBills ? `
+                  <div class="exp-group-older-bills" data-group-key="${this.escapeHtml(grp.key)}"
+                    style="display:${isExpanded ? 'flex' : 'none'}; flex-direction:column; gap:0.45rem;">
+                    ${olderBillsHtml}
                   </div>
-                </div>
-              </div>
-              <div class="fec-right">
-                <span class="fec-amount">-${this.formatCurrency(exp.amount)}</span>
-                ${unitPriceStr ? `<span class="fec-unit-cost">${unitPriceStr}</span>` : ''}
+                ` : ''}
               </div>
             </div>
 
-            <!-- Sub Row: Pack Quantity, Stock Balance & Note if present -->
-            ${qtyDisplay || exp.note || stockBalanceBadge ? `
-              <div class="fec-sub-row" style="display:flex; flex-wrap:wrap; gap:0.4rem; align-items:center;">
-                <div class="fec-pack-info" style="display:inline-flex; align-items:center; gap:0.4rem; flex-wrap:wrap;">
-                  ${qtyDisplay ? `<span>📦 บันทึกรับ: ${this.escapeHtml(qtyDisplay)}</span>` : ''}
-                  ${stockBalanceBadge}
-                </div>
-                ${exp.note ? `<div class="fec-note" style="margin-left:auto;" title="${this.escapeHtml(exp.note)}">📝 ${this.escapeHtml(exp.note)}</div>` : ''}
-              </div>
-            ` : ''}
-
-            <!-- Action Buttons -->
-            <div class="fec-actions">
-              <button type="button" class="btn-figma-tx-action edit" onclick="app.openExpenseModal('${exp.id}')">
-                <i data-lucide="edit-3"></i>
-                <span>แก้ไข</span>
-              </button>
-              <button type="button" class="btn-figma-tx-action delete" onclick="app.deleteExpense('${exp.id}')">
-                <i data-lucide="trash-2"></i>
-                <span>ลบ</span>
-              </button>
-            </div>
+            <!-- View All History Pill Button -->
+            <button type="button"
+              onclick="app.openExpenseGroupHistoryModal('${escapedKey}')"
+              style="width:100%; padding:0.55rem 1rem; border-radius:9999px; border:1.5px solid #0284c7; background:#ffffff; color:#0284c7; font-size:0.86rem; font-weight:700; cursor:pointer; transition:all 0.15s; text-align:center;">
+              ดูประวัติทั้งหมด
+            </button>
           </div>
         `;
       }).join('');
@@ -3585,6 +3625,149 @@ class WaterFlowApp {
     if (tbody) {
       tbody.innerHTML = '';
     }
+
+    const histModal = document.getElementById('expenseGroupHistoryModal');
+    if (histModal && histModal.classList.contains('active') && this._activeExpenseHistoryKey) {
+      this.renderExpenseGroupHistoryModal();
+    }
+
+    this.refreshLucide();
+  }
+
+  toggleExpenseGroupInlineHistory(groupKey, btnEl) {
+    if (!this.expandedExpenseGroupKeys) {
+      this.expandedExpenseGroupKeys = new Set();
+    }
+    const card = btnEl ? btnEl.closest('.figma-exp-card') : null;
+    const olderBox = card ? card.querySelector('.exp-group-older-bills') : null;
+    const isNowExpanded = !this.expandedExpenseGroupKeys.has(groupKey);
+    if (isNowExpanded) {
+      this.expandedExpenseGroupKeys.add(groupKey);
+    } else {
+      this.expandedExpenseGroupKeys.delete(groupKey);
+    }
+    if (olderBox) {
+      olderBox.style.display = isNowExpanded ? 'flex' : 'none';
+    }
+    if (btnEl) {
+      const count = btnEl.dataset.count || '';
+      const span = btnEl.querySelector('span');
+      if (span) {
+        span.textContent = isNowExpanded ? 'ซ่อนรายการ ▴' : `ดู ${count} รายการ ▾`;
+      }
+    }
+  }
+
+  openExpenseGroupHistoryModal(groupKey) {
+    this._activeExpenseHistoryKey = groupKey;
+    this.renderExpenseGroupHistoryModal();
+    const modal = document.getElementById('expenseGroupHistoryModal');
+    if (modal) {
+      modal.classList.add('active');
+      this.refreshLucide();
+    }
+  }
+
+  renderExpenseGroupHistoryModal() {
+    const groupKey = this._activeExpenseHistoryKey;
+    const titleEl = document.getElementById('expGroupHistoryTitle');
+    const subEl = document.getElementById('expGroupHistorySubtitle');
+    const summaryEl = document.getElementById('expGroupHistorySummary');
+    const listEl = document.getElementById('expGroupHistoryList');
+    const countEl = document.getElementById('expGroupHistoryCountLabel');
+    if (!groupKey || !listEl) return;
+
+    const bills = (this.data.expenses || []).filter(exp => {
+      const normTitle = this.normalizeProductName(exp.title);
+      const k = normTitle || (exp.stockItemId ? `stk:${exp.stockItemId}` : `id:${exp.id}`);
+      return k === groupKey;
+    }).sort((a, b) => {
+      const dCmp = (b.date || '').localeCompare(a.date || '');
+      return dCmp !== 0 ? dCmp : String(b.id || '').localeCompare(String(a.id || ''));
+    });
+
+    if (bills.length === 0) {
+      const modal = document.getElementById('expenseGroupHistoryModal');
+      if (modal) modal.classList.remove('active');
+      return;
+    }
+
+    const first = bills[0];
+    const totalSpent = bills.reduce((sum, b) => sum + (Number(b.amount) || 0), 0);
+    const normTitle = this.normalizeProductName(first.title);
+    const matchedStock = (this.data.stockItems || []).find(s => {
+      if (!s || !s.name) return false;
+      if (first.stockItemId && String(s.id) === String(first.stockItemId)) return true;
+      return this.normalizeProductName(s.name) === normTitle;
+    });
+
+    if (titleEl) titleEl.textContent = first.title || 'ประวัติเติมสต๊อก';
+    if (subEl) subEl.textContent = `ประวัติการบันทึกซื้อ & เติมสต๊อกทั้งหมด ${bills.length} ครั้ง`;
+    if (countEl) countEl.textContent = `ทั้งหมด ${bills.length} รายการ`;
+
+    if (summaryEl) {
+      const stockText = matchedStock ? `${Number(matchedStock.qty) || 0} ${this.escapeHtml(matchedStock.unit || 'หน่วย')}` : '-';
+      const avgCostText = matchedStock && Number(matchedStock.unitCost) > 0
+        ? `฿${this.formatUnitCost(matchedStock.unitCost)}/${this.escapeHtml(matchedStock.unit || 'หน่วย')}`
+        : '-';
+      summaryEl.innerHTML = `
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:var(--radius-sm); padding:0.55rem 0.7rem;">
+          <div class="text-xs text-muted">คงเหลือปัจจุบัน</div>
+          <div class="font-bold text-main" style="font-size:0.95rem; margin-top:2px;">${stockText}</div>
+        </div>
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:var(--radius-sm); padding:0.55rem 0.7rem;">
+          <div class="text-xs text-muted">ต้นทุนเฉลี่ย</div>
+          <div class="font-bold text-primary" style="font-size:0.95rem; margin-top:2px;">${avgCostText}</div>
+        </div>
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:var(--radius-sm); padding:0.55rem 0.7rem;">
+          <div class="text-xs text-muted">ยอดซื้อสะสม</div>
+          <div class="font-bold text-main" style="font-size:0.95rem; margin-top:2px;">${this.formatCurrency(totalSpent)}</div>
+        </div>
+      `;
+    }
+
+    listEl.innerHTML = bills.map(exp => {
+      const pricing = this.getExpenseUnitPricing(exp);
+      const isBulk = pricing ? pricing.isBulk : false;
+      const pSize = Number(exp.packSize) || 0;
+      const pUnit = exp.packUnit || 'หน่วย';
+      const pieceUnit = pricing ? pricing.pieceName : pUnit;
+      const receivedQty = (pricing && isBulk && pricing.itemsPerBulk > 1) ? pricing.totalPieces : pSize;
+      const uCost = pricing ? pricing.costPerPiece : (pSize > 0 ? (Number(exp.amount) || 0) / pSize : (Number(exp.amount) || 0));
+
+      const supParsed = exp.supplier ? this.parseSupplier(exp.supplier) : null;
+      const supBadge = supParsed && supParsed.name
+        ? (supParsed.isUrl
+          ? `<a href="${this.escapeHtml(supParsed.url)}" target="_blank" rel="noopener noreferrer" style="color:#c2410c; font-weight:600; text-decoration:underline;">${this.escapeHtml(supParsed.name)}</a>`
+          : `<span>${this.escapeHtml(supParsed.name)}</span>`)
+        : '';
+
+      const detailParts = [];
+      if (supBadge) detailParts.push(supBadge);
+      if (receivedQty > 0) detailParts.push(`รับเข้า ${receivedQty} ${this.escapeHtml(pieceUnit)}`);
+      if (uCost > 0) detailParts.push(`฿${this.formatUnitCost(uCost)}/${this.escapeHtml(pieceUnit)}`);
+
+      return `
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:var(--radius-md); padding:0.75rem 0.9rem; display:flex; justify-content:space-between; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+          <div style="min-width:0; flex:1;">
+            <div style="font-size:0.92rem; font-weight:700; color:var(--text-main);">${this.formatThaiDate(exp.date)}</div>
+            <div class="text-xs text-muted" style="margin-top:0.2rem; line-height:1.4;">${detailParts.join(' &middot; ') || '-'}</div>
+            ${exp.note ? `<div class="text-xs text-muted" style="margin-top:0.2rem;">📝 ${this.escapeHtml(exp.note)}</div>` : ''}
+          </div>
+          <div style="display:flex; align-items:center; gap:0.5rem; flex-shrink:0;">
+            <span class="font-bold text-main" style="font-size:0.98rem; margin-right:0.25rem;">${this.formatCurrency(exp.amount)}</span>
+            <button type="button" class="btn-figma-tx-action edit" style="padding:0.3rem 0.55rem;" onclick="app.openExpenseModal('${exp.id}')" title="แก้ไขบิลนี้">
+              <i data-lucide="edit-3"></i>
+              <span>แก้ไข</span>
+            </button>
+            <button type="button" class="btn-figma-tx-action delete" style="padding:0.3rem 0.55rem;" onclick="app.deleteExpense('${exp.id}')" title="ลบบิลนี้">
+              <i data-lucide="trash-2"></i>
+              <span>ลบ</span>
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
 
     this.refreshLucide();
   }
@@ -4983,7 +5166,11 @@ class WaterFlowApp {
   // MODALS
   // -------------------------------------------------------------------------
   openExpenseModal(expId = null) {
+    this._pendingRecipeExpenseAddFromPicker = false;
     const modal = document.getElementById('expenseModal');
+    const histOpen = document.getElementById('expenseGroupHistoryModal')?.classList.contains('active');
+    const pickerOpen = document.getElementById('recipeExpensePickerModal')?.classList.contains('active');
+    if (modal) modal.style.zIndex = (histOpen || pickerOpen) ? '1070' : '';
     const form = document.getElementById('expenseForm');
     form.reset();
 
@@ -6087,6 +6274,154 @@ class WaterFlowApp {
     return calculatedCups || (liters === 5 ? 20 : 24);
   }
 
+  openRecipeExpensePicker(row) {
+    this._activeRecipeExpenseRow = row;
+    const modal = document.getElementById('recipeExpensePickerModal');
+    const searchInput = document.getElementById('recipeExpensePickerSearch');
+    if (searchInput) searchInput.value = '';
+    this.renderRecipeExpensePickerList();
+    if (modal) {
+      modal.classList.add('active');
+      this.refreshLucide();
+    }
+  }
+
+  renderRecipeExpensePickerList() {
+    const listEl = document.getElementById('recipeExpensePickerList');
+    const countEl = document.getElementById('recipeExpensePickerCountLabel');
+    const searchInput = document.getElementById('recipeExpensePickerSearch');
+    const clearBtn = document.getElementById('recipeExpensePickerSearchClearBtn');
+    const query = (searchInput?.value || '').trim().toLowerCase();
+    if (clearBtn) {
+      clearBtn.style.display = query ? 'block' : 'none';
+    }
+    if (!listEl) return;
+
+    const currentExpId = this._activeRecipeExpenseRow?.querySelector('.calc-expense-select')?.value || '';
+    const currentExpObj = currentExpId ? (this.data.expenses || []).find(e => e && String(e.id) === String(currentExpId)) : null;
+    const currentExpNormTitle = currentExpObj ? this.normalizeProductName(currentExpObj.title) : '';
+
+    // กรองเฉพาะหมวด "วัตถุดิบชงน้ำ" (INGREDIENT) ที่ยังมีสต๊อก/พร้อมใช้งาน และรวมรายการซ้ำให้เหลือเฉพาะบิลล่าสุด
+    const availableIngredients = (this.data.expenses || []).filter(exp => {
+      if (!exp) return false;
+      if (exp.category !== 'INGREDIENT') return false;
+      return this.isExpenseAvailableForSelection(exp);
+    });
+
+    const uniqueMap = new Map();
+    availableIngredients.forEach((exp, idx) => {
+      const normTitle = this.normalizeProductName(exp.title);
+      const key = normTitle || (exp.stockItemId ? `stk:${exp.stockItemId}` : `id:${exp.id}`);
+      const existing = uniqueMap.get(key);
+      if (!existing) {
+        uniqueMap.set(key, { exp, idx });
+      } else {
+        const expDate = String(exp.date || '').substring(0, 10);
+        const existingDate = String(existing.exp.date || '').substring(0, 10);
+        if (expDate > existingDate || (expDate === existingDate && idx < existing.idx)) {
+          uniqueMap.set(key, { exp, idx });
+        }
+      }
+    });
+
+    let items = Array.from(uniqueMap.values()).map(entry => entry.exp);
+
+    if (query) {
+      items = items.filter(exp => {
+        const title = String(exp.title || '').toLowerCase();
+        const sup = String(exp.supplier || '').toLowerCase();
+        const note = String(exp.note || '').toLowerCase();
+        const packUnit = String(exp.packUnit || '').toLowerCase();
+        const netUnit = String(exp.netUnit || '').toLowerCase();
+        return title.includes(query) || sup.includes(query) || note.includes(query) || packUnit.includes(query) || netUnit.includes(query);
+      });
+    }
+
+    if (countEl) {
+      countEl.textContent = `พบ ${items.length} รายการ (เฉพาะวัตถุดิบชงน้ำ)`;
+    }
+
+    if (items.length === 0) {
+      listEl.innerHTML = `
+        <div style="text-align:center; padding:2rem 1rem; background:#f8fafc; border:1.5px dashed #cbd5e1; border-radius:var(--radius-md);">
+          <div style="font-size:2rem; margin-bottom:0.35rem;">🍵</div>
+          <div class="font-bold text-main" style="font-size:0.92rem;">
+            ${query ? `ไม่พบวัตถุดิบชงน้ำที่ตรงกับ "${this.escapeHtml(searchInput.value.trim())}"` : 'ยังไม่มีรายการวัตถุดิบชงน้ำในบันทึกค่าใช้จ่าย'}
+          </div>
+          <p class="text-xs text-muted" style="margin:0.25rem 0 0.85rem;">กดปุ่ม "เพิ่มวัตถุดิบ" เพื่อบันทึกค่าใช้จ่าย &amp; รับเข้าสต๊อกร้านค้าได้ทันที</p>
+          <button type="button" class="btn-fastwork btn-sm" onclick="app.openAddIngredientFromRecipePicker()">
+            <i data-lucide="plus" style="width:14px;height:14px;"></i>
+            <span>+ เพิ่มวัตถุดิบใหม่</span>
+          </button>
+        </div>
+      `;
+      this.refreshLucide();
+      return;
+    }
+
+    listEl.innerHTML = items.map(exp => {
+      const pricing = this.getExpenseUnitPricing(exp);
+      const badgeSpec = pricing ? pricing.badgeSpec : `฿${exp.amount}`;
+      const isSelected = Boolean(
+        (currentExpId && String(currentExpId) === String(exp.id)) ||
+        (currentExpNormTitle && this.normalizeProductName(exp.title) === currentExpNormTitle)
+      );
+      const supParsed = exp.supplier ? this.parseSupplier(exp.supplier) : null;
+      const supLabel = supParsed && supParsed.name ? `🛒 ${supParsed.name}` : '';
+      const billText = pricing && pricing.isBulk ? `บิล ฿${Number(exp.amount || 0).toLocaleString()}` : '';
+
+      return `
+        <button type="button"
+          onclick="app.selectRecipeExpenseFromPicker('${this.escapeHtml(String(exp.id)).replace(/'/g, "\\'")}')"
+          style="width:100%; text-align:left; padding:0.7rem 0.85rem; border-radius:var(--radius-md); border:1.5px solid ${isSelected ? 'var(--primary)' : 'var(--border-color)'}; background:${isSelected ? '#eff6ff' : '#ffffff'}; display:flex; align-items:center; justify-content:space-between; gap:0.75rem; cursor:pointer; transition:all 0.15s;">
+          <div style="min-width:0; flex:1;">
+            <div style="display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap;">
+              <span class="font-bold text-main" style="font-size:0.9rem;">${this.escapeHtml(exp.title || 'ไม่ระบุชื่อ')}</span>
+              ${isSelected ? '<span class="pill-tag blue-tag" style="font-size:0.7rem; padding:0.1rem 0.45rem;">เลือกอยู่</span>' : ''}
+            </div>
+            <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; margin-top:0.2rem; font-size:0.75rem; color:var(--text-muted);">
+              <span style="color:var(--primary); font-weight:600;">${this.escapeHtml(badgeSpec)}</span>
+              ${billText ? `<span>• ${this.escapeHtml(billText)}</span>` : ''}
+              ${supLabel ? `<span>• ${this.escapeHtml(supLabel)}</span>` : ''}
+            </div>
+          </div>
+          <span style="flex-shrink:0; font-size:0.78rem; font-weight:700; color:${isSelected ? 'var(--primary)' : '#475569'};">
+            ${isSelected ? '✓ เลือกแล้ว' : 'เลือก →'}
+          </span>
+        </button>
+      `;
+    }).join('');
+    this.refreshLucide();
+  }
+
+  selectRecipeExpenseFromPicker(expId) {
+    if (this._activeRecipeExpenseRow && typeof this._activeRecipeExpenseRow._applySelectedExpense === 'function') {
+      this._activeRecipeExpenseRow._applySelectedExpense(expId);
+    }
+    const modal = document.getElementById('recipeExpensePickerModal');
+    if (modal) modal.classList.remove('active');
+    this._activeRecipeExpenseRow = null;
+  }
+
+  openAddIngredientFromRecipePicker() {
+    const searchVal = (document.getElementById('recipeExpensePickerSearch')?.value || '').trim();
+    this.openExpenseModal();
+    this._pendingRecipeExpenseAddFromPicker = true;
+    const expModal = document.getElementById('expenseModal');
+    if (expModal) {
+      expModal.style.zIndex = '1070';
+    }
+    const catSelect = document.getElementById('expCategory');
+    if (catSelect) {
+      catSelect.value = 'INGREDIENT';
+      catSelect.dispatchEvent(new Event('change'));
+    }
+    const titleInput = document.getElementById('expTitle');
+    if (titleInput && !titleInput.value && searchVal) {
+      titleInput.value = searchVal;
+    }
+  }
+
   addIngredientRowToModal(ingData = {}) {
     const container = document.getElementById('recipeIngredientsContainer');
     if (!container) return;
@@ -6221,6 +6556,14 @@ class WaterFlowApp {
 
     const hasCalc = (pPrice !== '' && pPrice > 0) || (pSize !== '' && pSize > 0) || Boolean(calcData);
     const isCupMode = document.getElementById('recMode')?.value === 'cup';
+    const selectedExpObj = selectedExpId ? (this.data.expenses || []).find(e => e && String(e.id) === String(selectedExpId)) : null;
+    const selectedExpPricing = selectedExpObj ? this.getExpenseUnitPricing(selectedExpObj) : null;
+    const selectedExpBadgeSpec = selectedExpPricing ? selectedExpPricing.badgeSpec : (selectedExpObj ? `฿${selectedExpObj.amount}` : '');
+    const selectedExpLabel = selectedExpObj
+      ? (selectedExpPricing && selectedExpPricing.isBulk
+        ? `${selectedExpObj.title} (${selectedExpBadgeSpec} | บิล ฿${selectedExpObj.amount})`
+        : `${selectedExpObj.title} (${selectedExpBadgeSpec})`)
+      : '';
 
     const standardUnits = ['oz', 'ml', 'g', 'ลูก', 'ช้อนโต๊ะ', 'ชุด', 'ชิ้น'];
     const currentUnit = amountUnit || 'g';
@@ -6259,36 +6602,15 @@ class WaterFlowApp {
             <label style="font-size:0.75rem; font-weight:700; color:var(--primary); display:block; margin-bottom:0.25rem;">
               📦 เลือกจากบันทึกค่าใช้จ่าย & วัตถุดิบ:
             </label>
-            <select class="form-input calc-expense-select" style="font-size:0.85rem; height:38px; padding:0.35rem 0.6rem; background:#ffffff; width:100%; text-overflow:ellipsis;" title="เลือกวัตถุดิบที่บันทึกไว้">
-              <option value="">-- เลือกวัตถุดิบที่บันทึกไว้ --</option>
-              ${(this.data.expenses || []).filter(exp => this.isExpenseAvailableForSelection(exp)).map(exp => {
-      const pricing = this.getExpenseUnitPricing(exp);
-      const isSelected = selectedExpId && selectedExpId === exp.id ? 'selected' : '';
-      const unitPrice = pricing ? pricing.calcPrice : (Number(exp.amount) || 0);
-      const unitSize = pricing ? pricing.calcSize : (Number(exp.packSize) || 1);
-      const unitUnit = pricing ? pricing.calcUnit : (exp.packUnit || 'หน่วย');
-      const badgeSpec = pricing ? pricing.badgeSpec : `฿${exp.amount}`;
-      const displayText = pricing && pricing.isBulk
-        ? `${exp.title} (${badgeSpec} | บิล ฿${exp.amount})`
-        : `${exp.title} (${badgeSpec})`;
-
-      return `<option value="${exp.id}" ${isSelected}
-                  data-title="${this.escapeHtml(exp.title)}" 
-                  data-amount="${exp.amount}" 
-                  data-unitprice="${unitPrice}" 
-                  data-unitsize="${unitSize}" 
-                  data-unitunit="${this.escapeHtml(unitUnit)}" 
-                  data-badgespec="${this.escapeHtml(badgeSpec)}" 
-                  data-qty="${this.escapeHtml(exp.qtyDesc || '')}" 
-                  data-packsize="${exp.packSize || ''}" 
-                  data-packunit="${this.escapeHtml(exp.packUnit || '')}" 
-                  data-netweight="${exp.netWeight || ''}" 
-                  data-netunit="${this.escapeHtml(exp.netUnit || '')}" 
-                  data-note="${this.escapeHtml(exp.note || '')}">
-                  ${this.escapeHtml(displayText)}
-                </option>`;
-    }).join('')}
-            </select>
+            <input type="hidden" class="calc-expense-select" value="${this.escapeHtml(selectedExpId)}">
+            <button type="button" class="form-input calc-expense-picker-btn"
+              style="font-size:0.85rem; height:38px; padding:0.35rem 0.65rem; background:#ffffff; width:100%; display:flex; align-items:center; justify-content:space-between; gap:0.5rem; text-align:left; cursor:pointer;"
+              title="แตะเพื่อเลือกวัตถุดิบชงน้ำจากบันทึกค่าใช้จ่าย & วัตถุดิบ">
+              <span class="calc-expense-picker-label" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:${selectedExpLabel ? 'var(--text-main)' : 'var(--text-muted)'}; font-weight:${selectedExpLabel ? '600' : '400'};">
+                ${selectedExpLabel ? this.escapeHtml(selectedExpLabel) : '-- แตะเพื่อเลือกวัตถุดิบชงน้ำ --'}
+              </span>
+              <span style="flex-shrink:0; font-size:0.75rem; color:var(--primary); font-weight:700;">เลือก ▾</span>
+            </button>
           </div>
           <div style="min-width:0;">
             <label class="calc-use-label" style="font-size:0.75rem; font-weight:700; color:var(--text-main); display:block; margin-bottom:0.25rem;">
@@ -6319,6 +6641,8 @@ class WaterFlowApp {
     const amountUnitInput = row.querySelector('.ing-amount-unit');
     const amountUnitLabel = row.querySelector('.ing-amount-unit-label');
     const expenseSelect = row.querySelector('.calc-expense-select');
+    const expensePickerBtn = row.querySelector('.calc-expense-picker-btn');
+    const expensePickerLabel = row.querySelector('.calc-expense-picker-label');
     const packPriceInput = row.querySelector('.calc-pack-price');
     const packSizeInput = row.querySelector('.calc-pack-size');
     const packUnitInput = row.querySelector('.calc-pack-unit');
@@ -6381,25 +6705,36 @@ class WaterFlowApp {
       this.updateRecipeModalCalculations();
     };
 
-    // Auto-fill from expense selection
-    if (expenseSelect) {
-      expenseSelect.addEventListener('change', (e) => {
-        const opt = e.target.selectedOptions[0];
-        if (!opt || !opt.value) return;
+    // Auto-fill from expense selection (via Popup Modal Picker)
+    const applySelectedExpense = (expId) => {
+      if (!expId) return;
+      const expObj = (this.data.expenses || []).find(x => x && String(x.id) === String(expId));
+      if (!expObj) return;
 
-        const title = opt.getAttribute('data-title') || '';
-        const expObj = (this.data.expenses || []).find(x => x.id === opt.value);
-        const pricing = this.getExpenseUnitPricing(expObj);
+      if (expenseSelect) expenseSelect.value = expObj.id;
+      const pricing = this.getExpenseUnitPricing(expObj);
+      const badgeSpec = pricing ? pricing.badgeSpec : `฿${expObj.amount}`;
+      const displayText = pricing && pricing.isBulk
+        ? `${expObj.title} (${badgeSpec} | บิล ฿${expObj.amount})`
+        : `${expObj.title} (${badgeSpec})`;
 
-        // ถ้าช่องชื่อว่าง ให้กรอกชื่อวัตถุดิบ (ตัดวงเล็บด้านหลังออก)
-        if (!nameInput.value.trim()) {
-          nameInput.value = title.split('(')[0].trim();
-        }
+      if (expensePickerLabel) {
+        expensePickerLabel.textContent = displayText;
+        expensePickerLabel.style.color = 'var(--text-main)';
+        expensePickerLabel.style.fontWeight = '600';
+      }
 
-        // กรอกราคาและขนาดต่อหน่วยบรรจุจริง (เช่น ขวดละ 52.50 บาท, 1 kg)
-        const unitPrice = pricing ? pricing.calcPrice : (parseFloat(opt.getAttribute('data-unitprice')) || parseFloat(opt.getAttribute('data-amount')) || 0);
-        let parsedSize = pricing ? pricing.calcSize : (parseFloat(opt.getAttribute('data-unitsize')) || 1);
-        let parsedUnit = pricing ? pricing.calcUnit : (opt.getAttribute('data-unitunit') || 'หน่วย');
+      const title = expObj.title || '';
+
+      // ถ้าช่องชื่อว่าง ให้กรอกชื่อวัตถุดิบ (ตัดวงเล็บด้านหลังออก)
+      if (!nameInput.value.trim()) {
+        nameInput.value = title.split('(')[0].trim();
+      }
+
+      // กรอกราคาและขนาดต่อหน่วยบรรจุจริง (เช่น ขวดละ 52.50 บาท, 1 kg)
+      const unitPrice = pricing ? pricing.calcPrice : (parseFloat(expObj.amount) || 0);
+      let parsedSize = pricing ? pricing.calcSize : (parseFloat(expObj.packSize) || 1);
+      let parsedUnit = pricing ? pricing.calcUnit : (expObj.packUnit || 'หน่วย');
 
         packPriceInput.value = unitPrice;
         packSizeInput.value = parsedSize;
@@ -6634,6 +6969,12 @@ class WaterFlowApp {
           useAmountInput.value = autoUse || 1;
           runPackCalc();
         }
+    };
+    row._applySelectedExpense = applySelectedExpense;
+
+    if (expensePickerBtn) {
+      expensePickerBtn.addEventListener('click', () => {
+        this.openRecipeExpensePicker(row);
       });
     }
 
@@ -7765,7 +8106,10 @@ class WaterFlowApp {
       this.saveData();
       this.syncRecipesWithExpenses();
       const expModal = document.getElementById('expenseModal');
-      if (expModal) expModal.classList.remove('active');
+      if (expModal) {
+        expModal.classList.remove('active');
+        expModal.style.zIndex = '';
+      }
 
       this.renderExpenses();
       this.renderRecipes();
@@ -7773,6 +8117,21 @@ class WaterFlowApp {
       this.renderStockHistory();
       this.renderLowStockAlertView();
       this.renderDashboard();
+
+      if (this._pendingRecipeExpenseAddFromPicker) {
+        this._pendingRecipeExpenseAddFromPicker = false;
+        const addedExp = !editId ? (this.data.expenses || [])[0] : null;
+        const pickerModal = document.getElementById('recipeExpensePickerModal');
+        if (addedExp && this._activeRecipeExpenseRow && document.body.contains(this._activeRecipeExpenseRow)) {
+          if (typeof this._activeRecipeExpenseRow._applySelectedExpense === 'function') {
+            this._activeRecipeExpenseRow._applySelectedExpense(addedExp.id);
+          }
+          if (pickerModal) pickerModal.classList.remove('active');
+          this._activeRecipeExpenseRow = null;
+        } else if (pickerModal && pickerModal.classList.contains('active')) {
+          this.renderRecipeExpensePickerList();
+        }
+      }
     } catch (err) {
       console.error('Error saving expense:', err);
       this.showToast('เกิดข้อผิดพลาดในการบันทึก: ' + err.message, 'danger');

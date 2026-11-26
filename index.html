@@ -1048,8 +1048,10 @@
                     style="width:100%; text-align:left; padding:0.75rem 1rem; border:none; background:none; cursor:pointer; display:flex; align-items:center; gap:0.75rem; transition:background 0.2s;">
                     <span style="font-size:1.35rem; line-height:1;">🥤</span>
                     <div style="flex:1;">
-                      <div style="font-weight:700; color:var(--text-main); font-size:0.9rem;">สูตรต่อ 1 แก้ว (ชงสด)</div>
-                      <div style="font-size:0.74rem; color:var(--text-muted); margin-top:2px;">คำนวณต้นทุนต่อแก้วโดยตรง</div>
+                      <div style="font-weight:700; color:var(--text-main); font-size:0.9rem;">สูตรต่อ 1 แก้ว (ชงสด)
+                      </div>
+                      <div style="font-size:0.74rem; color:var(--text-muted); margin-top:2px;">คำนวณต้นทุนต่อแก้วโดยตรง
+                      </div>
                     </div>
                   </button>
                   <div style="height:1px; background:var(--border-color); margin:0.25rem 0;"></div>
@@ -1057,8 +1059,10 @@
                     style="width:100%; text-align:left; padding:0.75rem 1rem; border:none; background:none; cursor:pointer; display:flex; align-items:center; gap:0.75rem; transition:background 0.2s;">
                     <span style="font-size:1.35rem; line-height:1;">🏺</span>
                     <div style="flex:1;">
-                      <div style="font-weight:700; color:var(--text-main); font-size:0.9rem;">สูตรต่อ 1 โหล (ชงถัง/เหยือก)</div>
-                      <div style="font-size:0.74rem; color:var(--text-muted); margin-top:2px;">ขยายสูตรเป็นถัง 5–12 ลิตร</div>
+                      <div style="font-weight:700; color:var(--text-main); font-size:0.9rem;">สูตรต่อ 1 โหล
+                        (ชงถัง/เหยือก)</div>
+                      <div style="font-size:0.74rem; color:var(--text-muted); margin-top:2px;">ขยายสูตรเป็นถัง 5–12 ลิตร
+                      </div>
                     </div>
                   </button>
                 </div>
@@ -1368,15 +1372,14 @@
                     <div
                       style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.45rem;">
                       <span class="text-xs font-bold text-muted">รายการเบิกขายในวันดังกล่าว:</span>
-                      <div style="display:flex; align-items:center; gap:0.45rem; flex:1; justify-content:flex-end; min-width:170px;">
+                      <div
+                        style="display:flex; align-items:center; gap:0.45rem; flex:1; justify-content:flex-end; min-width:170px;">
                         <div style="position:relative; flex:1; max-width:210px; min-width:130px;">
                           <i data-lucide="search"
                             style="position:absolute; left:8px; top:50%; transform:translateY(-50%); width:13px; height:13px; color:#94a3b8; pointer-events:none;"></i>
                           <input type="text" id="stockProfitDaySearchInput" class="form-input-sm"
-                            placeholder="ค้นหาชื่อสินค้า..."
-                            oninput="app.renderStockProfitCard()"
-                            onchange="app.renderStockProfitCard()"
-                            onsearch="app.renderStockProfitCard()"
+                            placeholder="ค้นหาชื่อสินค้า..." oninput="app.renderStockProfitCard()"
+                            onchange="app.renderStockProfitCard()" onsearch="app.renderStockProfitCard()"
                             style="height:28px; width:100%; padding-left:1.65rem; padding-right:1.5rem; font-size:0.75rem; background:#ffffff;">
                           <button type="button" id="stockProfitDaySearchClearBtn"
                             onclick="app.clearSearchInput('stockProfitDaySearchInput', 'renderStockProfitCard')"
@@ -1385,7 +1388,8 @@
                             ✕
                           </button>
                         </div>
-                        <span class="text-xs text-muted" id="stockProfitDayItemsDetailBadge" style="white-space:nowrap;">0 ชิ้น</span>
+                        <span class="text-xs text-muted" id="stockProfitDayItemsDetailBadge"
+                          style="white-space:nowrap;">0 ชิ้น</span>
                       </div>
                     </div>
                     <div id="stockProfitDayItemsList"
@@ -1567,26 +1571,25 @@
 
         <!-- Urgent Purchasing Cards Grid -->
         <div class="card mb-4" style="border: 1px solid #fecaca; box-shadow: 0 4px 20px rgba(239,68,68,0.06);">
-          <div class="card-header space-between" style="background: #fffafa; border-bottom: 1px solid #fee2e2; flex-wrap:wrap; gap:0.65rem;">
+          <div class="card-header space-between"
+            style="background: #fffafa; border-bottom: 1px solid #fee2e2; flex-wrap:wrap; gap:0.65rem;">
             <div class="card-header-title"
               style="color: #991b1b; display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
               <i data-lucide="bell-ring" style="color: #ef4444;"></i>
               <span>รายการเตือนสั่งซื้อ</span>
               <span id="lowStockFilterIndicator" style="display:none; margin-left:0.5rem;"></span>
             </div>
-            <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; flex:1; justify-content:flex-end;">
+            <div
+              style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; flex:1; justify-content:flex-end;">
               <div style="position:relative; min-width:190px; flex:1; max-width:260px;">
                 <i data-lucide="search"
                   style="position:absolute; left:9px; top:50%; transform:translateY(-50%); width:14px; height:14px; color:#94a3b8; pointer-events:none;"></i>
                 <input type="text" id="lowStockSearchInput" class="form-input-sm"
-                  placeholder="ค้นหาชื่อสินค้า, ร้านค้า, หมวด..."
-                  oninput="app.renderLowStockAlertView()"
-                  onchange="app.renderLowStockAlertView()"
-                  onsearch="app.renderLowStockAlertView()"
+                  placeholder="ค้นหาชื่อสินค้า, ร้านค้า, หมวด..." oninput="app.renderLowStockAlertView()"
+                  onchange="app.renderLowStockAlertView()" onsearch="app.renderLowStockAlertView()"
                   style="height:32px; width:100%; padding-left:1.85rem; padding-right:1.65rem; font-size:0.8rem; background:#ffffff; border:1px solid #fecaca;">
                 <button type="button" id="lowStockSearchClearBtn"
-                  onclick="app.clearSearchInput('lowStockSearchInput', 'renderLowStockAlertView')"
-                  title="ล้างคำค้นหา"
+                  onclick="app.clearSearchInput('lowStockSearchInput', 'renderLowStockAlertView')" title="ล้างคำค้นหา"
                   style="display:none; position:absolute; right:5px; top:50%; transform:translateY(-50%); background:none; border:none; color:#94a3b8; cursor:pointer; font-size:0.85rem; line-height:1; padding:2px 4px;">
                   ✕
                 </button>
@@ -1609,25 +1612,32 @@
           <!-- Category Filter Pills -->
           <div class="figma-pills-scroll-row" id="lowStockCategoryPills"
             style="padding:0.65rem 1rem; background:#ffffff; border-bottom:1px solid #fee2e2; margin:0;">
-            <button type="button" class="figma-pill-filter active" data-cat="ALL" onclick="app.setLowStockCategoryFilter('ALL')">
+            <button type="button" class="figma-pill-filter active" data-cat="ALL"
+              onclick="app.setLowStockCategoryFilter('ALL')">
               <span>ทั้งหมด</span>
             </button>
-            <button type="button" class="figma-pill-filter" data-cat="INGREDIENT" onclick="app.setLowStockCategoryFilter('INGREDIENT')">
+            <button type="button" class="figma-pill-filter" data-cat="INGREDIENT"
+              onclick="app.setLowStockCategoryFilter('INGREDIENT')">
               <span>🍵 วัตถุดิบชงน้ำ</span>
             </button>
-            <button type="button" class="figma-pill-filter" data-cat="PACKAGING" onclick="app.setLowStockCategoryFilter('PACKAGING')">
+            <button type="button" class="figma-pill-filter" data-cat="PACKAGING"
+              onclick="app.setLowStockCategoryFilter('PACKAGING')">
               <span>🥤 บรรจุภัณฑ์ &amp; แก้ว</span>
             </button>
-            <button type="button" class="figma-pill-filter" data-cat="FRIDGE_DRINK" onclick="app.setLowStockCategoryFilter('FRIDGE_DRINK')">
+            <button type="button" class="figma-pill-filter" data-cat="FRIDGE_DRINK"
+              onclick="app.setLowStockCategoryFilter('FRIDGE_DRINK')">
               <span>🧊 น้ำขายในตู้</span>
             </button>
-            <button type="button" class="figma-pill-filter" data-cat="STOCK" onclick="app.setLowStockCategoryFilter('STOCK')">
+            <button type="button" class="figma-pill-filter" data-cat="STOCK"
+              onclick="app.setLowStockCategoryFilter('STOCK')">
               <span>📦 ยกลัง/สำเร็จรูป</span>
             </button>
-            <button type="button" class="figma-pill-filter" data-cat="OTHER" onclick="app.setLowStockCategoryFilter('OTHER')">
+            <button type="button" class="figma-pill-filter" data-cat="OTHER"
+              onclick="app.setLowStockCategoryFilter('OTHER')">
               <span>🛠️ ค่าใช้จ่ายอื่นๆ</span>
             </button>
-            <button type="button" class="figma-pill-filter" data-cat="PACK_SELL" onclick="app.setLowStockCategoryFilter('PACK_SELL')">
+            <button type="button" class="figma-pill-filter" data-cat="PACK_SELL"
+              onclick="app.setLowStockCategoryFilter('PACK_SELL')">
               <span>📦 ของแพ็คขาย</span>
             </button>
           </div>
@@ -1687,8 +1697,7 @@
                   placeholder="ค้นหาชื่อสินค้า, หมายเหตุ, วันที่..." oninput="app.renderStockHistory()"
                   style="padding-left:2rem; padding-right:1.75rem; width:100%; min-width:220px;">
                 <button type="button" id="stockLogSearchClearBtn"
-                  onclick="app.clearSearchInput('stockLogSearchInput', 'renderStockHistory')"
-                  title="ล้างคำค้นหา"
+                  onclick="app.clearSearchInput('stockLogSearchInput', 'renderStockHistory')" title="ล้างคำค้นหา"
                   style="display:none; position:absolute; right:6px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:0.9rem; line-height:1; padding:2px 4px;">
                   ✕
                 </button>
@@ -2594,7 +2603,8 @@
     <div class="modal-dialog modal-lg">
       <div class="modal-header">
         <div style="display:flex; align-items:center; gap:0.65rem;">
-          <div style="width:36px; height:36px; background:linear-gradient(135deg, var(--primary) 0%, #2563eb 100%); color:#fff; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+          <div
+            style="width:36px; height:36px; background:linear-gradient(135deg, var(--primary) 0%, #2563eb 100%); color:#fff; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
             <i data-lucide="beaker" style="width:18px;height:18px;"></i>
           </div>
           <div>
@@ -2605,7 +2615,8 @@
         <button class="close-modal-btn" data-close="recipeModal">&times;</button>
       </div>
 
-      <form id="recipeForm" style="display:flex; flex-direction:column; flex:1; min-height:0; overflow:hidden;" novalidate>
+      <form id="recipeForm" style="display:flex; flex-direction:column; flex:1; min-height:0; overflow:hidden;"
+        novalidate>
         <div class="modal-body rec-modal-body">
           <input type="hidden" id="recipeEditId">
           <input type="hidden" id="recMode" value="jar">
@@ -2621,14 +2632,17 @@
             <button type="button" class="recipe-mode-tab-btn" id="btnModeCup"
               style="flex:1; border:none; padding:0.55rem 0.75rem; border-radius:8px; font-weight:600; font-size:0.85rem; cursor:pointer; background:transparent; color:var(--text-muted); display:flex; align-items:center; justify-content:center; gap:0.4rem; transition:all 0.2s;">
               <span>🥤 ต่อ 1 แก้ว</span>
-              <span class="pill-tag" style="font-size:0.68rem; padding:0.1rem 0.4rem; background:#e2e8f0; color:#475569;">ชงสด</span>
+              <span class="pill-tag"
+                style="font-size:0.68rem; padding:0.1rem 0.4rem; background:#e2e8f0; color:#475569;">ชงสด</span>
             </button>
           </div>
 
           <!-- Menu Name -->
           <div class="form-group mb-3">
-            <label class="form-label font-bold" for="recName">ชื่อเมนูเครื่องดื่ม <span class="text-danger">*</span></label>
-            <input type="text" id="recName" class="form-input font-bold" placeholder="เช่น ชาไทย, ชาเขียว, โกโก้เข้มข้น" required>
+            <label class="form-label font-bold" for="recName">ชื่อเมนูเครื่องดื่ม <span
+                class="text-danger">*</span></label>
+            <input type="text" id="recName" class="form-input font-bold" placeholder="เช่น ชาไทย, ชาเขียว, โกโก้เข้มข้น"
+              required>
           </div>
 
           <!-- Batch Capacity & Yield (Jar Mode) -->
@@ -2637,7 +2651,8 @@
               <div class="form-group mb-0">
                 <label class="form-label" for="recJarLiters">ปริมาตรโหล/ถัง</label>
                 <div class="input-with-affix">
-                  <input type="number" id="recJarLiters" class="form-input font-bold" value="6" min="0.5" step="0.5" required>
+                  <input type="number" id="recJarLiters" class="form-input font-bold" value="6" min="0.5" step="0.5"
+                    required>
                   <span class="affix-right">ลิตร</span>
                 </div>
                 <div class="rec-liter-presets">
@@ -2662,11 +2677,12 @@
               <div class="form-group mb-0">
                 <label class="form-label" for="recYieldCups">ชงได้ประมาณ</label>
                 <div class="input-with-affix">
-                  <input type="number" id="recYieldCups" class="form-input font-bold" value="24" min="1" step="1" readonly
-                    style="background-color:#ffffff; color:var(--primary); font-size:1.05rem;">
+                  <input type="number" id="recYieldCups" class="form-input font-bold" value="24" min="1" step="1"
+                    readonly style="background-color:#ffffff; color:var(--primary); font-size:1.05rem;">
                   <span class="affix-right">แก้ว</span>
                 </div>
-                <span class="field-hint" id="recYieldHintText" style="font-size:0.72rem; margin-top:4px; display:block;">~24 แก้ว</span>
+                <span class="field-hint" id="recYieldHintText"
+                  style="font-size:0.72rem; margin-top:4px; display:block;">~24 แก้ว</span>
               </div>
             </div>
           </div>
@@ -2676,7 +2692,8 @@
             <div class="rec-section-head">
               <div>
                 <div class="rec-section-title" style="color:var(--primary);">🥤 สัดส่วนต่อ 1 แก้ว</div>
-                <span class="text-xs text-muted" id="singleCupSectionHint">คูณขยายเป็น <span id="cupScaleCountBadge" class="font-bold text-primary">24</span> แก้วอัตโนมัติ</span>
+                <span class="text-xs text-muted" id="singleCupSectionHint">คูณขยายเป็น <span id="cupScaleCountBadge"
+                    class="font-bold text-primary">24</span> แก้วอัตโนมัติ</span>
               </div>
               <div style="display:flex; align-items:center; gap:0.4rem;">
                 <button type="button" class="btn-fastwork-sm" id="btnAddSingleCupRow"
@@ -2698,7 +2715,8 @@
               </div>
 
               <div id="syncCupToBatchWrapper" style="text-align:right;">
-                <button type="button" class="btn-fastwork-sm" id="btnSyncCupToBatch" title="คำนวณและอัปเดตสัดส่วนลงสูตรโหลทันที">
+                <button type="button" class="btn-fastwork-sm" id="btnSyncCupToBatch"
+                  title="คำนวณและอัปเดตสัดส่วนลงสูตรโหลทันที">
                   <span>⚡ ขยายสูตรลง 1 โหล</span>
                 </button>
               </div>
@@ -2740,20 +2758,25 @@
 
             <div class="rec-price-grid">
               <div>
-                <label class="form-label mb-1" for="recSellingPrice" style="font-size:0.78rem; font-weight:700;">💰 ราคาขาย/แก้ว</label>
+                <label class="form-label mb-1" for="recSellingPrice" style="font-size:0.78rem; font-weight:700;">💰
+                  ราคาขาย/แก้ว</label>
                 <div class="input-with-affix" style="width:100%;">
                   <span class="affix-left" style="font-weight:700; color:var(--primary);">฿</span>
-                  <input type="number" id="recSellingPrice" class="form-input font-bold" placeholder="ราคาขาย" value="25"
-                    min="0" step="any" style="font-size:1.05rem; font-weight:800; color:var(--primary); height:40px; padding-left:2rem;" required>
+                  <input type="number" id="recSellingPrice" class="form-input font-bold" placeholder="ราคาขาย"
+                    value="25" min="0" step="any"
+                    style="font-size:1.05rem; font-weight:800; color:var(--primary); height:40px; padding-left:2rem;"
+                    required>
                 </div>
               </div>
 
               <div>
-                <label class="form-label mb-1" for="recTargetProfit" style="font-size:0.78rem; font-weight:700; color:#c2410c;">🎯 กำไรเป้าหมาย/แก้ว</label>
+                <label class="form-label mb-1" for="recTargetProfit"
+                  style="font-size:0.78rem; font-weight:700; color:#c2410c;">🎯 กำไรเป้าหมาย/แก้ว</label>
                 <div class="input-with-affix" style="width:100%;">
                   <span class="affix-left" style="font-weight:800; color:#ea580c;">฿</span>
                   <input type="number" id="recTargetProfit" class="form-input font-bold" placeholder="5" value="5"
-                    min="0.5" step="0.5" style="font-size:1.05rem; font-weight:800; color:#c2410c; height:40px; padding-left:2rem; background:#fff7ed; border-color:#fdba74;">
+                    min="0.5" step="0.5"
+                    style="font-size:1.05rem; font-weight:800; color:#c2410c; height:40px; padding-left:2rem; background:#fff7ed; border-color:#fdba74;">
                 </div>
               </div>
 
@@ -3172,7 +3195,8 @@
     <div class="modal-dialog modal-lg" style="max-width: 740px;">
       <div class="modal-header">
         <div style="display:flex; align-items:center; gap:0.65rem;">
-          <div style="width:36px; height:36px; border-radius:10px; background:#dcfce7; color:#15803d; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+          <div
+            style="width:36px; height:36px; border-radius:10px; background:#dcfce7; color:#15803d; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
             <i data-lucide="trending-up" style="width:18px;height:18px;"></i>
           </div>
           <div>
@@ -3292,6 +3316,87 @@
             <span>ยืนยันการเลือก</span>
           </button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recipe Ingredient Expense Picker Modal (เลือกวัตถุดิบชงน้ำจากบันทึกค่าใช้จ่าย & วัตถุดิบ) -->
+  <div class="modal-backdrop" id="recipeExpensePickerModal" style="z-index: 1060;">
+    <div class="modal-dialog modal-lg" style="max-width: 580px;">
+      <div class="modal-header">
+        <div style="display:flex; align-items:center; gap:0.6rem;">
+          <div class="icon-circle" style="background:#eff6ff; color:var(--primary);">
+            <i data-lucide="package"></i>
+          </div>
+          <div>
+            <h3 class="modal-title" style="margin-bottom:0;">เลือกวัตถุดิบชงน้ำ</h3>
+            <span class="text-xs text-muted">กรองเฉพาะหมวดวัตถุดิบชงน้ำจากบันทึกค่าใช้จ่าย &amp; วัตถุดิบ</span>
+          </div>
+        </div>
+        <button type="button" class="close-modal-btn" data-close="recipeExpensePickerModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; margin-bottom:0.75rem;">
+          <div style="position:relative; flex:1; min-width:190px;">
+            <i data-lucide="search"
+              style="position:absolute; left:10px; top:50%; transform:translateY(-50%); width:16px; height:16px; color:#94a3b8; pointer-events:none;"></i>
+            <input type="text" id="recipeExpensePickerSearch" class="form-input"
+              placeholder="ค้นหาชื่อวัตถุดิบ, ร้านค้า..."
+              style="padding-left:34px; padding-right:28px; height:38px; font-size:0.86rem;"
+              oninput="app.renderRecipeExpensePickerList()" onchange="app.renderRecipeExpensePickerList()"
+              onsearch="app.renderRecipeExpensePickerList()">
+            <button type="button" id="recipeExpensePickerSearchClearBtn"
+              onclick="app.clearSearchInput('recipeExpensePickerSearch', 'renderRecipeExpensePickerList')"
+              title="ล้างคำค้นหา"
+              style="display:none; position:absolute; right:6px; top:50%; transform:translateY(-50%); background:none; border:none; color:#94a3b8; cursor:pointer; font-size:0.85rem; line-height:1; padding:2px 4px;">
+              ✕
+            </button>
+          </div>
+          <button type="button" class="btn-fastwork" id="btnAddIngredientFromPicker"
+            onclick="app.openAddIngredientFromRecipePicker()"
+            style="height:38px; padding:0 0.9rem; font-size:0.82rem; white-space:nowrap; display:inline-flex; align-items:center; gap:0.35rem;">
+            <i data-lucide="plus" style="width:15px;height:15px;"></i>
+            <span>เพิ่มวัตถุดิบ</span>
+          </button>
+        </div>
+        <div id="recipeExpensePickerList"
+          style="max-height: 360px; overflow-y:auto; display:flex; flex-direction:column; gap:0.45rem; padding-right:2px;">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+      <div class="modal-footer" style="justify-content:space-between; flex-wrap:wrap; gap:0.5rem;">
+        <span class="text-xs text-muted" id="recipeExpensePickerCountLabel">พบ 0 รายการ</span>
+        <button type="button" class="btn-secondary" data-close="recipeExpensePickerModal">ปิด</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Expense Group Restock History Modal (ดูประวัติการเติมสต๊อก/บิลซื้อทั้งหมดของสินค้า) -->
+  <div class="modal-backdrop" id="expenseGroupHistoryModal" style="z-index: 1055;">
+    <div class="modal-dialog modal-lg" style="max-width: 620px;">
+      <div class="modal-header">
+        <div style="display:flex; align-items:center; gap:0.65rem; min-width:0;">
+          <div class="icon-circle" style="background:#eff6ff; color:#0284c7; flex-shrink:0;">
+            <i data-lucide="history"></i>
+          </div>
+          <div style="min-width:0;">
+            <h3 class="modal-title" id="expGroupHistoryTitle" style="margin-bottom:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">ประวัติเติมสต๊อก</h3>
+            <span class="text-xs text-muted" id="expGroupHistorySubtitle">รายการบิลซื้อและรับเข้าสต๊อกทั้งหมด</span>
+          </div>
+        </div>
+        <button type="button" class="close-modal-btn" data-close="expenseGroupHistoryModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="expGroupHistorySummary" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:0.6rem; margin-bottom:0.85rem;">
+          <!-- Rendered by JS -->
+        </div>
+        <div id="expGroupHistoryList" style="max-height: 380px; overflow-y:auto; display:flex; flex-direction:column; gap:0.55rem; padding-right:2px;">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+      <div class="modal-footer" style="justify-content:space-between; flex-wrap:wrap; gap:0.5rem;">
+        <span class="text-xs text-muted" id="expGroupHistoryCountLabel">0 รายการ</span>
+        <button type="button" class="btn-secondary" data-close="expenseGroupHistoryModal">ปิด</button>
       </div>
     </div>
   </div>
