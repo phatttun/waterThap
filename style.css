@@ -11022,3 +11022,125 @@ body {
     min-width: 110px;
   }
 }
+
+/* ═══ Recipe Create/Edit Modal Mobile & iPhone Redesign (<= 640px) ═══ */
+@media (max-width: 640px) {
+  .modal-recipe-redesign .rec-modal-header {
+    padding: 0.75rem 1rem 0.65rem;
+  }
+
+  .modal-recipe-redesign .rec-modal-body {
+    padding: 0.85rem 1rem;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .modal-recipe-redesign input[type="text"],
+  .modal-recipe-redesign input[type="number"],
+  .modal-recipe-redesign select,
+  .modal-recipe-redesign textarea {
+    font-size: 16px !important;
+  }
+
+  .modal-recipe-redesign .rec-mode-switcher {
+    display: flex;
+    gap: 0.35rem;
+    padding: 0.25rem;
+    background: #f1f5f9;
+    border-radius: 12px;
+  }
+
+  .modal-recipe-redesign .recipe-mode-tab-btn {
+    min-height: 40px;
+    padding: 0.45rem 0.5rem !important;
+    font-size: 0.82rem !important;
+    white-space: nowrap;
+  }
+
+  .modal-recipe-redesign .rec-mode-badge {
+    display: none !important;
+  }
+
+  .modal-recipe-redesign .rec-modal-section {
+    padding: 0.8rem 0.85rem;
+    border-radius: 12px;
+  }
+
+  .modal-recipe-redesign .rec-yield-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.65rem;
+  }
+
+  .modal-recipe-redesign .rec-yield-grid > .form-group:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .modal-recipe-redesign .rec-liter-presets {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.35rem;
+  }
+
+  .modal-recipe-redesign .rec-liter-presets .btn-liter-preset {
+    padding: 0.38rem 0;
+    text-align: center;
+    font-size: 0.78rem;
+  }
+
+  .modal-recipe-redesign .ingredient-row {
+    padding: 0.7rem;
+    border-radius: 12px;
+  }
+
+  .modal-recipe-redesign .ingredient-calc-panel > div:first-child {
+    grid-template-columns: 1fr !important;
+    gap: 0.55rem !important;
+  }
+
+  .modal-recipe-redesign .calc-expense-picker-btn,
+  .modal-recipe-redesign .calc-use-amount {
+    height: 42px !important;
+  }
+
+  .modal-recipe-redesign .rec-finance-card {
+    padding: 0.85rem;
+  }
+
+  .modal-recipe-redesign .rec-cost-strip {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+
+  .modal-recipe-redesign .rec-cost-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.15rem;
+    padding: 0.5rem 0.65rem;
+    font-size: 0.74rem;
+  }
+
+  .modal-recipe-redesign .rec-price-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.55rem;
+  }
+
+  .modal-recipe-redesign #modalRecipeTotalJarProfitBox {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.55rem 0.8rem;
+  }
+
+  .modal-recipe-redesign .rec-modal-footer {
+    display: grid;
+    grid-template-columns: 1fr 1.6fr;
+    gap: 0.55rem;
+    padding: 0.75rem 1rem;
+  }
+
+  .modal-recipe-redesign .rec-modal-footer button {
+    width: 100%;
+    height: 44px;
+    justify-content: center;
+  }
+}

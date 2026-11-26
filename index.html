@@ -2575,19 +2575,20 @@
 
   <!-- MODAL: ADD / EDIT RECIPE (สูตรชงน้ำ - Redesigned) -->
   <div class="modal-backdrop" id="recipeModal">
-    <div class="modal-dialog modal-lg">
-      <div class="modal-header">
-        <div style="display:flex; align-items:center; gap:0.65rem;">
+    <div class="modal-dialog modal-lg modal-recipe-redesign">
+      <div class="modal-mobile-handle"></div>
+      <div class="modal-header rec-modal-header">
+        <div style="display:flex; align-items:center; gap:0.65rem; min-width:0;">
           <div
             style="width:36px; height:36px; background:linear-gradient(135deg, var(--primary) 0%, #2563eb 100%); color:#fff; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
             <i data-lucide="beaker" style="width:18px;height:18px;"></i>
           </div>
-          <div>
+          <div style="min-width:0;">
             <h3 class="modal-title" id="recipeModalTitle" style="margin-bottom:0;">สร้าง / แก้ไขสูตรชงน้ำ</h3>
-            <span class="text-xs text-muted">คำนวณต้นทุนวัตถุดิบและกำไรต่อแก้วอัตโนมัติ</span>
+            <span class="text-xs text-muted">คำนวณต้นทุน &amp; กำไรอัตโนมัติ</span>
           </div>
         </div>
-        <button class="close-modal-btn" data-close="recipeModal">&times;</button>
+        <button type="button" class="close-modal-btn" data-close="recipeModal" aria-label="ปิด">&times;</button>
       </div>
 
       <form id="recipeForm" style="display:flex; flex-direction:column; flex:1; min-height:0; overflow:hidden;"
@@ -2602,12 +2603,12 @@
             <button type="button" class="recipe-mode-tab-btn" id="btnModeJar"
               style="flex:1; border:none; padding:0.55rem 0.75rem; border-radius:8px; font-weight:700; font-size:0.85rem; cursor:pointer; background:#ffffff; color:var(--primary); box-shadow:0 1px 3px rgba(0,0,0,0.08); display:flex; align-items:center; justify-content:center; gap:0.4rem; transition:all 0.2s;">
               <span>🏺 ต่อ 1 โหล / ถัง</span>
-              <span class="pill-tag green-tag" style="font-size:0.68rem; padding:0.1rem 0.4rem;">ชงหลายแก้ว</span>
+              <span class="pill-tag green-tag rec-mode-badge" style="font-size:0.68rem; padding:0.1rem 0.4rem;">ชงหลายแก้ว</span>
             </button>
             <button type="button" class="recipe-mode-tab-btn" id="btnModeCup"
               style="flex:1; border:none; padding:0.55rem 0.75rem; border-radius:8px; font-weight:600; font-size:0.85rem; cursor:pointer; background:transparent; color:var(--text-muted); display:flex; align-items:center; justify-content:center; gap:0.4rem; transition:all 0.2s;">
               <span>🥤 ต่อ 1 แก้ว</span>
-              <span class="pill-tag"
+              <span class="pill-tag rec-mode-badge"
                 style="font-size:0.68rem; padding:0.1rem 0.4rem; background:#e2e8f0; color:#475569;">ชงสด</span>
             </button>
           </div>
@@ -2782,7 +2783,7 @@
           </div>
         </div>
 
-        <div class="modal-footer">
+        <div class="modal-footer rec-modal-footer">
           <button type="button" class="btn-secondary" data-close="recipeModal">ยกเลิก</button>
           <button type="submit" class="btn-fastwork" id="btnSaveRecipe">
             <i data-lucide="save" style="width:16px;height:16px;"></i>
