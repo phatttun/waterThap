@@ -9129,22 +9129,38 @@ class WaterFlowApp {
     const noteInput = document.getElementById('quickRestockNote');
     if (noteInput) noteInput.value = '';
 
+    const netWeightInput = document.getElementById('quickRestockNetWeight');
+    const netUnitSelect = document.getElementById('quickRestockNetUnit');
+    let preNetWeight = item.netWeight || '';
+    let preNetUnit = item.netUnit || 'g';
+    if (!preNetWeight) {
+      const itemNorm = this.normalizeProductName(item.name);
+      const matchedExp = (this.data.expenses || []).find(e =>
+        e && e.netWeight && ((e.stockItemId && String(e.stockItemId) === String(item.id)) || this.normalizeProductName(e.title) === itemNorm)
+      );
+      if (matchedExp) {
+        preNetWeight = matchedExp.netWeight;
+        preNetUnit = matchedExp.netUnit || 'g';
+      }
+    }
+    if (netWeightInput) netWeightInput.value = preNetWeight;
+    if (netUnitSelect) netUnitSelect.value = preNetUnit;
+
     // ฟังก์ชันคำนวณสด
     const updatePreview = () => {
       const addQty = parseFloat(addInput?.value) || 0;
       const expenseAmount = parseFloat(priceInput?.value) || 0;
       const totalQty = currentQty + addQty;
 
-      // ต้นทุนต่อหน่วยของการซื้อรอบนี้ = ยอดเงินรวม / จำนวนที่ซื้อ
+      // ต้นทุนต่อหน่วยของการซื้อรอบนี้ = ยอดเงินรวม / จำนวนที่ซื้อ (ใช้ความละเอียดสูงก่อนปัดเศษแสดงผล)
       const unitCostThisRound = addQty > 0 ? (expenseAmount / addQty) : 0;
 
-      // สูตรต้นทุนเฉลี่ยถ่วงน้ำหนัก (Moving Average Cost)
-      // ((จำนวนเดิม * ทุนเดิม) + ยอดเงินรวมรอบนี้) / จำนวนรวม
-      let weightedAvgCost = currentUnitCost;
-      if (totalQty > 0) {
-        const totalCostSum = (currentQty * currentUnitCost) + expenseAmount;
-        weightedAvgCost = parseFloat((totalCostSum / totalQty).toFixed(4));
-      }
+      // สูตรต้นทุนเฉลี่ยถ่วงน้ำหนัก (Weighted Average Cost)
+      // ((จำนวนเดิม * ทุนเดิม) + ยอดเงินรวมรอบนี้) / จำนวนรวมทั้งหมด
+      const rawWeightedAvg = totalQty > 0
+        ? (((currentQty * currentUnitCost) + expenseAmount) / totalQty)
+        : currentUnitCost;
+      const weightedAvgCost = parseFloat(rawWeightedAvg.toFixed(4));
 
       const expEl = document.getElementById('quickRestockTotalExpensePreview');
       const qtyEl = document.getElementById('quickRestockTotalQtyPreview');
@@ -9161,29 +9177,32 @@ class WaterFlowApp {
         }
       }
 
-      const diffVal = parseFloat((weightedAvgCost - currentUnitCost).toFixed(4));
+      const displayNewAvg = this.formatUnitCost(rawWeightedAvg);
+      const displayOldAvg = this.formatUnitCost(currentUnitCost);
+      const dispDiff = parseFloat((parseFloat(displayNewAvg) - parseFloat(displayOldAvg)).toFixed(4));
+      const rawDiff = rawWeightedAvg - currentUnitCost;
 
       if (avgEl) {
-        avgEl.textContent = `฿${this.formatUnitCost(weightedAvgCost)} / ${unit}`;
-        if (diffVal > 0) {
-          avgEl.style.color = '#ef4444'; // ราคาเฉลี่ยแพงขึ้น
-        } else if (diffVal < 0) {
-          avgEl.style.color = '#10b981'; // ราคาเฉลี่ยถูกลง
+        avgEl.textContent = `฿${displayNewAvg} / ${unit}`;
+        if (dispDiff > 0) {
+          avgEl.style.color = '#ef4444'; // ราคาเฉลี่ยแพงขึ้นชัดเจน
+        } else if (dispDiff < 0) {
+          avgEl.style.color = '#10b981'; // ราคาเฉลี่ยถูกลงชัดเจน
         } else {
           avgEl.style.color = 'var(--text-main)';
         }
       }
 
       if (diffEl) {
-        const unitCostText = addQty > 0 ? ` (เฉลี่ย ฿${this.formatUnitCost(unitCostThisRound)}/${unit})` : '';
-        if (diffVal > 0) {
-          diffEl.textContent = `🔺 แพงขึ้น +฿${this.formatUnitCost(diffVal)} จากทุนเดิม (฿${this.formatUnitCost(currentUnitCost)})${unitCostText}`;
+        const unitCostText = addQty > 0 ? ` (รอบนี้ ฿${this.formatUnitCost(unitCostThisRound)}/${unit})` : '';
+        if (dispDiff > 0) {
+          diffEl.textContent = `🔺 แพงขึ้น +฿${this.formatUnitCost(dispDiff)} จากทุนเดิม (฿${displayOldAvg})${unitCostText}`;
           diffEl.style.color = '#ef4444';
-        } else if (diffVal < 0) {
-          diffEl.textContent = `🔻 ถูกลง -฿${this.formatUnitCost(Math.abs(diffVal))} จากทุนเดิม (฿${this.formatUnitCost(currentUnitCost)})${unitCostText}`;
+        } else if (dispDiff < 0) {
+          diffEl.textContent = `🔻 ถูกลง -฿${this.formatUnitCost(Math.abs(dispDiff))} จากทุนเดิม (฿${displayOldAvg})${unitCostText}`;
           diffEl.style.color = '#10b981';
         } else {
-          diffEl.textContent = `⚖️ เท่ากับราคาเดิม (฿${this.formatUnitCost(currentUnitCost)})${unitCostText}`;
+          diffEl.textContent = `⚖️ เท่ากับทุนเดิม (฿${displayOldAvg})${unitCostText}`;
           diffEl.style.color = 'var(--text-muted)';
         }
       }
@@ -9214,6 +9233,9 @@ class WaterFlowApp {
     const purchaseDate = document.getElementById('quickRestockDate')?.value || this.formatDate(new Date());
     const supplier = document.getElementById('quickRestockSupplier')?.value.trim() || item.supplier || '';
     const customNote = document.getElementById('quickRestockNote')?.value.trim() || '';
+    const netWeightRaw = parseFloat(document.getElementById('quickRestockNetWeight')?.value);
+    const netWeight = (!isNaN(netWeightRaw) && netWeightRaw > 0) ? netWeightRaw : null;
+    const netUnit = netWeight ? (document.getElementById('quickRestockNetUnit')?.value || 'g') : null;
 
     if (addQty <= 0) {
       this.showToast('กรุณาระบุจำนวนที่ซื้อเพิ่มอย่างน้อย 1', 'error');
@@ -9236,6 +9258,8 @@ class WaterFlowApp {
     item.qty = totalQty;
     item.unitCost = newAvgCost;
     if (supplier) item.supplier = supplier;
+    item.netWeight = netWeight;
+    item.netUnit = netUnit;
 
     // 2. สร้างบิลรายจ่ายลงในเดือนนั้นอัตโนมัติ (Expenses)
     if (!Array.isArray(this.data.expenses)) {
@@ -9257,6 +9281,8 @@ class WaterFlowApp {
         : `${addQty} ${item.unit || 'หน่วย'} (รวม ฿${totalExpense} เฉลี่ย ฿${this.formatUnitCost(unitPriceThisRound)}/${item.unit || 'หน่วย'})`,
       packSize: isBulk ? parseFloat((addQty / crateBottles).toFixed(2)) : addQty,
       packUnit: isBulk ? rawUnit : (item.unit || 'หน่วย'),
+      netWeight: netWeight,
+      netUnit: netUnit,
       crateBottles: isBulk ? crateBottles : null,
       minQty: item.minQty,
       supplier: supplier,

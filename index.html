@@ -1154,22 +1154,24 @@
                   <i data-lucide="boxes" style="width:22px; height:22px;"></i>
                 </div>
                 <div>
-                  <h2 class="stock-main-title" style="color:#ffffff; margin:0; font-size:1.22rem; font-weight:800;">ระบบสต๊อกร้านค้า &amp; คลังวัตถุดิบ</h2>
+                  <h2 class="stock-main-title" style="color:#ffffff; margin:0; font-size:1.22rem; font-weight:800;">
+                    ระบบสต๊อกร้านค้า &amp; คลังวัตถุดิบ</h2>
                   <p class="stock-main-desc" style="color:#94a3b8; margin:0.15rem 0 0 0; font-size:0.78rem;">
                     ปรับเพิ่ม-ลดสต๊อก ซิงค์ราคาต้นทุนจากบิลซื้ออัตโนมัติ
                   </p>
                 </div>
               </div>
-              <div class="stock-main-hero-actions" style="display:flex; gap:0.45rem; flex-wrap:wrap; align-items:center;">
-                <div style="display:inline-flex; align-items:center; gap:0.35rem; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.22); border-radius:var(--radius-sm); padding:0.25rem 0.6rem; height:36px;"
+              <div class="stock-main-hero-actions"
+                style="display:flex; gap:0.45rem; flex-wrap:wrap; align-items:center;">
+                <div
+                  style="display:inline-flex; align-items:center; gap:0.35rem; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.22); border-radius:var(--radius-sm); padding:0.25rem 0.6rem; height:36px;"
                   title="เลือกวันที่สำหรับบันทึกเพิ่ม/ลดสต๊อก (รองรับย้อนหลัง)">
                   <i data-lucide="calendar" style="width:14px; height:14px; color:#93c5fd; flex-shrink:0;"></i>
-                  <span style="font-size:0.74rem; color:#cbd5e1; white-space:nowrap; font-weight:600;">วันที่บันทึก:</span>
-                  <input type="date" id="stockActionDateInput"
-                    onchange="app.onStockActionDateChange()"
+                  <span
+                    style="font-size:0.74rem; color:#cbd5e1; white-space:nowrap; font-weight:600;">วันที่บันทึก:</span>
+                  <input type="date" id="stockActionDateInput" onchange="app.onStockActionDateChange()"
                     style="background:transparent; border:none; color:#ffffff; font-size:0.8rem; font-weight:700; outline:none; cursor:pointer; color-scheme:dark;">
-                  <button type="button" id="btnStockActionDateToday"
-                    onclick="app.resetStockActionDateToToday()"
+                  <button type="button" id="btnStockActionDateToday" onclick="app.resetStockActionDateToToday()"
                     style="display:none; background:rgba(255,255,255,0.22); border:none; color:#ffffff; border-radius:4px; padding:0.15rem 0.4rem; font-size:0.7rem; font-weight:700; cursor:pointer;">
                     วันนี้
                   </button>
@@ -1191,9 +1193,11 @@
 
             <!-- Total Expense, Stock Value & Category Pills -->
             <div style="padding-top:0.85rem;">
-              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:0.75rem; margin-bottom:0.75rem; align-items:stretch;">
+              <div
+                style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:0.75rem; margin-bottom:0.75rem; align-items:stretch;">
                 <!-- ยอดจ่ายรวมทั้งหมด -->
-                <div style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:0.7rem 0.9rem;">
+                <div
+                  style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:0.7rem 0.9rem;">
                   <div class="feh-top" style="margin-bottom:0.25rem;">
                     <div class="feh-label" style="color:#cbd5e1; font-size:0.78rem;">
                       <i data-lucide="receipt" style="width:14px;height:14px;"></i>
@@ -1214,7 +1218,8 @@
                       <i data-lucide="banknote" style="width:14px;height:14px;"></i>
                       <span>มูลค่าสต๊อกในร้านรวม</span>
                     </div>
-                    <span class="feh-count-badge" style="background:rgba(139,92,246,0.25); color:#ede9fe; border-color:rgba(196,181,253,0.3);">ต้นทุนจริง</span>
+                    <span class="feh-count-badge"
+                      style="background:rgba(139,92,246,0.25); color:#ede9fe; border-color:rgba(196,181,253,0.3);">ต้นทุนจริง</span>
                   </div>
                   <div class="feh-amount-wrap" style="margin-bottom:0;">
                     <span class="feh-amount" id="kpiStockTotalValue" style="color:#ddd6fe; font-size:1.5rem;">฿0</span>
@@ -1262,7 +1267,8 @@
                 </div>
                 <div>
                   <div style="display:flex; align-items:center; gap:0.45rem; flex-wrap:wrap;">
-                    <span class="font-bold text-main" style="font-size:0.92rem;">กำไรเบิกขายน้ำในตู้ &amp; แพ็คขาย</span>
+                    <span class="font-bold text-main" style="font-size:0.92rem;">กำไรเบิกขายน้ำในตู้ &amp;
+                      แพ็คขาย</span>
                     <span id="stockProfitDayTotalVal"
                       style="font-size:0.95rem; font-weight:800; color:#15803d; background:#f0fdf4; border:1px solid #bbf7d0; padding:0.1rem 0.55rem; border-radius:9999px;">+฿0.00</span>
                   </div>
@@ -1284,7 +1290,8 @@
                   <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
                 </button>
                 <button type="button" class="btn-secondary btn-sm" id="btnStockProfitToday"
-                  onclick="app.setStockProfitDateToToday()" style="height:30px; padding:0 0.55rem; font-size:0.75rem; font-weight:600;">
+                  onclick="app.setStockProfitDateToToday()"
+                  style="height:30px; padding:0 0.55rem; font-size:0.75rem; font-weight:600;">
                   วันนี้
                 </button>
                 <button type="button" class="btn-outline-fastwork btn-sm" onclick="app.openStockProfitHistoryModal()"
@@ -1302,22 +1309,27 @@
 
             <!-- Collapsible Body (Hidden by default to keep page clean) -->
             <div id="stockProfitCardBody" style="display:none; padding:0.9rem 1.25rem; border-top:1px solid #e2e8f0;">
-              <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:0.6rem; margin-bottom:0.8rem;">
+              <div
+                style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:0.6rem; margin-bottom:0.8rem;">
                 <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; padding:0.55rem 0.75rem;">
                   <div class="text-xs text-muted">💵 ยอดขายรวม</div>
-                  <div class="font-bold text-main" id="stockProfitDayRevenueVal" style="font-size:1rem; margin-top:2px;">฿0.00</div>
+                  <div class="font-bold text-main" id="stockProfitDayRevenueVal"
+                    style="font-size:1rem; margin-top:2px;">฿0.00</div>
                 </div>
                 <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; padding:0.55rem 0.75rem;">
                   <div class="text-xs text-muted">📉 ต้นทุนสินค้ารวม</div>
-                  <div class="font-bold text-muted" id="stockProfitDayCostVal" style="font-size:1rem; margin-top:2px;">฿0.00</div>
+                  <div class="font-bold text-muted" id="stockProfitDayCostVal" style="font-size:1rem; margin-top:2px;">
+                    ฿0.00</div>
                 </div>
                 <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; padding:0.55rem 0.75rem;">
                   <div class="text-xs text-muted">📊 อัตรากำไรเฉลี่ย</div>
-                  <div class="font-bold text-success" id="stockProfitDayMarginVal" style="font-size:1rem; margin-top:2px;">0%</div>
+                  <div class="font-bold text-success" id="stockProfitDayMarginVal"
+                    style="font-size:1rem; margin-top:2px;">0%</div>
                 </div>
                 <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; padding:0.55rem 0.75rem;">
                   <div class="text-xs text-muted">📦 เบิกขายไป</div>
-                  <div class="font-bold text-primary" id="stockProfitDayItemsCountVal" style="font-size:1rem; margin-top:2px;">0 รายการ</div>
+                  <div class="font-bold text-primary" id="stockProfitDayItemsCountVal"
+                    style="font-size:1rem; margin-top:2px;">0 รายการ</div>
                 </div>
               </div>
 
@@ -1342,8 +1354,8 @@
                         ✕
                       </button>
                     </div>
-                    <span class="text-xs text-muted" id="stockProfitDayItemsDetailBadge"
-                      style="white-space:nowrap;">0 ชิ้น</span>
+                    <span class="text-xs text-muted" id="stockProfitDayItemsDetailBadge" style="white-space:nowrap;">0
+                      ชิ้น</span>
                   </div>
                 </div>
                 <div id="stockProfitDayItemsList"
@@ -1483,35 +1495,48 @@
 
           <!-- Integrated Metrics & Supplier Breakdown inside Hero Card -->
           <div style="border-top:1px solid rgba(255,255,255,0.18); padding-top:0.95rem;">
-            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:0.85rem; margin-bottom:0.85rem;">
+            <div
+              style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:0.85rem; margin-bottom:0.85rem;">
               <!-- สินค้าวิกฤต (ต้องสั่งวันนี้) -->
-              <div style="background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.22); border-radius:12px; padding:0.75rem 0.95rem; display:flex; align-items:center; gap:0.8rem;">
-                <div style="width:40px; height:40px; border-radius:10px; background:rgba(255,255,255,0.18); color:#ffffff; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+              <div
+                style="background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.22); border-radius:12px; padding:0.75rem 0.95rem; display:flex; align-items:center; gap:0.8rem;">
+                <div
+                  style="width:40px; height:40px; border-radius:10px; background:rgba(255,255,255,0.18); color:#ffffff; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
                   <i data-lucide="alert-octagon" style="width:20px; height:20px;"></i>
                 </div>
                 <div style="min-width:0; flex:1;">
                   <div style="font-size:0.76rem; color:#fecaca; font-weight:700;">สินค้าวิกฤต (ต้องสั่งวันนี้)</div>
-                  <div id="lowAlertCountVal" style="font-size:1.35rem; font-weight:800; color:#ffffff; line-height:1.2; margin-top:2px;">0 รายการ</div>
-                  <div id="lowAlertCountSubtext" style="font-size:0.72rem; color:#fee2e2; font-weight:600; margin-top:2px;">หมดสต๊อก 0 | ใกล้หมด 0</div>
+                  <div id="lowAlertCountVal"
+                    style="font-size:1.35rem; font-weight:800; color:#ffffff; line-height:1.2; margin-top:2px;">0 รายการ
+                  </div>
+                  <div id="lowAlertCountSubtext"
+                    style="font-size:0.72rem; color:#fee2e2; font-weight:600; margin-top:2px;">หมดสต๊อก 0 | ใกล้หมด 0
+                  </div>
                 </div>
               </div>
 
               <!-- ประมาณการงบสั่งซื้อด่วน -->
-              <div style="background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.22); border-radius:12px; padding:0.75rem 0.95rem; display:flex; align-items:center; gap:0.8rem;">
-                <div style="width:40px; height:40px; border-radius:10px; background:rgba(255,255,255,0.18); color:#ffffff; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+              <div
+                style="background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.22); border-radius:12px; padding:0.75rem 0.95rem; display:flex; align-items:center; gap:0.8rem;">
+                <div
+                  style="width:40px; height:40px; border-radius:10px; background:rgba(255,255,255,0.18); color:#ffffff; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
                   <i data-lucide="calculator" style="width:20px; height:20px;"></i>
                 </div>
                 <div style="min-width:0; flex:1;">
                   <div style="font-size:0.76rem; color:#dbeafe; font-weight:700;">ประมาณการงบสั่งซื้อด่วน</div>
-                  <div id="lowAlertEstBudget" style="font-size:1.35rem; font-weight:800; color:#ffffff; line-height:1.2; margin-top:2px;">฿0</div>
-                  <div style="font-size:0.72rem; color:#e0f2fe; font-weight:500; margin-top:2px;">คำนวณจากต้นทุนซื้อรอบล่าสุด</div>
+                  <div id="lowAlertEstBudget"
+                    style="font-size:1.35rem; font-weight:800; color:#ffffff; line-height:1.2; margin-top:2px;">฿0</div>
+                  <div style="font-size:0.72rem; color:#e0f2fe; font-weight:500; margin-top:2px;">
+                    คำนวณจากต้นทุนซื้อรอบล่าสุด</div>
                 </div>
               </div>
             </div>
 
             <!-- แนะนำสั่งซื้อแยกตามแหล่งซื้อ -->
-            <div style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); border-radius:12px; padding:0.75rem 0.95rem;">
-              <div style="display:flex; align-items:center; gap:0.45rem; font-size:0.8rem; font-weight:700; color:#fef3c7;">
+            <div
+              style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); border-radius:12px; padding:0.75rem 0.95rem;">
+              <div
+                style="display:flex; align-items:center; gap:0.45rem; font-size:0.8rem; font-weight:700; color:#fef3c7;">
                 <i data-lucide="store" style="width:15px; height:15px;"></i>
                 <span>แนะนำสั่งซื้อแยกตามแหล่งซื้อ</span>
               </div>
@@ -1925,7 +1950,8 @@
             <div class="ds-hero-stats">
               <div class="ds-hero-stat-pill ds-hero-date-pill"
                 style="background:rgba(255,255,255,0.14); border-color:rgba(255,255,255,0.28);">
-                <label class="ds-hero-stat-lbl" for="drinkSalesSaveDate" style="color:#e2e8f0; cursor:pointer; white-space:nowrap;">📅
+                <label class="ds-hero-stat-lbl" for="drinkSalesSaveDate"
+                  style="color:#e2e8f0; cursor:pointer; white-space:nowrap;">📅
                   วันที่บันทึก</label>
                 <input type="date" id="drinkSalesSaveDate" class="form-input ds-hero-date-input"
                   style="height:30px; margin-top:3px; padding:0.15rem 0.45rem; font-size:0.82rem; font-weight:700; background:#ffffff; color:#0f172a; border:none; border-radius:7px; min-width:0;">
@@ -2059,7 +2085,8 @@
               <div class="card-header-title">
                 <i data-lucide="history"></i>
                 <span>ประวัติการบันทึกยอดขายน้ำชง</span>
-                <span class="pill-tag blue-tag" id="drinkSalesHistoryCount" style="font-size:0.75rem; font-weight:700;">0
+                <span class="pill-tag blue-tag" id="drinkSalesHistoryCount"
+                  style="font-size:0.75rem; font-weight:700;">0
                   รายการ</span>
               </div>
               <div style="display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap;">
@@ -2069,8 +2096,7 @@
                   วันนี้
                 </button>
                 <input type="date" id="dsHistoryDateFilter" class="form-input-sm"
-                  onchange="app.renderDrinkSalesHistory()"
-                  title="เลือกวันที่ต้องการดูรายรับ-กำไร"
+                  onchange="app.renderDrinkSalesHistory()" title="เลือกวันที่ต้องการดูรายรับ-กำไร"
                   style="height:32px; font-size:0.78rem; font-weight:600;">
                 <button type="button" id="btnDsHistoryAllFilter" class="btn-secondary btn-sm"
                   onclick="app.setDsHistoryDateFilter('all')"
@@ -2603,7 +2629,8 @@
             <button type="button" class="recipe-mode-tab-btn" id="btnModeJar"
               style="flex:1; border:none; padding:0.55rem 0.75rem; border-radius:8px; font-weight:700; font-size:0.85rem; cursor:pointer; background:#ffffff; color:var(--primary); box-shadow:0 1px 3px rgba(0,0,0,0.08); display:flex; align-items:center; justify-content:center; gap:0.4rem; transition:all 0.2s;">
               <span>🏺 ต่อ 1 โหล / ถัง</span>
-              <span class="pill-tag green-tag rec-mode-badge" style="font-size:0.68rem; padding:0.1rem 0.4rem;">ชงหลายแก้ว</span>
+              <span class="pill-tag green-tag rec-mode-badge"
+                style="font-size:0.68rem; padding:0.1rem 0.4rem;">ชงหลายแก้ว</span>
             </button>
             <button type="button" class="recipe-mode-tab-btn" id="btnModeCup"
               style="flex:1; border:none; padding:0.55rem 0.75rem; border-radius:8px; font-weight:600; font-size:0.85rem; cursor:pointer; background:transparent; color:var(--text-muted); display:flex; align-items:center; justify-content:center; gap:0.4rem; transition:all 0.2s;">
@@ -2991,26 +3018,72 @@
           </div>
         </div>
 
-        <!-- Weighted Average & Expense Preview Card -->
+        <!-- Unified Net Weight + Weighted Average & Expense Preview Card -->
         <div class="calc-preview-card mb-3"
-          style="background:linear-gradient(135deg, rgba(16, 185, 129, 0.06) 0%, rgba(0, 80, 240, 0.05) 100%); border:1.5px solid #a7f3d0; border-radius:var(--radius-md); padding:0.85rem 1rem;">
-          <div class="calc-preview-row mb-1">
-            <span style="font-size:0.85rem; color:var(--text-muted);">💸 ยอดเงินที่จ่าย
-              (บันทึกเป็นรายจ่ายเดือนนี้):</span>
-            <span class="font-bold text-danger" id="quickRestockTotalExpensePreview"
-              style="font-size:1.05rem;">฿0.00</span>
+          style="background:linear-gradient(135deg, rgba(16, 185, 129, 0.06) 0%, rgba(0, 80, 240, 0.05) 100%); border:1.5px solid #a7f3d0; border-radius:var(--radius-md); padding:0.9rem 1rem;">
+          <!-- Net Weight / Package Size per Piece -->
+          <div style="padding-bottom:0.75rem; margin-bottom:0.75rem; border-bottom:1px dashed #a7f3d0;">
+            <label class="form-label font-bold mb-1" for="quickRestockNetWeight"
+              style="font-size:0.8rem; color:#047857; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.35rem;">
+              <span style="display:inline-flex; align-items:center; gap:0.35rem;">
+                <i data-lucide="scale" style="width:14px;height:14px;"></i>
+                <span>ปริมาณ/ขนาดบรรจุต่อชิ้น</span>
+              </span>
+            </label>
+            <div style="display:flex; gap:0.45rem; align-items:center; margin-top:0.35rem;">
+              <input type="number" id="quickRestockNetWeight" class="form-input font-bold"
+                placeholder="เช่น 400, 388, 1000" min="0" step="any" style="flex:1.2; height:38px; background:#ffffff;">
+              <select id="quickRestockNetUnit" class="form-input font-bold"
+                style="flex:1; min-width:110px; height:38px; cursor:pointer; background:#ffffff;">
+                <option value="g" selected>กรัม (g)</option>
+                <option value="ml">มล. (ml)</option>
+                <option value="kg">กิโลกรัม (kg)</option>
+                <option value="ลิตร">ลิตร (L)</option>
+                <option value="oz">ออนซ์ (oz)</option>
+                <option value="ลูก">ลูก (ผลไม้/ผลแช่แข็ง)</option>
+                <option value="ชิ้น">ชิ้น/ใบ</option>
+              </select>
+            </div>
           </div>
-          <div class="calc-preview-row mb-1">
-            <span style="font-size:0.85rem; color:var(--text-muted);">📦 ยอดสต๊อกคงเหลือใหม่รวม:</span>
-            <b class="text-main" id="quickRestockTotalQtyPreview">0</b>
+
+          <!-- Top 2-Col Summary: ยอดเงินที่จ่าย | สต๊อกคงเหลือใหม่ -->
+          <div
+            style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:0.55rem; margin-bottom:0.55rem;">
+            <div
+              style="background:rgba(255,255,255,0.9); border:1px solid #e2e8f0; border-radius:10px; padding:0.55rem 0.75rem;">
+              <div
+                style="display:flex; align-items:center; gap:0.3rem; font-size:0.74rem; color:var(--text-muted); font-weight:600;">
+                <i data-lucide="wallet" style="width:13px;height:13px;color:var(--danger);"></i>
+                <span>ยอดจ่าย (รายจ่ายเดือนนี้)</span>
+              </div>
+              <div class="font-bold text-danger" id="quickRestockTotalExpensePreview"
+                style="font-size:1.1rem; margin-top:2px;">฿0.00</div>
+            </div>
+            <div
+              style="background:rgba(255,255,255,0.9); border:1px solid #e2e8f0; border-radius:10px; padding:0.55rem 0.75rem;">
+              <div
+                style="display:flex; align-items:center; gap:0.3rem; font-size:0.74rem; color:var(--text-muted); font-weight:600;">
+                <i data-lucide="package" style="width:13px;height:13px;color:var(--primary);"></i>
+                <span>สต๊อกคงเหลือใหม่</span>
+              </div>
+              <div class="font-bold text-main" id="quickRestockTotalQtyPreview"
+                style="font-size:1.05rem; margin-top:2px;">0</div>
+            </div>
           </div>
-          <div class="calc-preview-row">
-            <span style="font-size:0.85rem; color:var(--text-muted);">✨ ต้นทุนเฉลี่ยใหม่ (Weighted Avg):</span>
-            <div style="text-align:right;">
+
+          <!-- Highlighted Weighted Average Cost -->
+          <div
+            style="background:#ffffff; border:1px solid #bbf7d0; border-radius:10px; padding:0.6rem 0.8rem; display:flex; justify-content:space-between; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+            <div
+              style="display:flex; align-items:center; gap:0.35rem; font-size:0.8rem; color:#065f46; font-weight:700;">
+              <i data-lucide="sparkles" style="width:14px;height:14px;color:#059669;"></i>
+              <span>ต้นทุนเฉลี่ยใหม่</span>
+            </div>
+            <div style="text-align:right; margin-left:auto;">
               <span class="font-bold text-success" id="quickRestockAvgCostPreview"
                 style="font-size:1.15rem;">฿0.00</span>
               <span id="quickRestockDiffLabel"
-                style="font-size:0.75rem; font-weight:700; display:block; margin-top:2px;">(เท่าเดิม)</span>
+                style="font-size:0.72rem; font-weight:700; display:block; margin-top:1px;">(เท่าเดิม)</span>
             </div>
           </div>
         </div>
@@ -3357,11 +3430,14 @@
             <i data-lucide="history"></i>
           </div>
           <div style="min-width:0; flex:1;">
-            <h3 class="modal-title" id="expGroupHistoryTitle" style="margin-bottom:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">ประวัติเติมสต๊อก</h3>
+            <h3 class="modal-title" id="expGroupHistoryTitle"
+              style="margin-bottom:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">ประวัติเติมสต๊อก
+            </h3>
             <span class="text-xs text-muted" id="expGroupHistorySubtitle">0 รายการ</span>
           </div>
         </div>
-        <button type="button" class="close-modal-btn" data-close="expenseGroupHistoryModal" aria-label="ปิด">&times;</button>
+        <button type="button" class="close-modal-btn" data-close="expenseGroupHistoryModal"
+          aria-label="ปิด">&times;</button>
       </div>
       <div class="modal-body egh-modal-body">
         <div id="expGroupHistorySummary" class="egh-summary-grid">
@@ -3373,7 +3449,8 @@
       </div>
       <div class="modal-footer egh-modal-footer">
         <span class="text-xs text-muted" id="expGroupHistoryCountLabel">0 รายการ</span>
-        <button type="button" class="btn-secondary egh-close-btn" data-close="expenseGroupHistoryModal">ปิดหน้าต่าง</button>
+        <button type="button" class="btn-secondary egh-close-btn"
+          data-close="expenseGroupHistoryModal">ปิดหน้าต่าง</button>
       </div>
     </div>
   </div>
@@ -3414,8 +3491,7 @@
       </div>
       <div class="modal-footer" style="justify-content:space-between; flex-wrap:wrap; gap:0.5rem;">
         <button type="button" class="btn-outline-fastwork btn-sm" id="btnRenameOpenLatestBill"
-          onclick="app.editLatestBillFromRenameModal()"
-          style="font-size:0.78rem;">
+          onclick="app.editLatestBillFromRenameModal()" style="font-size:0.78rem;">
           แก้ไขรายละเอียดบิลล่าสุด
         </button>
         <div style="display:flex; gap:0.5rem;">
