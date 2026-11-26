@@ -1163,7 +1163,20 @@
                   </p>
                 </div>
               </div>
-              <div class="stock-main-hero-actions" style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+              <div class="stock-main-hero-actions" style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+                <div style="display:inline-flex; align-items:center; gap:0.4rem; background:rgba(255,255,255,0.12); border:1.5px solid rgba(255,255,255,0.28); border-radius:var(--radius-sm); padding:0.3rem 0.65rem; height:38px;"
+                  title="เลือกวันที่สำหรับบันทึกเพิ่ม/ลดสต๊อก (รองรับย้อนหลัง)">
+                  <i data-lucide="calendar" style="width:15px; height:15px; color:#93c5fd; flex-shrink:0;"></i>
+                  <span style="font-size:0.75rem; color:#e2e8f0; white-space:nowrap; font-weight:600;">วันที่บันทึก:</span>
+                  <input type="date" id="stockActionDateInput"
+                    onchange="app.onStockActionDateChange()"
+                    style="background:transparent; border:none; color:#ffffff; font-size:0.82rem; font-weight:700; outline:none; cursor:pointer; color-scheme:dark;">
+                  <button type="button" id="btnStockActionDateToday"
+                    onclick="app.resetStockActionDateToToday()"
+                    style="display:none; background:rgba(255,255,255,0.22); border:none; color:#ffffff; border-radius:4px; padding:0.15rem 0.4rem; font-size:0.7rem; font-weight:700; cursor:pointer;">
+                    วันนี้
+                  </button>
+                </div>
                 <button class="btn-fastwork"
                   style="background:linear-gradient(135deg, #2563eb 0%, #3b82f6 100%); color:#ffffff; font-weight:700; box-shadow:0 4px 14px rgba(37,99,235,0.35); border-color:#3b82f6;"
                   onclick="app.openExpenseModal()">

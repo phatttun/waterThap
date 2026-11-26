@@ -8480,6 +8480,7 @@ class WaterFlowApp {
   // ==========================================
 
   renderStock() {
+    this.getSelectedStockActionDate();
     const list = this.data.stockItems || [];
     const tbody = document.getElementById('stockTableBody');
     if (!tbody) return;
@@ -8869,9 +8870,40 @@ class WaterFlowApp {
     }
   }
 
+  getSelectedStockActionDate() {
+    const input = document.getElementById('stockActionDateInput');
+    const todayStr = this.formatDate(new Date());
+    if (input && !input.value) {
+      input.value = todayStr;
+    }
+    return (input && /^\d{4}-\d{2}-\d{2}$/.test(input.value)) ? input.value : todayStr;
+  }
+
+  onStockActionDateChange() {
+    const input = document.getElementById('stockActionDateInput');
+    const btnToday = document.getElementById('btnStockActionDateToday');
+    const todayStr = this.formatDate(new Date());
+    if (input && !input.value) input.value = todayStr;
+    if (btnToday && input) {
+      btnToday.style.display = input.value !== todayStr ? 'inline-block' : 'none';
+    }
+    if (input && /^\d{4}-\d{2}-\d{2}$/.test(input.value)) {
+      this.selectedStockProfitDate = input.value;
+      this.renderStockProfitCard();
+    }
+  }
+
+  resetStockActionDateToToday() {
+    const input = document.getElementById('stockActionDateInput');
+    if (input) input.value = this.formatDate(new Date());
+    this.onStockActionDateChange();
+  }
+
   setExactStockQty(itemId, val) {
     const item = (this.data.stockItems || []).find(x => x.id === itemId);
     if (!item) return;
+
+    const actionDateStr = this.getSelectedStockActionDate();
 
     let parsed = parseFloat(val);
     if (isNaN(parsed) || parsed < 0) parsed = 0;
@@ -8921,6 +8953,7 @@ class WaterFlowApp {
 
         this.logStockAction(item.name, 'USE', diff, parsed, item.unit || '', logNote, {
           itemId: item.id,
+          date: actionDateStr,
           profit: totalProfit,
           revenue: totalRevenue,
           cost: totalCost,
@@ -8930,10 +8963,9 @@ class WaterFlowApp {
           category: item.category || 'STOCK'
         });
 
-        // บันทึกเข้า Daily Sales (ยอดขายประจำวัน) อัตโนมัติทันที
-        const todayStr = this.formatDate(new Date());
+        // บันทึกเข้า Daily Sales (ยอดขายประจำวัน) อัตโนมัติทันที ตามวันที่ที่เลือกบันทึกสต๊อก
         if (!Array.isArray(this.data.dailySales)) this.data.dailySales = [];
-        const existingIndex = this.data.dailySales.findIndex(d => d.date === todayStr);
+        const existingIndex = this.data.dailySales.findIndex(d => d.date === actionDateStr);
         const saleDesc = `ขาย ${item.name} x${useQty} ${item.unit || 'หน่วย'} (กำไร ${profitStr})`;
         if (existingIndex !== -1) {
           const ex = this.data.dailySales[existingIndex];
@@ -8943,11 +8975,11 @@ class WaterFlowApp {
           ex.profit = parseFloat(((Number(ex.profit) || 0) + totalProfit).toFixed(2));
           ex.note = ex.note ? `${ex.note}, ${saleDesc}` : saleDesc;
         } else {
-          const costInfo = this.getSystemCostForDate(todayStr, totalRevenue);
+          const costInfo = this.getSystemCostForDate(actionDateStr, totalRevenue);
           const dailyRent = costInfo.dailyRent || 0;
           const newRecord = {
             id: 'd_' + Date.now(),
-            date: todayStr,
+            date: actionDateStr,
             revenue: totalRevenue,
             cost: parseFloat((totalCost + dailyRent).toFixed(2)),
             materialCost: totalCost,
@@ -8960,27 +8992,26 @@ class WaterFlowApp {
 
         saleProfitRecorded = totalProfit;
       } else {
-        this.logStockAction(item.name, 'USE', diff, parsed, item.unit || '', `พิมพ์ปรับจำนวนจาก ${oldQty} เป็น ${parsed}${crateSub}`);
+        this.logStockAction(item.name, 'USE', diff, parsed, item.unit || '', `พิมพ์ปรับจำนวนจาก ${oldQty} เป็น ${parsed}${crateSub}`, { itemId: item.id, date: actionDateStr });
       }
     } else {
       const isBulk = (Number(item.crateBottles) > 1);
       const crateBottles = Number(item.crateBottles) || 1;
       const rawUnit = item.rawUnit || 'ลัง';
       const crateSub = isBulk ? ` (~${(parsed / crateBottles).toFixed(2).replace(/\.?0+$/, '')} ${rawUnit})` : '';
-      this.logStockAction(item.name, actionType, diff, parsed, item.unit || '', `พิมพ์ปรับจำนวนจาก ${oldQty} เป็น ${parsed} ${item.unit || ''}${crateSub}`);
+      this.logStockAction(item.name, actionType, diff, parsed, item.unit || '', `พิมพ์ปรับจำนวนจาก ${oldQty} เป็น ${parsed} ${item.unit || ''}${crateSub}`, { itemId: item.id, date: actionDateStr });
     }
 
-    // ถ้าพิมพ์เพิ่มจำนวน (diff > 0) ให้สร้างบิลรายจ่ายของเดือนปัจจุบันอัตโนมัติ (จำนวนที่เพิ่ม × ต้นทุนต่อหน่วย)
+    // ถ้าพิมพ์เพิ่มจำนวน (diff > 0) ให้สร้างบิลรายจ่ายตามวันที่บันทึกสต๊อกอัตโนมัติ (จำนวนที่เพิ่ม × ต้นทุนต่อหน่วย)
     if (diff > 0 && (Number(item.unitCost) || 0) > 0) {
       if (!Array.isArray(this.data.expenses)) this.data.expenses = [];
       const expenseAmount = parseFloat((diff * item.unitCost).toFixed(2));
-      const todayStr = this.formatDate(new Date());
       const isBulk = (Number(item.crateBottles) > 1);
       const crateBottles = Number(item.crateBottles) || 1;
       const rawUnit = item.rawUnit || 'ลัง';
       const newExp = {
         id: 'e_' + Date.now() + Math.random().toString(36).substring(2, 5),
-        date: todayStr,
+        date: actionDateStr,
         title: item.name,
         category: item.category || 'INGREDIENT',
         amount: expenseAmount,
@@ -9077,7 +9108,7 @@ class WaterFlowApp {
     if (addInput) addInput.value = defaultAddQty;
     const defaultTotalExpense = parseFloat((defaultAddQty * currentUnitCost).toFixed(2));
     if (priceInput) priceInput.value = defaultTotalExpense;
-    if (dateInput) dateInput.value = this.formatDate(new Date());
+    if (dateInput) dateInput.value = this.getSelectedStockActionDate();
     if (supInput) supInput.value = item.supplier || '';
     const noteInput = document.getElementById('quickRestockNote');
     if (noteInput) noteInput.value = '';
