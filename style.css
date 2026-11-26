@@ -6612,6 +6612,8 @@ body {
   flex-wrap: wrap;
   gap: 0.6rem;
   align-items: center;
+  max-width: 100%;
+  min-width: 0;
 }
 
 #dashPeriodPresets.radio-tab-group {
@@ -6917,10 +6919,17 @@ body {
   }
 
   /* Responsive Filter Toolbar on Phones & Tablets/iPads */
+  #tab-stock .card-header .filter-group {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
   #stockFilterTabs.radio-tab-group {
     display: flex !important;
     flex-wrap: nowrap !important;
     overflow-x: auto !important;
+    overflow-y: hidden !important;
     -webkit-overflow-scrolling: touch !important;
     touch-action: pan-x !important;
     scrollbar-width: thin;
@@ -6930,6 +6939,7 @@ body {
     gap: 4px !important;
     width: 100% !important;
     max-width: 100% !important;
+    min-width: 0 !important;
     box-sizing: border-box !important;
   }
 
@@ -6948,7 +6958,7 @@ body {
     cursor: pointer !important;
     user-select: none !important;
     -webkit-tap-highlight-color: transparent !important;
-    touch-action: manipulation !important;
+    touch-action: pan-x !important;
   }
 
   #stockFilterTabs .radio-tab span {

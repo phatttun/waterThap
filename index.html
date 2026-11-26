@@ -1556,7 +1556,23 @@
               <span>รายการเตือนสั่งซื้อ</span>
               <span id="lowStockFilterIndicator" style="display:none; margin-left:0.5rem;"></span>
             </div>
-            <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+            <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; flex:1; justify-content:flex-end;">
+              <div style="position:relative; min-width:190px; flex:1; max-width:260px;">
+                <i data-lucide="search"
+                  style="position:absolute; left:9px; top:50%; transform:translateY(-50%); width:14px; height:14px; color:#94a3b8; pointer-events:none;"></i>
+                <input type="text" id="lowStockSearchInput" class="form-input-sm"
+                  placeholder="ค้นหาชื่อสินค้า, ร้านค้า, หมวด..."
+                  oninput="app.renderLowStockAlertView()"
+                  onchange="app.renderLowStockAlertView()"
+                  onsearch="app.renderLowStockAlertView()"
+                  style="height:32px; width:100%; padding-left:1.85rem; padding-right:1.65rem; font-size:0.8rem; background:#ffffff; border:1px solid #fecaca;">
+                <button type="button" id="lowStockSearchClearBtn"
+                  onclick="const el=document.getElementById('lowStockSearchInput'); if(el){el.value=''; app.renderLowStockAlertView(); el.focus();}"
+                  title="ล้างคำค้นหา"
+                  style="display:none; position:absolute; right:5px; top:50%; transform:translateY(-50%); background:none; border:none; color:#94a3b8; cursor:pointer; font-size:0.85rem; line-height:1; padding:2px 4px;">
+                  ✕
+                </button>
+              </div>
               <select id="lowStockSortOrder" class="form-input-sm" onchange="app.renderLowStockAlertView()"
                 style="height:32px; font-size:0.78rem; font-weight:600; background:#ffffff;" title="เรียงลำดับรายการ">
                 <option value="newest">🕒 รายการล่าสุด</option>
@@ -1670,9 +1686,10 @@
                 </button>
               </div>
               <select id="stockLogTypeFilter" class="form-input-sm" onchange="app.renderStockHistory()">
-                <option value="ALL">ประเภททั้งหมด (เบิก/เติม/พิมพ์)</option>
+                <option value="ALL">ประเภททั้งหมด (เบิก/เติม/บันทึกต้นทุน)</option>
                 <option value="USE">เฉพาะการเบิก/ใช้ของ (-)</option>
                 <option value="RESTOCK">เฉพาะการเติมสต๊อก (+)</option>
+                <option value="EXPENSE_ADD">เฉพาะเพิ่มจากบันทึกต้นทุน &amp; วัตถุดิบ</option>
               </select>
             </div>
           </div>

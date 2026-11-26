@@ -3613,6 +3613,7 @@ class WaterFlowApp {
       this.renderExpenses();
       this.renderRecipes();
       this.renderStock();
+      this.renderStockHistory();
       this.renderLowStockAlertView();
       this.renderDashboard();
     }
@@ -7769,6 +7770,7 @@ class WaterFlowApp {
       this.renderExpenses();
       this.renderRecipes();
       this.renderStock();
+      this.renderStockHistory();
       this.renderLowStockAlertView();
       this.renderDashboard();
     } catch (err) {
@@ -9705,8 +9707,20 @@ class WaterFlowApp {
       logs = logs.filter(l => String(l.date || '').substring(0, 10) === dateFilter);
     }
 
+    const isExpenseAddLog = (log) => {
+      if (!log) return false;
+      if (log.actionType === 'EXPENSE_ADD') return true;
+      if (log.expenseId) return true;
+      const noteStr = String(log.note || '');
+      return noteStr.includes('จากบิลซื้อ') || noteStr.includes('บันทึกต้นทุน');
+    };
+
     if (typeFilter !== 'ALL') {
-      logs = logs.filter(l => l.actionType === typeFilter);
+      if (typeFilter === 'EXPENSE_ADD') {
+        logs = logs.filter(l => isExpenseAddLog(l));
+      } else {
+        logs = logs.filter(l => l.actionType === typeFilter);
+      }
     }
 
     if (searchQuery) {
@@ -9754,9 +9768,12 @@ class WaterFlowApp {
 
     tbody.innerHTML = sortedLogs.map(log => {
       const isUse = log.actionType === 'USE';
+      const isExpenseAdd = !isUse && isExpenseAddLog(log);
       const typeBadge = isUse
         ? `<span class="pill-tag red-tag" style="font-weight:700; font-size:0.75rem;"><i data-lucide="arrow-down-circle" style="width:12px;height:12px;"></i> เบิก/ตัดใช้</span>`
-        : `<span class="pill-tag green-tag" style="font-weight:700; font-size:0.75rem;"><i data-lucide="arrow-up-circle" style="width:12px;height:12px;"></i> เติมสต๊อก</span>`;
+        : (isExpenseAdd
+          ? `<span class="pill-tag" style="font-weight:700; font-size:0.75rem; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe;"><i data-lucide="receipt" style="width:12px;height:12px;"></i> บันทึกต้นทุน &amp; วัตถุดิบ</span>`
+          : `<span class="pill-tag green-tag" style="font-weight:700; font-size:0.75rem;"><i data-lucide="arrow-up-circle" style="width:12px;height:12px;"></i> เติมสต๊อก</span>`);
 
       const changeSign = log.changeQty > 0 ? `+${log.changeQty}` : `${log.changeQty}`;
       const changeClass = isUse ? 'text-danger' : 'text-green';
@@ -10722,6 +10739,17 @@ class WaterFlowApp {
     this.renderLowStockAlertView();
   }
 
+  resetLowStockFilters() {
+    this.currentLowStockSupplierFilter = 'ALL';
+    this.currentLowStockCategoryFilter = 'ALL';
+    const searchInput = document.getElementById('lowStockSearchInput');
+    if (searchInput) searchInput.value = '';
+    document.querySelectorAll('#lowStockCategoryPills .figma-pill-filter').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.cat === 'ALL');
+    });
+    this.renderLowStockAlertView();
+  }
+
   renderLowStockAlertView() {
     const list = this.data.stockItems || [];
     const container = document.getElementById('lowStockCardsContainer');
@@ -10839,10 +10867,42 @@ class WaterFlowApp {
       }
     }
 
-    // Apply Supplier & Category Filters to lowItems
+    // Apply Supplier, Category & Search Filters to lowItems
+    const searchInput = document.getElementById('lowStockSearchInput');
+    const searchClearBtn = document.getElementById('lowStockSearchClearBtn');
+    const searchQuery = (searchInput?.value || '').trim().toLowerCase();
+    if (searchClearBtn) {
+      searchClearBtn.style.display = searchQuery ? 'block' : 'none';
+    }
+
     let displayedItems = [...lowItems];
     if (this.currentLowStockCategoryFilter && this.currentLowStockCategoryFilter !== 'ALL') {
       displayedItems = displayedItems.filter(item => item.category === this.currentLowStockCategoryFilter);
+    }
+
+    if (searchQuery) {
+      const catLabels = {
+        INGREDIENT: 'วัตถุดิบชงน้ำ',
+        PACKAGING: 'บรรจุภัณฑ์ & แก้ว',
+        FRIDGE_DRINK: 'น้ำขายในตู้',
+        STOCK: 'ยกลัง/สำเร็จรูป',
+        OTHER: 'ค่าใช้จ่ายอื่นๆ',
+        PACK_SELL: 'ของแพ็คขาย'
+      };
+      displayedItems = displayedItems.filter(item => {
+        const name = String(item.name || '').toLowerCase();
+        const sup = String(item.supplier || '').toLowerCase();
+        const parsedSup = String(this.parseSupplier(item.supplier || '').name || '').toLowerCase();
+        const note = String(item.note || '').toLowerCase();
+        const unit = String(item.unit || '').toLowerCase();
+        const catLabel = String(catLabels[item.category] || item.category || '').toLowerCase();
+        return name.includes(searchQuery) ||
+          sup.includes(searchQuery) ||
+          parsedSup.includes(searchQuery) ||
+          note.includes(searchQuery) ||
+          unit.includes(searchQuery) ||
+          catLabel.includes(searchQuery);
+      });
     }
 
     if (this.currentLowStockSupplierFilter && this.currentLowStockSupplierFilter !== 'ALL') {
@@ -10895,12 +10955,20 @@ class WaterFlowApp {
     }
 
     if (displayedItems.length === 0) {
+      const emptyTitle = searchQuery
+        ? `ไม่พบสินค้าเตือนสั่งซื้อที่ตรงกับ "${this.escapeHtml(searchInput.value.trim())}"`
+        : (this.currentLowStockSupplierFilter !== 'ALL'
+          ? `ไม่พบสินค้าเตือนสั่งซื้อที่ซื้อจาก "${this.escapeHtml(this.currentLowStockSupplierFilter)}"`
+          : 'ไม่พบสินค้าเตือนสั่งซื้อในหมวดหมู่นี้');
+      const emptySub = searchQuery
+        ? 'ลองเปลี่ยนคำค้นหา หรือล้างตัวกรองเพื่อดูรายการทั้งหมด'
+        : 'รายการสินค้าใกล้หมดอาจอยู่ในหมวดหมู่หรือแหล่งซื้ออื่น';
       container.innerHTML = `
         <div style="grid-column: 1 / -1; text-align: center; padding: 3rem 1.5rem; background: #fffbeb; border: 1.5px dashed #fcd34d; border-radius: var(--radius-md);">
           <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🔍</div>
-          <h3 style="color: #92400e; font-weight: 800; font-size: 1.15rem;">ไม่พบสินค้าเตือนสั่งซื้อที่ซื้อจาก "${this.escapeHtml(this.currentLowStockSupplierFilter)}"</h3>
-          <p style="color: #b45309; font-size: 0.9rem; margin-top: 0.25rem;">รายการสินค้าใกล้หมดอาจเป็นของแหล่งซื้ออื่น</p>
-          <button class="btn-fastwork mt-3" onclick="app.filterLowStockBySupplier('ALL')">ดูสินค้าใกล้หมดทั้งหมด (${lowItems.length} รายการ)</button>
+          <h3 style="color: #92400e; font-weight: 800; font-size: 1.15rem;">${emptyTitle}</h3>
+          <p style="color: #b45309; font-size: 0.9rem; margin-top: 0.25rem;">${emptySub}</p>
+          <button class="btn-fastwork mt-3" onclick="app.resetLowStockFilters()">ดูสินค้าใกล้หมดทั้งหมด (${lowItems.length} รายการ)</button>
         </div>
       `;
       this.refreshLucide();
