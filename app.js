@@ -1431,8 +1431,10 @@ class WaterFlowApp {
 
     const stockSearch = document.getElementById('stockSearchInput');
     if (stockSearch) {
-      stockSearch.addEventListener('input', () => {
-        this.applyStockFilter();
+      ['input', 'change', 'search'].forEach(evt => {
+        stockSearch.addEventListener(evt, () => {
+          this.applyStockFilter();
+        });
       });
     }
 
@@ -8255,7 +8257,7 @@ class WaterFlowApp {
     rows.forEach(tr => {
       const cat = tr.dataset.category;
       const isLow = tr.dataset.isLow === 'true';
-      const text = tr.innerText.toLowerCase();
+      const text = (tr.textContent || tr.innerText || '').toLowerCase();
 
       let matchFilter = true;
       if (filterVal === 'low') {
@@ -8272,9 +8274,11 @@ class WaterFlowApp {
       }
 
       if (matchFilter && matchSearch) {
+        tr.classList.remove('stock-row-hidden');
         tr.style.display = '';
         visibleCount++;
       } else {
+        tr.classList.add('stock-row-hidden');
         tr.style.display = 'none';
       }
     });

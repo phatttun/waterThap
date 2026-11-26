@@ -7147,6 +7147,11 @@ body {
     width: 100% !important;
   }
 
+  .stock-redesigned-table tr.stock-row-hidden,
+  .stock-redesigned-table tr[style*="display: none"] {
+    display: none !important;
+  }
+
   .stock-redesigned-table tr {
     background: #ffffff !important;
     border: 1.5px solid var(--border-color) !important;
