@@ -3564,12 +3564,28 @@ class WaterFlowApp {
 
         return `
           <div class="figma-exp-card" style="background:#ffffff; border:1px solid var(--border-color); border-radius:var(--radius-md); padding:1.05rem 1.2rem; display:flex; flex-direction:column; gap:0.85rem;">
-            <!-- Header: Product Name + Stock Status Pill -->
-            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:0.75rem;">
-              <div style="min-width:0;">
+            <!-- Header: Product Name + Stock Status Pill + Edit Button -->
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:0.5rem;">
+              <div style="min-width:0; flex:1;">
                 <div style="font-size:1.05rem; font-weight:800; color:var(--text-main); line-height:1.3;" title="${this.escapeHtml(grp.title)}">${this.escapeHtml(grp.title)}</div>
               </div>
-              ${statusBadgeHtml}
+              <div style="display:flex; align-items:center; gap:0.4rem; flex-shrink:0; flex-wrap:wrap; justify-content:flex-end;">
+                ${statusBadgeHtml}
+                <button type="button"
+                  onclick="app.openRenameExpenseGroupModal('${escapedKey}')"
+                  title="แก้ไขชื่อสินค้า / หมวดหมู่"
+                  style="background:#f8fafc; color:#475569; border:1px solid #cbd5e1; border-radius:9999px; padding:0.2rem 0.55rem; font-size:0.72rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:0.25rem; white-space:nowrap;">
+                  <i data-lucide="edit-3" style="width:12px;height:12px;"></i>
+                  <span>แก้ไข</span>
+                </button>
+                <button type="button"
+                  onclick="app.deleteExpenseGroup('${escapedKey}')"
+                  title="ลบรายการสินค้าและบิลทั้งหมดในกลุ่มนี้"
+                  style="background:#fef2f2; color:#dc2626; border:1px solid #fecaca; border-radius:9999px; padding:0.2rem 0.55rem; font-size:0.72rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:0.25rem; white-space:nowrap;">
+                  <i data-lucide="trash-2" style="width:12px;height:12px;"></i>
+                  <span>ลบ</span>
+                </button>
+              </div>
             </div>
 
             <!-- KPI Summary Row: คงเหลือ | ต้นทุนเฉลี่ย -->
@@ -3656,6 +3672,104 @@ class WaterFlowApp {
         span.textContent = isNowExpanded ? 'ซ่อนรายการ ▴' : `ดู ${count} รายการ ▾`;
       }
     }
+  }
+
+  openRenameExpenseGroupModal(groupKey) {
+    const bills = (this.data.expenses || []).filter(exp => {
+      const normTitle = this.normalizeProductName(exp.title);
+      const k = normTitle || (exp.stockItemId ? `stk:${exp.stockItemId}` : `id:${exp.id}`);
+      return k === groupKey;
+    }).sort((a, b) => {
+      const dCmp = (b.date || '').localeCompare(a.date || '');
+      return dCmp !== 0 ? dCmp : String(b.id || '').localeCompare(String(a.id || ''));
+    });
+    if (bills.length === 0) return;
+
+    const latest = bills[0];
+    const keyInput = document.getElementById('renameExpGroupKey');
+    const billIdInput = document.getElementById('renameExpLatestBillId');
+    const titleInput = document.getElementById('renameExpGroupTitle');
+    const catSelect = document.getElementById('renameExpGroupCategory');
+
+    if (keyInput) keyInput.value = groupKey;
+    if (billIdInput) billIdInput.value = latest.id || '';
+    if (titleInput) titleInput.value = latest.title || '';
+    if (catSelect) catSelect.value = latest.category || 'INGREDIENT';
+
+    const modal = document.getElementById('renameExpenseGroupModal');
+    if (modal) {
+      modal.classList.add('active');
+      this.refreshLucide();
+      if (titleInput) setTimeout(() => titleInput.focus(), 50);
+    }
+  }
+
+  editLatestBillFromRenameModal() {
+    const billId = document.getElementById('renameExpLatestBillId')?.value;
+    const modal = document.getElementById('renameExpenseGroupModal');
+    if (modal) modal.classList.remove('active');
+    if (billId) {
+      this.openExpenseModal(billId);
+    }
+  }
+
+  saveRenameExpenseGroup() {
+    const groupKey = document.getElementById('renameExpGroupKey')?.value || '';
+    const newTitle = (document.getElementById('renameExpGroupTitle')?.value || '').trim();
+    const newCat = document.getElementById('renameExpGroupCategory')?.value || 'INGREDIENT';
+
+    if (!newTitle) {
+      this.showToast('กรุณากรอกชื่อสินค้า / วัตถุดิบ', 'warning');
+      return;
+    }
+
+    const oldNormTitle = groupKey.startsWith('stk:') || groupKey.startsWith('id:') ? '' : groupKey;
+    const linkedStockIds = new Set();
+
+    (this.data.expenses || []).forEach(exp => {
+      const normTitle = this.normalizeProductName(exp.title);
+      const k = normTitle || (exp.stockItemId ? `stk:${exp.stockItemId}` : `id:${exp.id}`);
+      if (k === groupKey) {
+        exp.title = newTitle;
+        exp.category = newCat;
+        if (exp.stockItemId) linkedStockIds.add(String(exp.stockItemId));
+      }
+    });
+
+    (this.data.stockItems || []).forEach(s => {
+      if (!s) return;
+      const matchById = linkedStockIds.has(String(s.id));
+      const matchByName = oldNormTitle && this.normalizeProductName(s.name) === oldNormTitle;
+      if (matchById || matchByName) {
+        s.name = newTitle;
+        s.category = newCat;
+      }
+    });
+
+    if (Array.isArray(this.data.stockLogs)) {
+      this.data.stockLogs.forEach(log => {
+        if (!log) return;
+        const matchById = log.itemId && linkedStockIds.has(String(log.itemId));
+        const matchByName = oldNormTitle && this.normalizeProductName(log.itemName) === oldNormTitle;
+        if (matchById || matchByName) {
+          log.itemName = newTitle;
+        }
+      });
+    }
+
+    this.saveData();
+    this.syncRecipesWithExpenses();
+
+    const modal = document.getElementById('renameExpenseGroupModal');
+    if (modal) modal.classList.remove('active');
+
+    this.renderExpenses();
+    this.renderRecipes();
+    this.renderStock();
+    this.renderStockHistory();
+    this.renderLowStockAlertView();
+    this.renderDashboard();
+    this.showToast(`แก้ไขชื่อเป็น "${newTitle}" เรียบร้อย (ไม่สร้างบิลใหม่)`, 'success');
   }
 
   openExpenseGroupHistoryModal(groupKey) {
@@ -3800,6 +3914,41 @@ class WaterFlowApp {
       this.renderLowStockAlertView();
       this.renderDashboard();
     }
+  }
+
+  deleteExpenseGroup(groupKey) {
+    const billsToDelete = (this.data.expenses || []).filter(exp => {
+      const normTitle = this.normalizeProductName(exp.title);
+      const k = normTitle || (exp.stockItemId ? `stk:${exp.stockItemId}` : `id:${exp.id}`);
+      return k === groupKey;
+    });
+    if (billsToDelete.length === 0) return;
+
+    const title = billsToDelete[0].title || 'รายการนี้';
+    const msg = billsToDelete.length > 1
+      ? `คุณต้องการลบ "${title}" และบิลทั้งหมด ${billsToDelete.length} รายการ (รวมถึงหักยอดออกจากสต๊อก) ใช่หรือไม่?`
+      : `คุณต้องการลบรายการ "${title}" (รวมถึงหักยอดออกจากสต๊อก) ใช่หรือไม่?`;
+
+    if (!confirm(msg)) return;
+
+    const deleteIds = new Set(billsToDelete.map(b => String(b.id)));
+    billsToDelete.forEach(exp => this.removeExpenseFromStock(exp));
+    this.data.expenses = (this.data.expenses || []).filter(e => !deleteIds.has(String(e.id)));
+
+    const renameModal = document.getElementById('renameExpenseGroupModal');
+    if (renameModal) renameModal.classList.remove('active');
+    const histModal = document.getElementById('expenseGroupHistoryModal');
+    if (histModal) histModal.classList.remove('active');
+
+    this.saveData();
+    this.syncRecipesWithExpenses();
+    this.showToast(`ลบ "${title}" (${billsToDelete.length} บิล) เรียบร้อยแล้ว`, 'info');
+    this.renderExpenses();
+    this.renderRecipes();
+    this.renderStock();
+    this.renderStockHistory();
+    this.renderLowStockAlertView();
+    this.renderDashboard();
   }
 
   // -------------------------------------------------------------------------
@@ -8086,6 +8235,16 @@ class WaterFlowApp {
           const updatedExp = { ...expRecord, id: this.data.expenses[idx].id, stockItemId: oldExp.stockItemId };
           this.updateExpenseInStock(oldExp, updatedExp);
           this.data.expenses[idx] = updatedExp;
+          // หากเป็นการแก้ชื่อสินค้า (โดยไม่ได้ย้ายไปรวมกับสินค้าอื่น) ให้อัปเดตชื่อบิลเดิมของสินค้านั้นด้วย เพื่อไม่ให้แยกการ์ดซ้ำ
+          const oldTitleNorm = this.normalizeProductName(oldExp.title);
+          const newTitleNorm = this.normalizeProductName(updatedExp.title);
+          if (oldTitleNorm && newTitleNorm && oldTitleNorm !== newTitleNorm && String(updatedExp.stockItemId || '') === String(oldExp.stockItemId || '')) {
+            this.data.expenses.forEach(e => {
+              if (e && String(e.id) !== String(updatedExp.id) && this.normalizeProductName(e.title) === oldTitleNorm) {
+                e.title = updatedExp.title;
+              }
+            });
+          }
         } else {
           const newExp = { ...expRecord, id: editId };
           this.addExpenseToStock(newExp);

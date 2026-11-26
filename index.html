@@ -3401,6 +3401,57 @@
     </div>
   </div>
 
+  <!-- Rename Expense Product Group Modal (แก้ไขชื่อสินค้า/หมวดหมู่โดยไม่สร้างบิลใหม่) -->
+  <div class="modal-backdrop" id="renameExpenseGroupModal" style="z-index: 1065;">
+    <div class="modal-dialog modal-sm" style="max-width: 440px;">
+      <div class="modal-header">
+        <div style="display:flex; align-items:center; gap:0.6rem;">
+          <div class="icon-circle" style="background:#eff6ff; color:var(--primary);">
+            <i data-lucide="edit-3"></i>
+          </div>
+          <div>
+            <h3 class="modal-title" style="margin-bottom:0;">แก้ไขชื่อสินค้า / หมวดหมู่</h3>
+            <span class="text-xs text-muted">อัปเดตชื่อในบิลทั้งหมดและสต๊อกโดยไม่สร้างบิลใหม่</span>
+          </div>
+        </div>
+        <button type="button" class="close-modal-btn" data-close="renameExpenseGroupModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="renameExpGroupKey">
+        <input type="hidden" id="renameExpLatestBillId">
+        <div class="form-group mb-3">
+          <label class="form-label font-bold" for="renameExpGroupTitle">ชื่อสินค้า / วัตถุดิบ</label>
+          <input type="text" id="renameExpGroupTitle" class="form-input" placeholder="ระบุชื่อสินค้าที่ถูกต้อง...">
+        </div>
+        <div class="form-group">
+          <label class="form-label font-bold" for="renameExpGroupCategory">หมวดหมู่</label>
+          <select id="renameExpGroupCategory" class="form-input">
+            <option value="INGREDIENT">🍵 วัตถุดิบชงน้ำ</option>
+            <option value="PACKAGING">🥤 บรรจุภัณฑ์ &amp; แก้ว</option>
+            <option value="FRIDGE_DRINK">🧊 น้ำขายในตู้</option>
+            <option value="STOCK">📦 ยกลัง/สำเร็จรูป</option>
+            <option value="OTHER">🛠️ ค่าใช้จ่ายอื่นๆ</option>
+            <option value="PACK_SELL">📦 ของแพ็คขาย</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer" style="justify-content:space-between; flex-wrap:wrap; gap:0.5rem;">
+        <button type="button" class="btn-outline-fastwork btn-sm" id="btnRenameOpenLatestBill"
+          onclick="app.editLatestBillFromRenameModal()"
+          style="font-size:0.78rem;">
+          แก้ไขรายละเอียดบิลล่าสุด
+        </button>
+        <div style="display:flex; gap:0.5rem;">
+          <button type="button" class="btn-secondary" data-close="renameExpenseGroupModal">ยกเลิก</button>
+          <button type="button" class="btn-fastwork" onclick="app.saveRenameExpenseGroup()">
+            <i data-lucide="check" style="width:15px;height:15px;"></i>
+            <span>บันทึกชื่อใหม่</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Holiday Management Modal (กำหนดวันหยุดพิเศษ / เลือกหลายวันจากปฏิทิน) -->
   <div class="modal-backdrop" id="customHolidayModal">
     <div class="modal-dialog modal-holiday-redesign" style="max-width: 620px;">
