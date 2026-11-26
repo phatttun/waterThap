@@ -9988,6 +9988,19 @@ class WaterFlowApp {
     }
   }
 
+  // สลับซ่อน/แสดงรายละเอียดกำไรเบิกขายรายวันในหน้าสต๊อก
+  toggleStockProfitDetails() {
+    const body = document.getElementById('stockProfitCardBody');
+    const btn = document.getElementById('btnToggleStockProfitDetails');
+    if (!body) return;
+    const isHidden = body.style.display === 'none';
+    body.style.display = isHidden ? 'block' : 'none';
+    if (btn) {
+      const span = btn.querySelector('span');
+      if (span) span.textContent = isHidden ? 'ซ่อนรายละเอียด ▴' : 'ดูรายละเอียด ▾';
+    }
+  }
+
   // เปลี่ยนวันที่ดูสรุปกำไร (ย้อนหลัง / ถัดไป)
   changeStockProfitDate(offset) {
     if (!this.selectedStockProfitDate) {

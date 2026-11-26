@@ -1139,38 +1139,35 @@
 
       <!-- TAB: STOCK (ระบบสต๊อกร้านค้า & วัตถุดิบคงคลัง - Redesigned) -->
       <section id="tab-stock" class="tab-pane">
-        <!-- Unified Stock Command Center Card (Header + Expense Summary + 4 KPIs + Daily Stock Profit) -->
+        <!-- Unified Stock Command Center Card (Clean & Scannable) -->
         <div class="mb-4"
-          style="border-radius:16px; overflow:hidden; border:1.5px solid #cbd5e1; background:#ffffff; box-shadow:0 8px 28px rgba(15,23,42,0.08);">
-          <!-- Section 1: Dark Hero Header + Total Expense Summary -->
+          style="border-radius:16px; overflow:hidden; border:1px solid #cbd5e1; background:#ffffff; box-shadow:0 6px 24px rgba(15,23,42,0.06);">
+          <!-- Section 1: Clean Dark Hero Header + Summary -->
           <div class="figma-expense-hero-card"
-            style="background:linear-gradient(135deg, #0f172a 0%, #1e293b 55%, #1e3a8a 100%); border:none; border-radius:0; margin-bottom:0; padding:1.25rem 1.4rem;">
+            style="background:linear-gradient(135deg, #0f172a 0%, #1e293b 55%, #1e3a8a 100%); border:none; border-radius:0; margin-bottom:0; padding:1.15rem 1.35rem;">
             <!-- Top Row: Title + Actions -->
             <div
-              style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; padding-bottom:1rem; border-bottom:1px solid rgba(255,255,255,0.12);">
-              <div style="display:flex; align-items:center; gap:0.9rem; min-width:0;">
+              style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.85rem; padding-bottom:0.9rem; border-bottom:1px solid rgba(255,255,255,0.1);">
+              <div style="display:flex; align-items:center; gap:0.8rem; min-width:0;">
                 <div class="stock-main-icon-ring"
-                  style="background:rgba(59,130,246,0.2); border:1.5px solid rgba(96,165,250,0.4); color:#93c5fd; flex-shrink:0;">
-                  <i data-lucide="boxes"></i>
+                  style="width:44px; height:44px; background:rgba(59,130,246,0.2); border:1.5px solid rgba(96,165,250,0.4); color:#93c5fd; flex-shrink:0;">
+                  <i data-lucide="boxes" style="width:22px; height:22px;"></i>
                 </div>
                 <div>
-                  <div class="stock-main-badge-top" style="color:#93c5fd; margin-bottom:0.2rem;">🏪 INVENTORY MANAGEMENT
-                    SYSTEM</div>
-                  <h2 class="stock-main-title" style="color:#ffffff; margin:0; font-size:1.3rem;">ระบบสต๊อกร้านค้า &
-                    คลังวัตถุดิบ</h2>
-                  <p class="stock-main-desc" style="color:#cbd5e1; margin:0.2rem 0 0 0; font-size:0.82rem;">
-                    ตรวจนับสินค้าคงคลัง ปรับเพิ่ม-ลดสต๊อกแบบเรียลไทม์ ซิงค์ราคาต้นทุนจากบิลซื้อ และแจ้งเตือนอัตโนมัติ
+                  <h2 class="stock-main-title" style="color:#ffffff; margin:0; font-size:1.22rem; font-weight:800;">ระบบสต๊อกร้านค้า &amp; คลังวัตถุดิบ</h2>
+                  <p class="stock-main-desc" style="color:#94a3b8; margin:0.15rem 0 0 0; font-size:0.78rem;">
+                    ปรับเพิ่ม-ลดสต๊อก ซิงค์ราคาต้นทุนจากบิลซื้ออัตโนมัติ
                   </p>
                 </div>
               </div>
-              <div class="stock-main-hero-actions" style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
-                <div style="display:inline-flex; align-items:center; gap:0.4rem; background:rgba(255,255,255,0.12); border:1.5px solid rgba(255,255,255,0.28); border-radius:var(--radius-sm); padding:0.3rem 0.65rem; height:38px;"
+              <div class="stock-main-hero-actions" style="display:flex; gap:0.45rem; flex-wrap:wrap; align-items:center;">
+                <div style="display:inline-flex; align-items:center; gap:0.35rem; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.22); border-radius:var(--radius-sm); padding:0.25rem 0.6rem; height:36px;"
                   title="เลือกวันที่สำหรับบันทึกเพิ่ม/ลดสต๊อก (รองรับย้อนหลัง)">
-                  <i data-lucide="calendar" style="width:15px; height:15px; color:#93c5fd; flex-shrink:0;"></i>
-                  <span style="font-size:0.75rem; color:#e2e8f0; white-space:nowrap; font-weight:600;">วันที่บันทึก:</span>
+                  <i data-lucide="calendar" style="width:14px; height:14px; color:#93c5fd; flex-shrink:0;"></i>
+                  <span style="font-size:0.74rem; color:#cbd5e1; white-space:nowrap; font-weight:600;">วันที่บันทึก:</span>
                   <input type="date" id="stockActionDateInput"
                     onchange="app.onStockActionDateChange()"
-                    style="background:transparent; border:none; color:#ffffff; font-size:0.82rem; font-weight:700; outline:none; cursor:pointer; color-scheme:dark;">
+                    style="background:transparent; border:none; color:#ffffff; font-size:0.8rem; font-weight:700; outline:none; cursor:pointer; color-scheme:dark;">
                   <button type="button" id="btnStockActionDateToday"
                     onclick="app.resetStockActionDateToToday()"
                     style="display:none; background:rgba(255,255,255,0.22); border:none; color:#ffffff; border-radius:4px; padding:0.15rem 0.4rem; font-size:0.7rem; font-weight:700; cursor:pointer;">
@@ -1178,48 +1175,49 @@
                   </button>
                 </div>
                 <button class="btn-fastwork"
-                  style="background:linear-gradient(135deg, #2563eb 0%, #3b82f6 100%); color:#ffffff; font-weight:700; box-shadow:0 4px 14px rgba(37,99,235,0.35); border-color:#3b82f6;"
+                  style="height:36px; padding:0 0.85rem; font-size:0.82rem; background:linear-gradient(135deg, #2563eb 0%, #3b82f6 100%); color:#ffffff; font-weight:700; box-shadow:0 4px 12px rgba(37,99,235,0.3); border-color:#3b82f6;"
                   onclick="app.openExpenseModal()">
-                  <i data-lucide="receipt"></i>
-                  <span>+ บันทึกซื้อของเข้าสต๊อก</span>
+                  <i data-lucide="plus" style="width:15px;height:15px;"></i>
+                  <span>ซื้อของเข้าสต๊อก</span>
                 </button>
                 <button class="btn-fastwork" id="btnSyncStockFromExpenses"
-                  style="background:rgba(255,255,255,0.12); color:#ffffff; border:1.5px solid rgba(255,255,255,0.28); font-weight:700;">
-                  <i data-lucide="refresh-cw"></i>
-                  <span>ซิงค์รายการซื้อของ</span>
+                  style="height:36px; padding:0 0.75rem; font-size:0.8rem; background:rgba(255,255,255,0.1); color:#e2e8f0; border:1px solid rgba(255,255,255,0.22); font-weight:600;"
+                  title="ซิงค์รายการซื้อของเข้าสต๊อก">
+                  <i data-lucide="refresh-cw" style="width:14px;height:14px;"></i>
+                  <span>ซิงค์</span>
                 </button>
               </div>
             </div>
 
             <!-- Total Expense, Stock Value & Category Pills -->
-            <div style="padding-top:0.95rem;">
-              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(230px, 1fr)); gap:0.85rem; margin-bottom:0.85rem; align-items:stretch;">
+            <div style="padding-top:0.85rem;">
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:0.75rem; margin-bottom:0.75rem; align-items:stretch;">
                 <!-- ยอดจ่ายรวมทั้งหมด -->
-                <div style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:12px; padding:0.75rem 0.95rem;">
-                  <div class="feh-top" style="margin-bottom:0.35rem;">
-                    <div class="feh-label" style="color:#e2e8f0;">
-                      <i data-lucide="receipt"></i>
-                      <span>ยอดจ่ายรวมทั้งหมด (จากบิลซื้อของเข้าสต๊อก)</span>
+                <div style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:0.7rem 0.9rem;">
+                  <div class="feh-top" style="margin-bottom:0.25rem;">
+                    <div class="feh-label" style="color:#cbd5e1; font-size:0.78rem;">
+                      <i data-lucide="receipt" style="width:14px;height:14px;"></i>
+                      <span>ยอดจ่ายรวมทั้งหมด</span>
                     </div>
                     <span class="feh-count-badge" id="stockExpTotalCount">0 รายการ</span>
                   </div>
                   <div class="feh-amount-wrap" style="margin-bottom:0;">
-                    <span class="feh-amount" id="stockExpCategoryTotal">฿0</span>
+                    <span class="feh-amount" id="stockExpCategoryTotal" style="font-size:1.5rem;">฿0</span>
                   </div>
                 </div>
 
                 <!-- มูลค่าสต๊อกในร้านรวม -->
                 <div onclick="app.setStockFilter('all')" title="คลิกเพื่อดูสินค้าทั้งหมด"
-                  style="background:rgba(139,92,246,0.14); border:1px solid rgba(196,181,253,0.28); border-radius:12px; padding:0.75rem 0.95rem; cursor:pointer; display:flex; flex-direction:column; justify-content:space-between;">
-                  <div class="feh-top" style="margin-bottom:0.35rem;">
-                    <div class="feh-label" style="color:#ede9fe;">
-                      <i data-lucide="banknote"></i>
+                  style="background:rgba(139,92,246,0.12); border:1px solid rgba(196,181,253,0.25); border-radius:12px; padding:0.7rem 0.9rem; cursor:pointer;">
+                  <div class="feh-top" style="margin-bottom:0.25rem;">
+                    <div class="feh-label" style="color:#ede9fe; font-size:0.78rem;">
+                      <i data-lucide="banknote" style="width:14px;height:14px;"></i>
                       <span>มูลค่าสต๊อกในร้านรวม</span>
                     </div>
-                    <span class="feh-count-badge" style="background:rgba(139,92,246,0.28); color:#ede9fe; border-color:rgba(196,181,253,0.35);">คำนวณตามต้นทุนจริง</span>
+                    <span class="feh-count-badge" style="background:rgba(139,92,246,0.25); color:#ede9fe; border-color:rgba(196,181,253,0.3);">ต้นทุนจริง</span>
                   </div>
                   <div class="feh-amount-wrap" style="margin-bottom:0;">
-                    <span class="feh-amount" id="kpiStockTotalValue" style="color:#ddd6fe;">฿0</span>
+                    <span class="feh-amount" id="kpiStockTotalValue" style="color:#ddd6fe; font-size:1.5rem;">฿0</span>
                   </div>
                 </div>
               </div>
@@ -1246,133 +1244,111 @@
                 </div>
                 <div class="feh-stat-pill" onclick="app.setStockFilter('OTHER')">
                   <span class="pill-dot" style="background:#64748b;"></span>
-                  <span class="pill-lbl">🛠️ อื่นๆ</span>
+                  <span class="pill-lbl">อื่นๆ</span>
                   <span class="pill-val" style="color:#64748b;" id="stockExpCatOther">฿0</span>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Section 3: Daily Stock Profit Summary -->
-          <div id="stockProfitDailyCard"
-            style="background:linear-gradient(180deg, #f0fdf4 0%, #ffffff 80px); border:none; border-radius:0; margin-bottom:0;">
+          <!-- Section 2: Clean Compact Daily Stock Profit Strip (Collapsible Details) -->
+          <div id="stockProfitDailyCard" style="background:#f8fafc; border-top:1px solid #e2e8f0;">
             <div class="card-header space-between"
-              style="flex-wrap:wrap; gap:0.75rem; background:transparent; border-bottom:1px solid #dcfce7; padding:0.9rem 1.25rem;">
-              <div style="display:flex; align-items:center; gap:0.6rem;">
+              style="flex-wrap:wrap; gap:0.65rem; background:#ffffff; padding:0.75rem 1.25rem; border-bottom:1px solid #f1f5f9;">
+              <div style="display:flex; align-items:center; gap:0.65rem; flex-wrap:wrap;">
                 <div
-                  style="width:36px; height:36px; background:linear-gradient(135deg, #10b981 0%, #059669 100%); color:#ffffff; border-radius:var(--radius-sm); display:flex; align-items:center; justify-content:center; box-shadow:0 2px 8px rgba(16,185,129,0.3);">
-                  <i data-lucide="trending-up" style="width:20px; height:20px;"></i>
+                  style="width:32px; height:32px; background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; border-radius:9px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                  <i data-lucide="trending-up" style="width:17px; height:17px;"></i>
                 </div>
                 <div>
-                  <div style="display:flex; align-items:center; gap:0.4rem;">
-                    <h3 class="card-title mb-0" style="font-size:1.05rem; color:#065f46;">
-                      รวมยอดกำไรจากการเบิกขายน้ำในตู้</h3>
-                    <span class="pill-tag green-tag" style="font-size:0.7rem; font-weight:700;">เฉพาะน้ำในตู้ &
-                      แพ็คขาย</span>
+                  <div style="display:flex; align-items:center; gap:0.45rem; flex-wrap:wrap;">
+                    <span class="font-bold text-main" style="font-size:0.92rem;">กำไรเบิกขายน้ำในตู้ &amp; แพ็คขาย</span>
+                    <span id="stockProfitDayTotalVal"
+                      style="font-size:0.95rem; font-weight:800; color:#15803d; background:#f0fdf4; border:1px solid #bbf7d0; padding:0.1rem 0.55rem; border-radius:9999px;">+฿0.00</span>
                   </div>
                   <span class="text-xs text-muted" id="stockProfitDateDisplayLabel">ประจำวันที่ -</span>
                 </div>
               </div>
 
-              <!-- Date Navigation Tools -->
               <div class="stock-profit-date-tools"
-                style="display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap;">
+                style="display:flex; align-items:center; gap:0.35rem; flex-wrap:wrap;">
                 <button type="button" class="btn-outline-fastwork btn-sm" onclick="app.changeStockProfitDate(-1)"
-                  title="ย้อนดูวันก่อนหน้า" style="padding:0.35rem 0.65rem;">
+                  title="ย้อนดูวันก่อนหน้า" style="height:30px; padding:0 0.5rem;">
                   <i data-lucide="chevron-left" style="width:14px;height:14px;"></i>
-                  <span>ย้อนหลัง</span>
                 </button>
                 <input type="date" id="stockProfitDatePicker" class="form-input-sm"
-                  style="font-weight:700; height:32px; padding:0.2rem 0.5rem;"
+                  style="font-weight:700; height:30px; padding:0.15rem 0.45rem; font-size:0.78rem;"
                   onchange="app.setStockProfitDate(this.value)">
                 <button type="button" class="btn-outline-fastwork btn-sm" onclick="app.changeStockProfitDate(1)"
-                  title="ดูวันถัดไป" style="padding:0.35rem 0.65rem;">
-                  <span>ถัดไป</span>
+                  title="ดูวันถัดไป" style="height:30px; padding:0 0.5rem;">
                   <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
                 </button>
                 <button type="button" class="btn-secondary btn-sm" id="btnStockProfitToday"
-                  onclick="app.setStockProfitDateToToday()" style="padding:0.35rem 0.65rem; font-weight:600;">
+                  onclick="app.setStockProfitDateToToday()" style="height:30px; padding:0 0.55rem; font-size:0.75rem; font-weight:600;">
                   วันนี้
                 </button>
-                <button type="button" class="btn-fastwork btn-sm" onclick="app.openStockProfitHistoryModal()"
-                  style="background:#059669; border-color:#059669; padding:0.35rem 0.75rem;">
-                  <i data-lucide="history" style="width:14px;height:14px;"></i>
-                  <span>ดูประวัติกำไรทั้งหมด</span>
+                <button type="button" class="btn-outline-fastwork btn-sm" onclick="app.openStockProfitHistoryModal()"
+                  style="height:30px; padding:0 0.65rem; font-size:0.75rem; color:#059669; border-color:#a7f3d0; background:#ecfdf5; font-weight:700;">
+                  <i data-lucide="history" style="width:13px;height:13px;"></i>
+                  <span>ประวัติทั้งหมด</span>
+                </button>
+                <button type="button" class="btn-outline-fastwork btn-sm" id="btnToggleStockProfitDetails"
+                  onclick="app.toggleStockProfitDetails()"
+                  style="height:30px; padding:0 0.65rem; font-size:0.75rem; font-weight:700;">
+                  <span>ดูรายละเอียด ▾</span>
                 </button>
               </div>
             </div>
 
-            <div class="card-body" style="padding:1.15rem 1.25rem;">
-              <div
-                style="display:grid; grid-template-columns: minmax(220px, 280px) 1fr; gap:1.25rem; align-items:center;"
-                class="stock-profit-card-grid">
-                <!-- Left: Big Profit Highlight -->
-                <div class="stock-profit-big-box"
-                  style="background:#ffffff; border:1.5px solid #a7f3d0; border-radius:var(--radius-md); padding:1rem 1.25rem; text-align:center; box-shadow:0 2px 8px rgba(16,185,129,0.06);">
-                  <div class="text-xs text-muted font-bold"
-                    style="text-transform:uppercase; letter-spacing:0.5px; color:#047857;">กำไรสุทธิวันที่เลือก</div>
-                  <div class="font-bold" id="stockProfitDayTotalVal"
-                    style="font-size:2rem; color:#15803d; line-height:1.2; margin:0.35rem 0;">+฿0.00</div>
-                  <div style="display:flex; justify-content:center; gap:0.5rem; font-size:0.8rem; margin-top:0.35rem;">
-                    <span class="text-muted">อัตรากำไรเฉลี่ย:</span>
-                    <b id="stockProfitDayMarginVal" class="text-success">0%</b>
+            <!-- Collapsible Body (Hidden by default to keep page clean) -->
+            <div id="stockProfitCardBody" style="display:none; padding:0.9rem 1.25rem; border-top:1px solid #e2e8f0;">
+              <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:0.6rem; margin-bottom:0.8rem;">
+                <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; padding:0.55rem 0.75rem;">
+                  <div class="text-xs text-muted">💵 ยอดขายรวม</div>
+                  <div class="font-bold text-main" id="stockProfitDayRevenueVal" style="font-size:1rem; margin-top:2px;">฿0.00</div>
+                </div>
+                <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; padding:0.55rem 0.75rem;">
+                  <div class="text-xs text-muted">📉 ต้นทุนสินค้ารวม</div>
+                  <div class="font-bold text-muted" id="stockProfitDayCostVal" style="font-size:1rem; margin-top:2px;">฿0.00</div>
+                </div>
+                <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; padding:0.55rem 0.75rem;">
+                  <div class="text-xs text-muted">📊 อัตรากำไรเฉลี่ย</div>
+                  <div class="font-bold text-success" id="stockProfitDayMarginVal" style="font-size:1rem; margin-top:2px;">0%</div>
+                </div>
+                <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; padding:0.55rem 0.75rem;">
+                  <div class="text-xs text-muted">📦 เบิกขายไป</div>
+                  <div class="font-bold text-primary" id="stockProfitDayItemsCountVal" style="font-size:1rem; margin-top:2px;">0 รายการ</div>
+                </div>
+              </div>
+
+              <!-- Day Items Mini List Feed -->
+              <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; padding:0.75rem 0.85rem;">
+                <div
+                  style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.45rem;">
+                  <span class="text-xs font-bold text-main">รายการเบิกขายในวันดังกล่าว:</span>
+                  <div
+                    style="display:flex; align-items:center; gap:0.45rem; flex:1; justify-content:flex-end; min-width:170px;">
+                    <div style="position:relative; flex:1; max-width:210px; min-width:130px;">
+                      <i data-lucide="search"
+                        style="position:absolute; left:8px; top:50%; transform:translateY(-50%); width:13px; height:13px; color:#94a3b8; pointer-events:none;"></i>
+                      <input type="text" id="stockProfitDaySearchInput" class="form-input-sm"
+                        placeholder="ค้นหาชื่อสินค้า..." oninput="app.renderStockProfitCard()"
+                        onchange="app.renderStockProfitCard()" onsearch="app.renderStockProfitCard()"
+                        style="height:28px; width:100%; padding-left:1.65rem; padding-right:1.5rem; font-size:0.75rem; background:#ffffff;">
+                      <button type="button" id="stockProfitDaySearchClearBtn"
+                        onclick="app.clearSearchInput('stockProfitDaySearchInput', 'renderStockProfitCard')"
+                        title="ล้างคำค้นหา"
+                        style="display:none; position:absolute; right:4px; top:50%; transform:translateY(-50%); background:none; border:none; color:#94a3b8; cursor:pointer; font-size:0.8rem; line-height:1; padding:1px 4px;">
+                        ✕
+                      </button>
+                    </div>
+                    <span class="text-xs text-muted" id="stockProfitDayItemsDetailBadge"
+                      style="white-space:nowrap;">0 ชิ้น</span>
                   </div>
                 </div>
-
-                <!-- Right: Sub Metrics & Breakdown -->
-                <div>
-                  <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:0.75rem; margin-bottom:0.85rem;"
-                    class="stock-profit-metrics-row">
-                    <div
-                      style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:var(--radius-sm); padding:0.6rem 0.85rem;">
-                      <div class="text-xs text-muted">💵 ยอดขายรวม</div>
-                      <div class="font-bold text-main" id="stockProfitDayRevenueVal"
-                        style="font-size:1.1rem; margin-top:2px;">฿0.00</div>
-                    </div>
-                    <div
-                      style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:var(--radius-sm); padding:0.6rem 0.85rem;">
-                      <div class="text-xs text-muted">📉 ต้นทุนสินค้ารวม</div>
-                      <div class="font-bold text-muted" id="stockProfitDayCostVal"
-                        style="font-size:1.1rem; margin-top:2px;">฿0.00</div>
-                    </div>
-                    <div
-                      style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:var(--radius-sm); padding:0.6rem 0.85rem;">
-                      <div class="text-xs text-muted">📦 เบิกขายไป</div>
-                      <div class="font-bold text-primary" id="stockProfitDayItemsCountVal"
-                        style="font-size:1.1rem; margin-top:2px;">0 รายการ</div>
-                    </div>
-                  </div>
-
-                  <!-- Day Items Mini List Feed -->
-                  <div>
-                    <div
-                      style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.45rem;">
-                      <span class="text-xs font-bold text-muted">รายการเบิกขายในวันดังกล่าว:</span>
-                      <div
-                        style="display:flex; align-items:center; gap:0.45rem; flex:1; justify-content:flex-end; min-width:170px;">
-                        <div style="position:relative; flex:1; max-width:210px; min-width:130px;">
-                          <i data-lucide="search"
-                            style="position:absolute; left:8px; top:50%; transform:translateY(-50%); width:13px; height:13px; color:#94a3b8; pointer-events:none;"></i>
-                          <input type="text" id="stockProfitDaySearchInput" class="form-input-sm"
-                            placeholder="ค้นหาชื่อสินค้า..." oninput="app.renderStockProfitCard()"
-                            onchange="app.renderStockProfitCard()" onsearch="app.renderStockProfitCard()"
-                            style="height:28px; width:100%; padding-left:1.65rem; padding-right:1.5rem; font-size:0.75rem; background:#ffffff;">
-                          <button type="button" id="stockProfitDaySearchClearBtn"
-                            onclick="app.clearSearchInput('stockProfitDaySearchInput', 'renderStockProfitCard')"
-                            title="ล้างคำค้นหา"
-                            style="display:none; position:absolute; right:4px; top:50%; transform:translateY(-50%); background:none; border:none; color:#94a3b8; cursor:pointer; font-size:0.8rem; line-height:1; padding:1px 4px;">
-                            ✕
-                          </button>
-                        </div>
-                        <span class="text-xs text-muted" id="stockProfitDayItemsDetailBadge"
-                          style="white-space:nowrap;">0 ชิ้น</span>
-                      </div>
-                    </div>
-                    <div id="stockProfitDayItemsList"
-                      style="max-height:165px; overflow-y:auto; display:flex; flex-direction:column; gap:0.35rem;">
-                      <!-- Rendered by JS -->
-                    </div>
-                  </div>
+                <div id="stockProfitDayItemsList"
+                  style="max-height:165px; overflow-y:auto; display:flex; flex-direction:column; gap:0.35rem;">
+                  <!-- Rendered by JS -->
                 </div>
               </div>
             </div>
