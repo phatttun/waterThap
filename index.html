@@ -25,14 +25,13 @@
 
 <body>
   <div class="app-layout">
-    <!-- Mobile Top Header -->
+    <!-- Mobile Top Header (Modern Minimalist App Bar) -->
     <header class="mobile-header">
-      <button id="mobileMenuBtn" class="icon-btn" aria-label="เปิดเมนู">
+      <button id="mobileMenuBtn" class="icon-btn mobile-menu-trigger" aria-label="เปิดเมนู">
         <i data-lucide="menu"></i>
       </button>
       <div class="mobile-brand">
-        <img src="ร้านน้ำยายแต๊ป.png" alt="โลโก้ร้านน้ำยายแต๊ป" class="brand-logo-img"
-          style="width:34px; height:34px; object-fit:cover; border-radius:var(--radius-sm); box-shadow:0 2px 6px rgba(0,0,0,0.15);">
+        <img src="ร้านน้ำยายแต๊ป.png" alt="โลโก้ร้านน้ำยายแต๊ป" class="brand-logo-img mobile-brand-logo">
         <span class="brand-name">ร้านน้ำยายแต๊ป</span>
       </div>
       <div id="cloudSyncStatusMobile" class="cloud-sync-badge" title="สถานะเชื่อมต่อคลาวด์">
@@ -41,12 +40,12 @@
       </div>
     </header>
 
-    <!-- Sidebar (Fastwork Style) -->
+    <!-- Sidebar / Navigation Drawer -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
         <div class="brand-logo">
           <img src="ร้านน้ำยายแต๊ป.png" alt="โลโก้ร้านน้ำยายแต๊ป" class="brand-logo-img"
-            style="width:42px; height:42px; object-fit:cover; border-radius:var(--radius-md); box-shadow:0 3px 10px rgba(0,80,240,0.25); border:1px solid rgba(0,80,240,0.15);">
+            style="width:40px; height:40px; object-fit:cover; border-radius:10px; box-shadow:0 3px 10px rgba(0,80,240,0.2); border:1px solid rgba(0,80,240,0.12);">
           <div class="brand-info">
             <h1 class="brand-title">ร้านน้ำยายแต๊ป</h1>
           </div>
@@ -56,81 +55,63 @@
         </button>
       </div>
 
-
-
-      <!-- Navigation Links -->
+      <!-- Navigation Links (Grouped & Clean) -->
       <nav class="sidebar-nav">
-        <div class="nav-section-title">แดชบอร์ดภาพรวม</div>
-        <button class="nav-item nav-item-main active" data-tab="dashboard">
+        <div class="nav-section-title">ภาพรวม &amp; ยอดขาย</div>
+        <button class="nav-item active" data-tab="dashboard">
           <i data-lucide="layout-dashboard"></i>
           <span>แดชบอร์ดภาพรวม</span>
         </button>
-
-        <div class="nav-sub-group">
-          <div class="nav-sub-header">
-            <span class="nav-sub-line"></span>
-            <span class="nav-sub-title">ระบบย่อย & การจัดการร้าน</span>
-          </div>
-          <button class="nav-item nav-item-sub" data-tab="today">
-            <i data-lucide="badge-dollar-sign"></i>
-            <span>รายได้วันนี้ & บันทึกขาย</span>
-            <span class="nav-badge" id="todaySalesBadge">0 บ.</span>
-          </button>
-          <button class="nav-item nav-item-sub" data-tab="expenses">
-            <i data-lucide="receipt"></i>
-            <span>บันทึกต้นทุน & วัตถุดิบ</span>
-          </button>
-          <button class="nav-item nav-item-sub" data-tab="pricing">
-            <i data-lucide="calculator"></i>
-            <span>คำนวณราคาขายต่อขวด/ลัง</span>
-          </button>
-          <button class="nav-item nav-item-sub" data-tab="calendar">
-            <i data-lucide="calendar-days"></i>
-            <span>ปฏิทินสรุปยอดรายวัน</span>
-          </button>
-          <button class="nav-item nav-item-sub" data-tab="recipes">
-            <i data-lucide="beaker"></i>
-            <span>สูตรชงน้ำ</span>
-          </button>
-        </div>
-
-        <div class="nav-section-title mt-4">คำนวณการขาย</div>
-        <div class="nav-sub-group">
-          <button class="nav-item nav-item-sub" data-tab="pack-sell">
-            <i data-lucide="package"></i>
-            <span>แพ็คขาย</span>
-          </button>
-          <button class="nav-item nav-item-sub" data-tab="drink-sales">
-            <i data-lucide="coffee"></i>
-            <span>น้ำชง</span>
-          </button>
-        </div>
-
-        <div class="nav-section-title mt-4">สต๊อกร้านค้า & วัตถุดิบ</div>
-        <button class="nav-item nav-item-main" data-tab="stock">
-          <i data-lucide="boxes"></i>
-          <span>สต๊อกร้านค้า & วัตถุดิบ</span>
-          <span class="nav-badge" id="stockAlertBadge" style="background-color: var(--danger);">3 เตือน</span>
+        <button class="nav-item" data-tab="today">
+          <i data-lucide="badge-dollar-sign"></i>
+          <span>รายได้วันนี้ &amp; บันทึกขาย</span>
+          <span class="nav-badge" id="todaySalesBadge">0 บ.</span>
+        </button>
+        <button class="nav-item" data-tab="calendar">
+          <i data-lucide="calendar-days"></i>
+          <span>ปฏิทินสรุปยอดรายวัน</span>
         </button>
 
-        <div class="nav-sub-group">
-          <div class="nav-sub-header">
-            <span class="nav-sub-line"></span>
-            <span class="nav-sub-title">จัดการสินค้า & วัตถุดิบคงคลัง</span>
-          </div>
-          <button class="nav-item nav-item-sub" data-tab="stock-low" id="navStockLow">
-            <i data-lucide="alert-triangle" style="color: var(--warning);"></i>
-            <span>สินค้าใกล้หมด (เตือนซื้อ)</span>
-            <span class="nav-badge" id="stockLowCountBadge"
-              style="background-color: var(--warning); color: #fff;">0</span>
-          </button>
-          <button class="nav-item nav-item-sub" data-tab="stock-history" id="navStockHistory">
-            <i data-lucide="history"></i>
-            <span>ประวัติเบิก-ตัดสต๊อก</span>
-          </button>
-        </div>
+        <div class="nav-section-title mt-3">สูตรชง &amp; คำนวณขาย</div>
+        <button class="nav-item" data-tab="recipes">
+          <i data-lucide="beaker"></i>
+          <span>สูตรชงน้ำ</span>
+        </button>
+        <button class="nav-item" data-tab="drink-sales">
+          <i data-lucide="coffee"></i>
+          <span>คำนวณการขายน้ำชง</span>
+        </button>
+        <button class="nav-item" data-tab="pack-sell">
+          <i data-lucide="package"></i>
+          <span>แพ็คขาย</span>
+        </button>
+        <button class="nav-item" data-tab="pricing">
+          <i data-lucide="calculator"></i>
+          <span>คำนวณราคาขายต่อขวด/ลัง</span>
+        </button>
 
-        <div class="nav-section-title mt-4">ตั้งค่า & ฐานข้อมูล</div>
+        <div class="nav-section-title mt-3">คลังสินค้า &amp; ต้นทุน</div>
+        <button class="nav-item" data-tab="expenses">
+          <i data-lucide="receipt"></i>
+          <span>บันทึกต้นทุน &amp; วัตถุดิบ</span>
+        </button>
+        <button class="nav-item" data-tab="stock">
+          <i data-lucide="boxes"></i>
+          <span>สต๊อกร้านค้า &amp; วัตถุดิบ</span>
+          <span class="nav-badge" id="stockAlertBadge" style="background-color: var(--danger);">3 เตือน</span>
+        </button>
+        <button class="nav-item" data-tab="stock-low" id="navStockLow">
+          <i data-lucide="alert-triangle" style="color: var(--warning);"></i>
+          <span>สินค้าใกล้หมด (เตือนซื้อ)</span>
+          <span class="nav-badge" id="stockLowCountBadge"
+            style="background-color: var(--warning); color: #fff;">0</span>
+        </button>
+        <button class="nav-item" data-tab="stock-history" id="navStockHistory">
+          <i data-lucide="history"></i>
+          <span>ประวัติเบิก-ตัดสต๊อก</span>
+        </button>
+
+        <div class="nav-section-title mt-3">ระบบ</div>
         <button class="nav-item" data-tab="settings">
           <i data-lucide="settings"></i>
           <span>จัดการข้อมูล / สำรองข้อมูล</span>
@@ -179,11 +160,11 @@
           <div class="figma-dash-header mb-3">
             <button class="figma-btn-action primary" onclick="app.switchTab('today')">
               <i data-lucide="plus-circle"></i>
-              <span>+ บันทึกยอดวันนี้</span>
+              <span>บันทึกยอดวันนี้</span>
             </button>
             <button class="figma-btn-action secondary" onclick="app.openExpenseModal()">
               <i data-lucide="receipt"></i>
-              <span>+ เพิ่มรายจ่าย</span>
+              <span>เพิ่มรายจ่าย</span>
             </button>
           </div>
 
@@ -1422,6 +1403,13 @@
                 <i data-lucide="arrow-up" class="sort-arrow-icon"></i>
                 <span class="sort-text">ล่าสุด</span>
               </button>
+              <button type="button" class="btn-outline-fastwork btn-sm" id="btnOpenBulkSellingPrice"
+                onclick="app.openBulkSellingPriceModal()"
+                style="height:36px; padding:0 0.75rem; font-size:0.8rem; font-weight:700; color:#059669; border-color:#a7f3d0; background:#ecfdf5; display:inline-flex; align-items:center; gap:0.35rem; white-space:nowrap;"
+                title="ตั้งราคาขาย/หน่วยทีละหลายรายการ">
+                <i data-lucide="tag" style="width:14px;height:14px;"></i>
+                <span>ตั้งราคาขาย</span>
+              </button>
             </div>
           </div>
 
@@ -2294,27 +2282,27 @@
       </section>
     </main>
 
-    <!-- Mobile Bottom Navigation (Fastwork Style) -->
-    <nav class="mobile-bottom-nav">
+    <!-- Mobile Bottom Navigation (Modern Minimalist) -->
+    <nav class="mobile-bottom-nav" aria-label="เมนูหลักด้านล่าง">
       <button class="mobile-nav-item active" data-tab="dashboard">
-        <i data-lucide="layout-dashboard"></i>
+        <span class="mobile-nav-icon-wrap"><i data-lucide="layout-dashboard"></i></span>
         <span>แดชบอร์ด</span>
       </button>
       <button class="mobile-nav-item" data-tab="today">
-        <i data-lucide="badge-dollar-sign"></i>
+        <span class="mobile-nav-icon-wrap"><i data-lucide="badge-dollar-sign"></i></span>
         <span>ขายวันนี้</span>
       </button>
       <button class="mobile-nav-item" data-tab="pricing">
-        <i data-lucide="calculator"></i>
+        <span class="mobile-nav-icon-wrap"><i data-lucide="calculator"></i></span>
         <span>คำนวณราคา</span>
       </button>
       <button class="mobile-nav-item" data-tab="calendar">
-        <i data-lucide="calendar"></i>
+        <span class="mobile-nav-icon-wrap"><i data-lucide="calendar-days"></i></span>
         <span>ปฏิทิน</span>
       </button>
-      <button class="mobile-nav-item" data-tab="recipes">
-        <i data-lucide="beaker"></i>
-        <span>สูตร 1 โหล</span>
+      <button class="mobile-nav-item" data-tab="stock">
+        <span class="mobile-nav-icon-wrap"><i data-lucide="boxes"></i></span>
+        <span>สต๊อก</span>
       </button>
     </nav>
   </div>
@@ -3499,6 +3487,61 @@
           <button type="button" class="btn-fastwork" onclick="app.saveRenameExpenseGroup()">
             <i data-lucide="check" style="width:15px;height:15px;"></i>
             <span>บันทึกชื่อใหม่</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bulk Stock Selling Price Modal (ตั้งราคาขาย/หน่วย หลายรายการพร้อมกัน) -->
+  <div class="modal-backdrop" id="bulkSellingPriceModal" style="z-index: 1060;">
+    <div class="modal-dialog modal-lg" style="max-width: 640px;">
+      <div class="modal-mobile-handle"></div>
+      <div class="modal-header">
+        <div style="display:flex; align-items:center; gap:0.65rem; min-width:0;">
+          <div class="icon-circle" style="background:#ecfdf5; color:#059669; flex-shrink:0;">
+            <i data-lucide="tag"></i>
+          </div>
+          <div style="min-width:0;">
+            <h3 class="modal-title" style="margin-bottom:0;">ตั้งราคาขาย/หน่วย</h3>
+            <span class="text-xs text-muted">กรอกราคาขายหลายรายการพร้อมกันเพื่อใช้คำนวณกำไร</span>
+          </div>
+        </div>
+        <button type="button" class="close-modal-btn" data-close="bulkSellingPriceModal" aria-label="ปิด">&times;</button>
+      </div>
+      <div class="modal-body" style="display:flex; flex-direction:column; gap:0.75rem;">
+        <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+          <div style="position:relative; flex:1; min-width:170px;">
+            <i data-lucide="search"
+              style="position:absolute; left:10px; top:50%; transform:translateY(-50%); width:15px; height:15px; color:#94a3b8; pointer-events:none;"></i>
+            <input type="text" id="bulkSellPriceSearch" class="form-input" placeholder="ค้นหาชื่อสินค้า..."
+              oninput="app.renderBulkSellingPriceList()"
+              style="height:38px; padding-left:32px; font-size:0.86rem;">
+          </div>
+          <select id="bulkSellPriceCatFilter" class="form-input" onchange="app.renderBulkSellingPriceList()"
+            style="width:auto; min-width:170px; height:38px; font-size:0.84rem; font-weight:600;">
+            <option value="SELLABLE" selected>สินค้าสำหรับขาย (แนะนำ)</option>
+            <option value="UNSET">ยังไม่ตั้งราคาขาย</option>
+            <option value="FRIDGE_DRINK">🧊 น้ำขายในตู้</option>
+            <option value="STOCK">📦 สำเร็จรูป/ลัง</option>
+            <option value="PACK_SELL">📦 ของแพ็คขาย</option>
+            <option value="ALL">ทั้งหมดในสต๊อก</option>
+          </select>
+        </div>
+
+        <div id="bulkSellingPriceList"
+          style="max-height:55vh; overflow-y:auto; -webkit-overflow-scrolling:touch; display:flex; flex-direction:column; gap:0.5rem; padding-right:2px;">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+      <div class="modal-footer" style="justify-content:space-between; flex-wrap:wrap; gap:0.5rem;">
+        <span class="text-xs text-muted" id="bulkSellPriceCountLabel">0 รายการ</span>
+        <div style="display:flex; gap:0.5rem;">
+          <button type="button" class="btn-secondary" data-close="bulkSellingPriceModal">ยกเลิก</button>
+          <button type="button" class="btn-fastwork" onclick="app.saveBulkStockSellingPrices()"
+            style="background:#059669; border-color:#059669;">
+            <i data-lucide="save" style="width:15px;height:15px;"></i>
+            <span>บันทึกทั้งหมด</span>
           </button>
         </div>
       </div>

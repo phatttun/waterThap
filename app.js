@@ -1479,7 +1479,7 @@ class WaterFlowApp {
       backdrop.addEventListener('click', (e) => {
         if (e.target === backdrop) {
           // ป้องกันไม่ให้คลิกด้านนอกแล้ว modal ปิดเองโดยไม่ได้ตั้งใจ (ต้องกดยกเลิก หรือบันทึกข้อมูลเท่านั้น)
-          if (backdrop.id === 'recipeModal' || backdrop.id === 'expenseModal' || backdrop.id === 'stockItemModal' || backdrop.id === 'quickRestockModal' || backdrop.id === 'packSellPickerModal' || backdrop.id === 'recipeExpensePickerModal') {
+          if (backdrop.id === 'recipeModal' || backdrop.id === 'expenseModal' || backdrop.id === 'stockItemModal' || backdrop.id === 'quickRestockModal' || backdrop.id === 'packSellPickerModal' || backdrop.id === 'recipeExpensePickerModal' || backdrop.id === 'bulkSellingPriceModal') {
             return;
           }
           backdrop.classList.remove('active');
@@ -1773,8 +1773,9 @@ class WaterFlowApp {
     document.querySelectorAll('.sidebar-nav .nav-item').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.tab === cleanTabId);
     });
+    const mobileActiveTab = (cleanTabId === 'stock-low' || cleanTabId === 'stock-history') ? 'stock' : cleanTabId;
     document.querySelectorAll('.mobile-bottom-nav .mobile-nav-item').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.tab === cleanTabId);
+      btn.classList.toggle('active', btn.dataset.tab === mobileActiveTab);
     });
     // If subhead clicked for stock, navigate to tab-stock or tab-stock-low
     const effectiveTabId = cleanTabId;
@@ -10706,6 +10707,164 @@ class WaterFlowApp {
 
     // Fallback: format any URLs cleanly
     return `<div style="display:flex; align-items:center; flex-wrap:wrap; gap:0.25rem;">${linkifyText(raw)}</div>`;
+  }
+
+  openBulkSellingPriceModal() {
+    this._bulkSellingPriceDraft = {};
+    (this.data.stockItems || []).forEach(item => {
+      if (item && item.id) {
+        this._bulkSellingPriceDraft[item.id] = (Number(item.sellingPrice) > 0) ? String(item.sellingPrice) : '';
+      }
+    });
+    const searchEl = document.getElementById('bulkSellPriceSearch');
+    if (searchEl) searchEl.value = '';
+    const catEl = document.getElementById('bulkSellPriceCatFilter');
+    if (catEl) catEl.value = 'SELLABLE';
+
+    this.renderBulkSellingPriceList();
+    const modal = document.getElementById('bulkSellingPriceModal');
+    if (modal) {
+      modal.classList.add('active');
+      this.refreshLucide();
+    }
+  }
+
+  renderBulkSellingPriceList() {
+    const listEl = document.getElementById('bulkSellingPriceList');
+    const countEl = document.getElementById('bulkSellPriceCountLabel');
+    const query = (document.getElementById('bulkSellPriceSearch')?.value || '').trim().toLowerCase();
+    const catFilter = document.getElementById('bulkSellPriceCatFilter')?.value || 'SELLABLE';
+    if (!listEl) return;
+
+    const sellableCats = new Set(['FRIDGE_DRINK', 'STOCK', 'PACK_SELL']);
+    const catLabels = {
+      FRIDGE_DRINK: '🧊 น้ำขายในตู้',
+      STOCK: '📦 สำเร็จรูป/ลัง',
+      PACK_SELL: '📦 ของแพ็คขาย',
+      INGREDIENT: '🍵 วัตถุดิบ',
+      PACKAGING: '🥤 บรรจุภัณฑ์',
+      OTHER: '🛠️ อื่นๆ'
+    };
+
+    let items = (this.data.stockItems || []).filter(item => {
+      if (!item) return false;
+      if (catFilter === 'SELLABLE') {
+        if (!sellableCats.has(item.category)) return false;
+      } else if (catFilter === 'UNSET') {
+        if (!sellableCats.has(item.category)) return false;
+        const draftVal = parseFloat(this._bulkSellingPriceDraft?.[item.id]) || 0;
+        if (draftVal > 0) return false;
+      } else if (catFilter !== 'ALL') {
+        if (item.category !== catFilter) return false;
+      }
+      if (query) {
+        const name = String(item.name || '').toLowerCase();
+        const cat = String(catLabels[item.category] || '').toLowerCase();
+        if (!name.includes(query) && !cat.includes(query)) return false;
+      }
+      return true;
+    });
+
+    if (countEl) countEl.textContent = `แสดง ${items.length} รายการ`;
+
+    if (items.length === 0) {
+      listEl.innerHTML = `
+        <div style="text-align:center; padding:2rem 1rem; background:#f8fafc; border:1px dashed #cbd5e1; border-radius:12px;">
+          <div style="font-size:1.75rem; margin-bottom:0.35rem;">🏷️</div>
+          <div class="font-bold text-main" style="font-size:0.92rem;">ไม่พบรายการสินค้าในหมวดนี้</div>
+          <div class="text-xs text-muted" style="margin-top:0.2rem;">ลองเปลี่ยนตัวกรองหมวดหมู่หรือคำค้นหา</div>
+        </div>
+      `;
+      return;
+    }
+
+    listEl.innerHTML = items.map(item => {
+      const unit = item.unit || 'หน่วย';
+      const cost = Number(item.unitCost) || 0;
+      const draftStr = this._bulkSellingPriceDraft?.[item.id] ?? '';
+      const sellVal = parseFloat(draftStr) || 0;
+      const profit = sellVal > 0 ? (sellVal - cost) : 0;
+      const profitColor = profit > 0 ? '#15803d' : (profit < 0 ? '#dc2626' : '#64748b');
+      const profitText = sellVal > 0
+        ? (profit >= 0 ? `กำไร +฿${profit.toFixed(2)}` : `ขาดทุน -฿${Math.abs(profit).toFixed(2)}`)
+        : 'ยังไม่ตั้งราคา';
+
+      return `
+        <div class="bulk-sell-row" style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:0.7rem 0.85rem; display:flex; align-items:center; justify-content:space-between; gap:0.75rem; flex-wrap:wrap;">
+          <div style="min-width:0; flex:1 1 180px;">
+            <div class="font-bold text-main" style="font-size:0.92rem; line-height:1.3;">${this.escapeHtml(item.name || '')}</div>
+            <div style="display:flex; align-items:center; gap:0.45rem; flex-wrap:wrap; margin-top:0.2rem; font-size:0.75rem; color:var(--text-muted);">
+              <span>${catLabels[item.category] || item.category || ''}</span>
+              <span>•</span>
+              <span>ทุน <b>฿${this.formatUnitCost(cost)}</b>/${this.escapeHtml(unit)}</span>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:0.55rem; flex-shrink:0;">
+            <div style="position:relative; width:125px;">
+              <span style="position:absolute; left:9px; top:50%; transform:translateY(-50%); font-size:0.82rem; font-weight:700; color:var(--primary); pointer-events:none;">฿</span>
+              <input type="number" step="any" min="0" class="form-input font-bold"
+                value="${this.escapeHtml(draftStr)}"
+                placeholder="ราคา/${this.escapeHtml(unit)}"
+                oninput="app.onBulkSellingPriceInput('${this.escapeHtml(String(item.id)).replace(/'/g, "\\'")}', this.value, this)"
+                style="height:36px; padding-left:1.55rem; padding-right:0.5rem; font-size:0.9rem; text-align:right;">
+            </div>
+            <div class="bulk-sell-profit-lbl" style="min-width:88px; text-align:right; font-size:0.76rem; font-weight:700; color:${profitColor};">
+              ${profitText}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  onBulkSellingPriceInput(itemId, val, inputEl) {
+    if (!this._bulkSellingPriceDraft) this._bulkSellingPriceDraft = {};
+    this._bulkSellingPriceDraft[itemId] = val;
+    const item = (this.data.stockItems || []).find(x => x && String(x.id) === String(itemId));
+    const row = inputEl ? inputEl.closest('.bulk-sell-row') : null;
+    const profitEl = row ? row.querySelector('.bulk-sell-profit-lbl') : null;
+    if (item && profitEl) {
+      const cost = Number(item.unitCost) || 0;
+      const sellVal = parseFloat(val) || 0;
+      if (sellVal > 0) {
+        const profit = sellVal - cost;
+        profitEl.style.color = profit > 0 ? '#15803d' : (profit < 0 ? '#dc2626' : '#64748b');
+        profitEl.textContent = profit >= 0 ? `กำไร +฿${profit.toFixed(2)}` : `ขาดทุน -฿${Math.abs(profit).toFixed(2)}`;
+      } else {
+        profitEl.style.color = '#64748b';
+        profitEl.textContent = 'ยังไม่ตั้งราคา';
+      }
+    }
+  }
+
+  saveBulkStockSellingPrices() {
+    if (!this._bulkSellingPriceDraft) return;
+    let updatedCount = 0;
+    (this.data.stockItems || []).forEach(item => {
+      if (!item || !item.id) return;
+      if (!Object.prototype.hasOwnProperty.call(this._bulkSellingPriceDraft, item.id)) return;
+      const rawVal = String(this._bulkSellingPriceDraft[item.id] ?? '').trim();
+      const newPrice = rawVal === '' ? 0 : Math.max(0, parseFloat(rawVal) || 0);
+      const oldPrice = Number(item.sellingPrice) || 0;
+      if (newPrice !== oldPrice) {
+        item.sellingPrice = newPrice;
+        updatedCount++;
+      }
+    });
+
+    this.saveData();
+    const modal = document.getElementById('bulkSellingPriceModal');
+    if (modal) modal.classList.remove('active');
+
+    this.renderStock();
+    this.renderStockProfitCard();
+    this.renderLowStockAlertView();
+
+    if (updatedCount > 0) {
+      this.showToast(`อัปเดตราคาขาย/หน่วยสำเร็จ ${updatedCount} รายการ`, 'success');
+    } else {
+      this.showToast('ไม่มีรายการที่เปลี่ยนแปลงราคา', 'info');
+    }
   }
 
   openStockModal(itemId = null) {

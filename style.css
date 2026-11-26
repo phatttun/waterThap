@@ -2713,13 +2713,16 @@ body {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 60px;
-  background-color: #ffffff;
-  border-top: 1px solid var(--border-color);
+  height: calc(62px + env(safe-area-inset-bottom, 0px));
+  padding: 0.25rem 0.35rem env(safe-area-inset-bottom, 0px);
+  background-color: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(226, 232, 240, 0.9);
   z-index: 90;
   justify-content: space-around;
   align-items: center;
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 -4px 16px rgba(15, 23, 42, 0.05);
 }
 
 .mobile-nav-item {
@@ -2731,21 +2734,31 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.25rem;
-  color: var(--text-muted);
+  gap: 0.2rem;
+  color: #64748b;
   cursor: pointer;
   font-family: inherit;
-  font-size: 0.725rem;
-  font-weight: 500;
-  padding: 0.35rem 0.25rem;
-  transition: var(--transition);
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.25rem 0.15rem;
+  transition: color 0.15s ease;
   -webkit-tap-highlight-color: transparent;
 }
 
+.mobile-nav-icon-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 28px;
+  border-radius: 9999px;
+  transition: background-color 0.2s ease, transform 0.15s ease;
+}
+
 .mobile-nav-item i {
-  width: 22px;
-  height: 22px;
-  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  width: 20px;
+  height: 20px;
+  transition: transform 0.15s ease;
 }
 
 .mobile-nav-item.active {
@@ -2753,9 +2766,16 @@ body {
   font-weight: 700;
 }
 
+.mobile-nav-item.active .mobile-nav-icon-wrap {
+  background-color: var(--primary-light);
+}
+
 .mobile-nav-item.active i {
-  transform: translateY(-2px);
   color: var(--primary);
+}
+
+.mobile-nav-item:active .mobile-nav-icon-wrap {
+  transform: scale(0.94);
 }
 
 /* -------------------------------------------------------------------------
@@ -2816,17 +2836,60 @@ body {
     z-index: 999;
   }
 
-  /* Mobile / Tablet Top Header */
+  /* Mobile / Tablet Top Header (Modern Minimalist App Bar) */
   .mobile-header {
     display: flex;
     width: 100%;
     position: sticky;
     top: 0;
     z-index: 90;
-    background-color: #ffffff;
-    border-bottom: 1px solid var(--border-color);
-    padding: 0.75rem 1.25rem;
-    box-shadow: var(--shadow-sm);
+    background-color: rgba(255, 255, 255, 0.94);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(226, 232, 240, 0.9);
+    padding: max(0.55rem, env(safe-area-inset-top, 0px)) 1rem 0.55rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.65rem;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+  }
+
+  .mobile-menu-trigger {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    color: var(--text-main);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .mobile-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+
+  .mobile-brand-logo {
+    width: 32px;
+    height: 32px;
+    object-fit: cover;
+    border-radius: 9px;
+    box-shadow: 0 2px 6px rgba(0, 80, 240, 0.14);
+    flex-shrink: 0;
+  }
+
+  .mobile-brand .brand-name {
+    font-weight: 800;
+    font-size: 1rem;
+    color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   /* Main Content Area */
@@ -2846,19 +2909,6 @@ body {
   /* Mobile Bottom Navigation Bar */
   .mobile-bottom-nav {
     display: flex;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 62px;
-    background-color: rgba(255, 255, 255, 0.96);
-    backdrop-filter: blur(10px);
-    border-top: 1px solid var(--border-color);
-    z-index: 90;
-    justify-content: space-around;
-    align-items: center;
-    padding-bottom: env(safe-area-inset-bottom, 0);
-    box-shadow: 0 -2px 12px rgba(15, 23, 42, 0.06);
   }
 
   /* Grids for Tablets */
