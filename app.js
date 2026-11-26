@@ -9708,7 +9708,7 @@ class WaterFlowApp {
 
     const itemName = log.itemName;
     const unit = log.unit || 'หน่วย';
-    const logDate = log.date || this.formatDate(new Date());
+    const logDate = String(log.date || this.formatDate(new Date())).substring(0, 10);
     const parsed = this.parseProfitInfoFromLog(log);
 
     // 1. คืนจำนวนสต๊อกสินค้ากลับเข้าคลัง
@@ -9729,16 +9729,26 @@ class WaterFlowApp {
     // 2. ปรับลดยอดขาย ต้นทุน และกำไรใน dailySales ของวันที่เบิก
     if (parsed && (parsed.revenue > 0 || parsed.cost > 0 || parsed.profit !== 0)) {
       if (Array.isArray(this.data.dailySales)) {
-        const salesIndex = this.data.dailySales.findIndex(d => d.date === logDate);
+        const salesIndex = this.data.dailySales.findIndex(d => String(d.date || '').substring(0, 10) === logDate);
         if (salesIndex !== -1) {
           const ex = this.data.dailySales[salesIndex];
           ex.revenue = Math.max(0, parseFloat(((Number(ex.revenue) || 0) - parsed.revenue).toFixed(2)));
-          ex.cost = Math.max(0, parseFloat(((Number(ex.cost) || 0) - parsed.cost).toFixed(2)));
           ex.materialCost = Math.max(0, parseFloat(((Number(ex.materialCost) || 0) - parsed.cost).toFixed(2)));
-          ex.profit = parseFloat(((Number(ex.profit) || 0) - parsed.profit).toFixed(2));
+          const dailyRent = Number(ex.dailyRent) || 0;
+          ex.cost = Math.max(0, parseFloat((ex.materialCost + dailyRent).toFixed(2)));
+          ex.profit = parseFloat((ex.revenue - ex.cost).toFixed(2));
 
-          // ถ้า revenue และ cost กลายเป็น 0 และไม่มี cupCount (สร้างขึ้นมาเฉพาะการเบิกนี้) ลบออกเพื่อไม่ให้ค้างขยะ
-          if ((Number(ex.revenue) || 0) === 0 && (Number(ex.cost) || 0) === 0 && (!ex.cupCount || ex.cupCount === 0)) {
+          // ลบคำอธิบายการขายสินค้านี้ออกจาก note ถ้ามี
+          if (ex.note && itemName) {
+            const escapedName = itemName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const notePattern = new RegExp(`(?:,\\s*)?ขาย\\s+${escapedName}\\s+x${qtyToRestore}[^,]*(?:,\\s*)?`);
+            ex.note = ex.note.replace(notePattern, (m, offset, str) => {
+              return (offset > 0 && offset + m.length < str.length) ? ', ' : '';
+            }).replace(/^,\s*|,\s*$/g, '').trim();
+          }
+
+          // ถ้าไม่มียอดขายและต้นทุนวัตถุดิบเหลืออยู่ และไม่มี cupCount ให้ลบรายการวันนี้ออก (ไม่ค้างค่าเช่าหรือรายการขายผี)
+          if ((Number(ex.revenue) || 0) === 0 && (Number(ex.materialCost) || 0) === 0 && (!ex.cupCount || ex.cupCount === 0)) {
             this.data.dailySales.splice(salesIndex, 1);
           }
         }
