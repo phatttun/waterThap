@@ -3348,30 +3348,31 @@
 
   <!-- Expense Group Restock History Modal (ดูประวัติการเติมสต๊อก/บิลซื้อทั้งหมดของสินค้า) -->
   <div class="modal-backdrop" id="expenseGroupHistoryModal" style="z-index: 1055;">
-    <div class="modal-dialog modal-lg" style="max-width: 620px;">
-      <div class="modal-header">
-        <div style="display:flex; align-items:center; gap:0.65rem; min-width:0;">
+    <div class="modal-dialog modal-lg modal-egh-redesign" style="max-width: 560px;">
+      <div class="modal-mobile-handle"></div>
+      <div class="modal-header egh-modal-header">
+        <div style="display:flex; align-items:center; gap:0.65rem; min-width:0; flex:1;">
           <div class="icon-circle" style="background:#eff6ff; color:#0284c7; flex-shrink:0;">
             <i data-lucide="history"></i>
           </div>
-          <div style="min-width:0;">
+          <div style="min-width:0; flex:1;">
             <h3 class="modal-title" id="expGroupHistoryTitle" style="margin-bottom:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">ประวัติเติมสต๊อก</h3>
-            <span class="text-xs text-muted" id="expGroupHistorySubtitle">รายการบิลซื้อและรับเข้าสต๊อกทั้งหมด</span>
+            <span class="text-xs text-muted" id="expGroupHistorySubtitle">0 รายการ</span>
           </div>
         </div>
-        <button type="button" class="close-modal-btn" data-close="expenseGroupHistoryModal">&times;</button>
+        <button type="button" class="close-modal-btn" data-close="expenseGroupHistoryModal" aria-label="ปิด">&times;</button>
       </div>
-      <div class="modal-body">
-        <div id="expGroupHistorySummary" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:0.6rem; margin-bottom:0.85rem;">
+      <div class="modal-body egh-modal-body">
+        <div id="expGroupHistorySummary" class="egh-summary-grid">
           <!-- Rendered by JS -->
         </div>
-        <div id="expGroupHistoryList" style="max-height: 380px; overflow-y:auto; display:flex; flex-direction:column; gap:0.55rem; padding-right:2px;">
+        <div id="expGroupHistoryList" class="egh-bill-list">
           <!-- Rendered by JS -->
         </div>
       </div>
-      <div class="modal-footer" style="justify-content:space-between; flex-wrap:wrap; gap:0.5rem;">
+      <div class="modal-footer egh-modal-footer">
         <span class="text-xs text-muted" id="expGroupHistoryCountLabel">0 รายการ</span>
-        <button type="button" class="btn-secondary" data-close="expenseGroupHistoryModal">ปิด</button>
+        <button type="button" class="btn-secondary egh-close-btn" data-close="expenseGroupHistoryModal">ปิดหน้าต่าง</button>
       </div>
     </div>
   </div>

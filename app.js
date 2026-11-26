@@ -3825,31 +3825,32 @@ class WaterFlowApp {
     });
 
     if (titleEl) titleEl.textContent = first.title || 'ประวัติเติมสต๊อก';
-    if (subEl) subEl.textContent = `ประวัติการบันทึกซื้อ & เติมสต๊อกทั้งหมด ${bills.length} ครั้ง`;
+    if (subEl) subEl.textContent = `เติมสต๊อกทั้งหมด ${bills.length} ครั้ง`;
     if (countEl) countEl.textContent = `ทั้งหมด ${bills.length} รายการ`;
 
     if (summaryEl) {
       const stockText = matchedStock ? `${Number(matchedStock.qty) || 0} ${this.escapeHtml(matchedStock.unit || 'หน่วย')}` : '-';
       const avgCostText = matchedStock && Number(matchedStock.unitCost) > 0
-        ? `฿${this.formatUnitCost(matchedStock.unitCost)}/${this.escapeHtml(matchedStock.unit || 'หน่วย')}`
+        ? `฿${this.formatUnitCost(matchedStock.unitCost)}`
         : '-';
+      const avgCostUnit = matchedStock ? `/${this.escapeHtml(matchedStock.unit || 'หน่วย')}` : '';
       summaryEl.innerHTML = `
-        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:var(--radius-sm); padding:0.55rem 0.7rem;">
-          <div class="text-xs text-muted">คงเหลือปัจจุบัน</div>
-          <div class="font-bold text-main" style="font-size:0.95rem; margin-top:2px;">${stockText}</div>
+        <div class="egh-kpi-card">
+          <div class="egh-kpi-lbl"><i data-lucide="package"></i> คงเหลือ</div>
+          <div class="egh-kpi-val">${stockText}</div>
         </div>
-        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:var(--radius-sm); padding:0.55rem 0.7rem;">
-          <div class="text-xs text-muted">ต้นทุนเฉลี่ย</div>
-          <div class="font-bold text-primary" style="font-size:0.95rem; margin-top:2px;">${avgCostText}</div>
+        <div class="egh-kpi-card is-blue">
+          <div class="egh-kpi-lbl"><i data-lucide="tag"></i> ต้นทุนเฉลี่ย</div>
+          <div class="egh-kpi-val text-primary">${avgCostText}<span class="egh-kpi-unit">${avgCostUnit}</span></div>
         </div>
-        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:var(--radius-sm); padding:0.55rem 0.7rem;">
-          <div class="text-xs text-muted">ยอดซื้อสะสม</div>
-          <div class="font-bold text-main" style="font-size:0.95rem; margin-top:2px;">${this.formatCurrency(totalSpent)}</div>
+        <div class="egh-kpi-card is-wide">
+          <div class="egh-kpi-lbl"><i data-lucide="wallet"></i> ยอดซื้อสะสม</div>
+          <div class="egh-kpi-val">${this.formatCurrency(totalSpent)}</div>
         </div>
       `;
     }
 
-    listEl.innerHTML = bills.map(exp => {
+    listEl.innerHTML = bills.map((exp, idx) => {
       const pricing = this.getExpenseUnitPricing(exp);
       const isBulk = pricing ? pricing.isBulk : false;
       const pSize = Number(exp.packSize) || 0;
@@ -3859,31 +3860,37 @@ class WaterFlowApp {
       const uCost = pricing ? pricing.costPerPiece : (pSize > 0 ? (Number(exp.amount) || 0) / pSize : (Number(exp.amount) || 0));
 
       const supParsed = exp.supplier ? this.parseSupplier(exp.supplier) : null;
-      const supBadge = supParsed && supParsed.name
+      const supChip = supParsed && supParsed.name
         ? (supParsed.isUrl
-          ? `<a href="${this.escapeHtml(supParsed.url)}" target="_blank" rel="noopener noreferrer" style="color:#c2410c; font-weight:600; text-decoration:underline;">${this.escapeHtml(supParsed.name)}</a>`
-          : `<span>${this.escapeHtml(supParsed.name)}</span>`)
+          ? `<a href="${this.escapeHtml(supParsed.url)}" target="_blank" rel="noopener noreferrer" class="egh-chip is-link">🛒 ${this.escapeHtml(supParsed.name)} ↗</a>`
+          : `<span class="egh-chip is-store">🛒 ${this.escapeHtml(supParsed.name)}</span>`)
         : '';
 
-      const detailParts = [];
-      if (supBadge) detailParts.push(supBadge);
-      if (receivedQty > 0) detailParts.push(`รับเข้า ${receivedQty} ${this.escapeHtml(pieceUnit)}`);
-      if (uCost > 0) detailParts.push(`฿${this.formatUnitCost(uCost)}/${this.escapeHtml(pieceUnit)}`);
-
       return `
-        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:var(--radius-md); padding:0.75rem 0.9rem; display:flex; justify-content:space-between; align-items:center; gap:0.75rem; flex-wrap:wrap;">
-          <div style="min-width:0; flex:1;">
-            <div style="font-size:0.92rem; font-weight:700; color:var(--text-main);">${this.formatThaiDate(exp.date)}</div>
-            <div class="text-xs text-muted" style="margin-top:0.2rem; line-height:1.4;">${detailParts.join(' &middot; ') || '-'}</div>
-            ${exp.note ? `<div class="text-xs text-muted" style="margin-top:0.2rem;">📝 ${this.escapeHtml(exp.note)}</div>` : ''}
+        <div class="egh-bill-card">
+          <div class="egh-bill-top">
+            <div class="egh-bill-date-wrap">
+              <i data-lucide="calendar" style="width:14px;height:14px;color:var(--primary);flex-shrink:0;"></i>
+              <span class="egh-bill-date">${this.formatThaiDate(exp.date)}</span>
+              ${idx === 0 ? '<span class="egh-latest-badge">ล่าสุด</span>' : ''}
+            </div>
+            <div class="egh-bill-amount">${this.formatCurrency(exp.amount)}</div>
           </div>
-          <div style="display:flex; align-items:center; gap:0.5rem; flex-shrink:0;">
-            <span class="font-bold text-main" style="font-size:0.98rem; margin-right:0.25rem;">${this.formatCurrency(exp.amount)}</span>
-            <button type="button" class="btn-figma-tx-action edit" style="padding:0.3rem 0.55rem;" onclick="app.openExpenseModal('${exp.id}')" title="แก้ไขบิลนี้">
+
+          <div class="egh-bill-chips">
+            ${supChip}
+            ${receivedQty > 0 ? `<span class="egh-chip is-qty">+${receivedQty} ${this.escapeHtml(pieceUnit)}</span>` : ''}
+            ${uCost > 0 ? `<span class="egh-chip">฿${this.formatUnitCost(uCost)}/${this.escapeHtml(pieceUnit)}</span>` : ''}
+          </div>
+
+          ${exp.note ? `<div class="egh-bill-note">📝 ${this.escapeHtml(exp.note)}</div>` : ''}
+
+          <div class="egh-bill-actions">
+            <button type="button" class="egh-action-btn is-edit" onclick="app.openExpenseModal('${exp.id}')">
               <i data-lucide="edit-3"></i>
               <span>แก้ไข</span>
             </button>
-            <button type="button" class="btn-figma-tx-action delete" style="padding:0.3rem 0.55rem;" onclick="app.deleteExpense('${exp.id}')" title="ลบบิลนี้">
+            <button type="button" class="egh-action-btn is-delete" onclick="app.deleteExpense('${exp.id}')">
               <i data-lucide="trash-2"></i>
               <span>ลบ</span>
             </button>

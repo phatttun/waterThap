@@ -10782,3 +10782,243 @@ body {
     width: 56px;
   }
 }
+
+/* ═══ Expense Group History Modal Redesign (Desktop & Mobile/iPhone) ═══ */
+.egh-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.egh-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.55rem;
+}
+
+.egh-kpi-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.65rem 0.75rem;
+}
+
+.egh-kpi-card.is-blue {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.egh-kpi-lbl {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.egh-kpi-lbl i {
+  width: 12px;
+  height: 12px;
+}
+
+.egh-kpi-val {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text-main);
+  margin-top: 0.2rem;
+  line-height: 1.2;
+}
+
+.egh-kpi-unit {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-left: 2px;
+}
+
+.egh-bill-list {
+  max-height: 380px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding-right: 2px;
+}
+
+.egh-bill-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.8rem 0.95rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  transition: border-color 0.15s ease;
+}
+
+.egh-bill-card:hover {
+  border-color: #cbd5e1;
+}
+
+.egh-bill-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.egh-bill-date-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.egh-bill-date {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.egh-latest-badge {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+  border-radius: 9999px;
+  padding: 0.08rem 0.45rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.egh-bill-amount {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text-main);
+  white-space: nowrap;
+}
+
+.egh-bill-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.egh-chip {
+  background: #f1f5f9;
+  color: #475569;
+  border-radius: 9999px;
+  padding: 0.15rem 0.55rem;
+  font-size: 0.74rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+}
+
+.egh-chip.is-qty {
+  background: #eff6ff;
+  color: #0369a1;
+}
+
+.egh-chip.is-store {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.egh-chip.is-link {
+  background: #ffedd5;
+  color: #c2410c;
+  text-decoration: none;
+}
+
+.egh-bill-note {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+.egh-bill-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.45rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid #f1f5f9;
+}
+
+.egh-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  height: 32px;
+  padding: 0 0.7rem;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: transform 0.1s ease, background-color 0.15s ease;
+}
+
+.egh-action-btn i {
+  width: 13px;
+  height: 13px;
+}
+
+.egh-action-btn:active {
+  transform: scale(0.97);
+}
+
+.egh-action-btn.is-edit {
+  background: #eff6ff;
+  color: #0284c7;
+  border-color: #bae6fd;
+}
+
+.egh-action-btn.is-delete {
+  background: #fef2f2;
+  color: #dc2626;
+  border-color: #fecaca;
+}
+
+.egh-modal-footer {
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+@media (max-width: 600px) {
+  .egh-summary-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .egh-kpi-card.is-wide {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .egh-kpi-card.is-wide .egh-kpi-val {
+    margin-top: 0;
+  }
+
+  .egh-bill-list {
+    max-height: 55vh;
+  }
+
+  .egh-bill-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .egh-action-btn {
+    height: 38px;
+    font-size: 0.82rem;
+  }
+
+  .egh-modal-footer .egh-close-btn {
+    min-width: 110px;
+  }
+}
