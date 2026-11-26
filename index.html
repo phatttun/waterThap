@@ -2114,15 +2114,36 @@
 
           <!-- ประวัติการบันทึกยอดขายน้ำชง (Full Width) -->
           <div class="card ds-section-card mt-2 mb-3">
-            <div class="card-header ds-card-header space-between">
+            <div class="card-header ds-card-header space-between" style="flex-wrap:wrap; gap:0.65rem;">
               <div class="card-header-title">
                 <i data-lucide="history"></i>
                 <span>ประวัติการบันทึกยอดขายน้ำชง</span>
+                <span class="pill-tag blue-tag" id="drinkSalesHistoryCount" style="font-size:0.75rem; font-weight:700;">0
+                  รายการ</span>
               </div>
-              <span class="pill-tag blue-tag" id="drinkSalesHistoryCount" style="font-size:0.75rem; font-weight:700;">0
-                รายการ</span>
+              <div style="display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap;">
+                <button type="button" id="btnDsHistoryTodayFilter" class="btn-outline-fastwork btn-sm"
+                  onclick="app.setDsHistoryDateFilter('today')"
+                  style="height:32px; font-size:0.76rem; padding:0 0.65rem; font-weight:700;">
+                  วันนี้
+                </button>
+                <input type="date" id="dsHistoryDateFilter" class="form-input-sm"
+                  onchange="app.renderDrinkSalesHistory()"
+                  title="เลือกวันที่ต้องการดูรายรับ-กำไร"
+                  style="height:32px; font-size:0.78rem; font-weight:600;">
+                <button type="button" id="btnDsHistoryAllFilter" class="btn-secondary btn-sm"
+                  onclick="app.setDsHistoryDateFilter('all')"
+                  style="display:none; height:32px; font-size:0.76rem; padding:0 0.65rem; font-weight:700;">
+                  ทุกวัน
+                </button>
+              </div>
             </div>
             <div class="card-body" style="padding:1rem;">
+              <!-- Filtered Day / Total Revenue-Profit Summary -->
+              <div id="dsHistoryFilteredSummary"
+                style="display:none; margin-bottom:0.9rem; background:#f8fafc; border:1px solid #e2e8f0; border-radius:var(--radius-md); padding:0.75rem 0.9rem;">
+                <!-- Rendered by JS -->
+              </div>
               <div id="drinkSalesHistoryList" class="ds-history-grid">
                 <div class="figma-tx-empty" style="padding:1.5rem 1rem; grid-column:1 / -1;">
                   <div class="figma-tx-empty-icon"><i data-lucide="inbox"></i></div>

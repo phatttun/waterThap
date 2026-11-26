@@ -13277,16 +13277,47 @@ class WaterFlowApp {
     );
   }
 
+  setDsHistoryDateFilter(mode) {
+    const input = document.getElementById('dsHistoryDateFilter');
+    if (input) {
+      input.value = mode === 'today' ? this.formatDate(new Date()) : '';
+    }
+    this.renderDrinkSalesHistory();
+  }
+
   renderDrinkSalesHistory() {
     const listContainer = document.getElementById('drinkSalesHistoryList');
     const badge = document.getElementById('drinkSalesHistoryCount');
+    const dateInput = document.getElementById('dsHistoryDateFilter');
+    const btnAll = document.getElementById('btnDsHistoryAllFilter');
+    const btnToday = document.getElementById('btnDsHistoryTodayFilter');
+    const summaryEl = document.getElementById('dsHistoryFilteredSummary');
     if (!listContainer) return;
 
     if (!Array.isArray(this.data.drinkSalesLogs)) {
       this.data.drinkSalesLogs = [];
     }
     const logs = this.data.drinkSalesLogs;
-    if (badge) badge.textContent = `${logs.length} รายการ`;
+    const selectedDate = (dateInput?.value || '').trim();
+    const todayStr = this.formatDate(new Date());
+
+    if (btnAll) btnAll.style.display = selectedDate ? 'inline-flex' : 'none';
+    if (btnToday) {
+      const isTodayActive = selectedDate === todayStr;
+      btnToday.style.background = isTodayActive ? 'var(--primary)' : '';
+      btnToday.style.color = isTodayActive ? '#ffffff' : '';
+      btnToday.style.borderColor = isTodayActive ? 'var(--primary)' : '';
+    }
+
+    const filteredLogs = selectedDate
+      ? logs.filter(l => String(l.date || '').substring(0, 10) === selectedDate)
+      : logs;
+
+    if (badge) {
+      badge.textContent = selectedDate
+        ? `${filteredLogs.length} / ${logs.length} รายการ`
+        : `${logs.length} รายการ`;
+    }
 
     const sumSold = logs.reduce((s, l) => s + (Number(l.totalSold) || 0), 0);
     const sumRev = logs.reduce((s, l) => s + (Number(l.totalRevenue) || 0), 0);
@@ -13305,6 +13336,50 @@ class WaterFlowApp {
       heroProfitEl.style.color = isProfit ? '#6ee7b7' : '#fca5a5';
     }
 
+    if (summaryEl) {
+      if (logs.length === 0) {
+        summaryEl.style.display = 'none';
+      } else {
+        const fSold = filteredLogs.reduce((s, l) => s + (Number(l.totalSold) || 0), 0);
+        const fRev = filteredLogs.reduce((s, l) => s + (Number(l.totalRevenue) || 0), 0);
+        const fProfit = filteredLogs.reduce((s, l) => s + (Number(l.totalProfit) || 0), 0);
+        const fCost = filteredLogs.reduce((s, l) => {
+          const c = l.totalCost !== undefined ? Number(l.totalCost) : ((Number(l.totalRevenue) || 0) - (Number(l.totalProfit) || 0));
+          return s + (Number(c) || 0);
+        }, 0);
+        const fIsProfit = fProfit >= 0;
+        const periodTitle = selectedDate
+          ? (selectedDate === todayStr ? `สรุปยอดวันนี้ (${this.formatThaiDate(selectedDate)})` : `สรุปยอดวันที่ ${this.formatThaiDate(selectedDate)}`)
+          : 'สรุปยอดประวัติทั้งหมด';
+
+        summaryEl.style.display = 'block';
+        summaryEl.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.4rem; margin-bottom:0.55rem;">
+            <span class="text-xs font-bold text-main">📊 ${this.escapeHtml(periodTitle)}</span>
+            <span class="text-xs text-muted">${filteredLogs.length} รายการบันทึก</span>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:0.5rem;">
+            <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:var(--radius-sm); padding:0.45rem 0.65rem;">
+              <div class="text-xs text-muted">ขายรวม</div>
+              <div class="font-bold text-main" style="font-size:0.95rem;">${fSold.toLocaleString()} แก้ว</div>
+            </div>
+            <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:var(--radius-sm); padding:0.45rem 0.65rem;">
+              <div class="text-xs text-muted">รายรับรวม</div>
+              <div class="font-bold text-primary" style="font-size:0.95rem;">${this.formatCurrency(fRev)}</div>
+            </div>
+            <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:var(--radius-sm); padding:0.45rem 0.65rem;">
+              <div class="text-xs text-muted">ต้นทุนรวม</div>
+              <div class="font-bold text-muted" style="font-size:0.95rem;">${this.formatCurrency(fCost)}</div>
+            </div>
+            <div style="background:${fIsProfit ? '#f0fdf4' : '#fef2f2'}; border:1px solid ${fIsProfit ? '#bbf7d0' : '#fecaca'}; border-radius:var(--radius-sm); padding:0.45rem 0.65rem;">
+              <div class="text-xs" style="color:${fIsProfit ? '#15803d' : '#dc2626'}; font-weight:600;">กำไรสุทธิ</div>
+              <div class="font-bold" style="font-size:0.95rem; color:${fIsProfit ? '#15803d' : '#dc2626'};">${fIsProfit ? '+' : ''}${this.formatCurrency(fProfit)}</div>
+            </div>
+          </div>
+        `;
+      }
+    }
+
     if (logs.length === 0) {
       listContainer.innerHTML = `
         <div class="figma-tx-empty" style="padding:1.5rem 1rem;">
@@ -13317,7 +13392,20 @@ class WaterFlowApp {
       return;
     }
 
-    listContainer.innerHTML = logs.map(log => {
+    if (filteredLogs.length === 0) {
+      listContainer.innerHTML = `
+        <div class="figma-tx-empty" style="padding:1.5rem 1rem; grid-column:1 / -1;">
+          <div class="figma-tx-empty-icon"><i data-lucide="calendar-x"></i></div>
+          <div class="figma-tx-empty-title">ไม่พบประวัติยอดขายในวันที่ ${this.escapeHtml(this.formatThaiDate(selectedDate))}</div>
+          <div class="figma-tx-empty-desc">ลองเลือกวันอื่น หรือกดปุ่ม "ดูทุกวัน" เพื่อแสดงประวัติทั้งหมด</div>
+          <button type="button" class="btn-fastwork btn-sm mt-2" onclick="app.setDsHistoryDateFilter('all')">ดูประวัติทั้งหมด (${logs.length} รายการ)</button>
+        </div>
+      `;
+      this.refreshLucide();
+      return;
+    }
+
+    listContainer.innerHTML = filteredLogs.map(log => {
       const recList = log.recipes || [];
       const profitClass = log.totalProfit >= 0 ? 'color:#15803d;' : 'color:#dc2626;';
       const profitSign = log.totalProfit >= 0 ? '+' : '';
