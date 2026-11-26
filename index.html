@@ -1253,50 +1253,6 @@
             </div>
           </div>
 
-          <!-- Section 2: 3 KPI Metric Stats -->
-          <div class="stats-grid three-col"
-            style="padding:1rem 1.25rem; background:#f8fafc; border-bottom:1px solid #e2e8f0; margin-bottom:0;">
-            <div class="stat-card" id="cardKpiStockLow"
-              style="border-top: 4px solid var(--danger); background: linear-gradient(180deg, #fff5f5 0%, #ffffff 60%); cursor:pointer;"
-              onclick="app.switchTab('stock-low')" title="คลิกเพื่อดูสินค้าใกล้หมด & หมดสต๊อก">
-              <div class="stat-icon-wrapper red">
-                <i data-lucide="alert-triangle"></i>
-              </div>
-              <div class="stat-meta">
-                <div class="stat-label" style="color:var(--danger); font-weight:700;">สินค้าวิกฤต (หมด/ใกล้หมด)</div>
-                <div class="stat-value text-danger" id="kpiStockLowCount">0 รายการ</div>
-                <div class="stat-subtext" id="kpiStockLowSubtext" style="color:#b91c1c; font-weight:600;">
-                  คลิกเพื่อไปหน้าสั่งซื้อด่วน</div>
-              </div>
-            </div>
-
-            <div class="stat-card" id="cardKpiStockTotal"
-              style="border-top: 4px solid var(--primary); background: linear-gradient(180deg, #eff6ff 0%, #ffffff 60%); cursor:pointer;"
-              onclick="app.setStockFilter('all')" title="คลิกเพื่อดูสินค้าทั้งหมด">
-              <div class="stat-icon-wrapper blue">
-                <i data-lucide="package-check"></i>
-              </div>
-              <div class="stat-meta">
-                <div class="stat-label">สินค้าพร้อมใช้ในร้าน</div>
-                <div class="stat-value text-primary" id="kpiStockTotalItems">0 รายการ</div>
-                <div class="stat-subtext" id="kpiStockTotalSubtext">มีสต๊อกพร้อมชงขาย</div>
-              </div>
-            </div>
-
-            <div class="stat-card" id="cardKpiStockNormal"
-              style="border-top: 4px solid var(--success); background: linear-gradient(180deg, #ecfdf5 0%, #ffffff 60%); cursor:pointer;"
-              onclick="app.setStockFilter('normal')" title="คลิกเพื่อดูสินค้าปกติ">
-              <div class="stat-icon-wrapper green">
-                <i data-lucide="check-circle-2"></i>
-              </div>
-              <div class="stat-meta">
-                <div class="stat-label">สถานะสต๊อกปกติ</div>
-                <div class="stat-value text-green" id="kpiStockNormalCount">0 รายการ</div>
-                <div class="stat-subtext">เพียงพอต่อการชงขาย</div>
-              </div>
-            </div>
-          </div>
-
           <!-- Section 3: Daily Stock Profit Summary -->
           <div id="stockProfitDailyCard"
             style="background:linear-gradient(180deg, #f0fdf4 0%, #ffffff 80px); border:none; border-radius:0; margin-bottom:0;">
@@ -1525,65 +1481,67 @@
 
       <!-- TAB: STOCK LOW ALERT (หน้าศูนย์เตือนสินค้าใกล้หมด & ใบรายการสั่งซื้อด่วน) -->
       <section id="tab-stock-low" class="tab-pane">
-        <!-- Emergency Alert Banner Header -->
-        <div class="stock-alert-hero mb-4">
-          <div class="stock-alert-hero-content">
-            <div class="stock-alert-icon-ring">
-              <i data-lucide="siren"></i>
+        <!-- Emergency Alert Banner Header (Unified Hero + Metrics) -->
+        <div class="stock-alert-hero mb-4" style="flex-direction:column; align-items:stretch; gap:1rem;">
+          <div class="stock-alert-hero-top"
+            style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem;">
+            <div class="stock-alert-hero-content">
+              <div class="stock-alert-icon-ring">
+                <i data-lucide="siren"></i>
+              </div>
+              <div>
+                <div class="stock-alert-badge-top">🚨 EMERGENCY RE-ORDER SYSTEM</div>
+                <h2 class="stock-alert-title">ศูนย์เตือนสินค้าใกล้หมด &amp; ใบจัดเตรียมสั่งซื้อ</h2>
+                <p class="stock-alert-desc">รายการวัตถุดิบและบรรจุภัณฑ์ที่เหลือน้อยกว่าเกณฑ์ปลอดภัย ต้องจัดซื้อเพิ่มด่วน
+                  เพื่อไม่ให้สะดุดเวลาเปิดร้าน</p>
+              </div>
             </div>
-            <div>
-              <div class="stock-alert-badge-top">🚨 EMERGENCY RE-ORDER SYSTEM</div>
-              <h2 class="stock-alert-title">ศูนย์เตือนสินค้าใกล้หมด & ใบจัดเตรียมสั่งซื้อ</h2>
-              <p class="stock-alert-desc">รายการวัตถุดิบและบรรจุภัณฑ์ที่เหลือน้อยกว่าเกณฑ์ปลอดภัย ต้องจัดซื้อเพิ่มด่วน
-                เพื่อไม่ให้สะดุดเวลาเปิดร้าน</p>
-            </div>
-          </div>
-          <div class="stock-alert-hero-actions">
-            <button class="btn-fastwork" id="btnExportShoppingList"
-              style="background: #ffffff; color: #dc2626; border: 1.5px solid #fee2e2; font-weight: 700; box-shadow: 0 4px 14px rgba(220,38,38,0.2);">
-              <i data-lucide="clipboard-copy" style="color: #dc2626;"></i>
-              <span>คัดลอกรายการไปสั่งซื้อ (LINE)</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Metric Highlight Bar -->
-        <div class="stats-grid three-col mb-4" id="lowStockStatsGrid">
-          <div class="stat-card card-low-alert"
-            style="background: linear-gradient(135deg, #fff5f5 0%, #fee2e2 100%); border: 1.5px solid #fecaca;">
-            <div class="stat-icon-wrapper red">
-              <i data-lucide="alert-octagon"></i>
-            </div>
-            <div class="stat-meta">
-              <div class="stat-label" style="color:#991b1b; font-weight:700;">สินค้าวิกฤต (ต้องสั่งวันนี้)</div>
-              <div class="stat-value text-danger" id="lowAlertCountVal">0 รายการ</div>
-              <div class="stat-subtext" style="color:#b91c1c;">ต่ำกว่าเกณฑ์ขั้นต่ำทุกรายการ</div>
+            <div class="stock-alert-hero-actions">
+              <button class="btn-fastwork" id="btnExportShoppingList"
+                style="background: #ffffff; color: #dc2626; border: 1.5px solid #fee2e2; font-weight: 700; box-shadow: 0 4px 14px rgba(220,38,38,0.2);">
+                <i data-lucide="clipboard-copy" style="color: #dc2626;"></i>
+                <span>คัดลอกรายการไปสั่งซื้อ (LINE)</span>
+              </button>
             </div>
           </div>
 
-          <div class="stat-card card-low-budget"
-            style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border: 1.5px solid #bfdbfe;">
-            <div class="stat-icon-wrapper blue">
-              <i data-lucide="calculator"></i>
-            </div>
-            <div class="stat-meta">
-              <div class="stat-label" style="color:#1e40af; font-weight:700;">ประมาณการงบสั่งซื้อด่วน</div>
-              <div class="stat-value text-primary" id="lowAlertEstBudget">฿0</div>
-              <div class="stat-subtext" style="color:#2563eb;">คำนวณจากต้นทุนซื้อรอบล่าสุด</div>
-            </div>
-          </div>
+          <!-- Integrated Metrics & Supplier Breakdown inside Hero Card -->
+          <div style="border-top:1px solid rgba(255,255,255,0.18); padding-top:0.95rem;">
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:0.85rem; margin-bottom:0.85rem;">
+              <!-- สินค้าวิกฤต (ต้องสั่งวันนี้) -->
+              <div style="background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.22); border-radius:12px; padding:0.75rem 0.95rem; display:flex; align-items:center; gap:0.8rem;">
+                <div style="width:40px; height:40px; border-radius:10px; background:rgba(255,255,255,0.18); color:#ffffff; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                  <i data-lucide="alert-octagon" style="width:20px; height:20px;"></i>
+                </div>
+                <div style="min-width:0; flex:1;">
+                  <div style="font-size:0.76rem; color:#fecaca; font-weight:700;">สินค้าวิกฤต (ต้องสั่งวันนี้)</div>
+                  <div id="lowAlertCountVal" style="font-size:1.35rem; font-weight:800; color:#ffffff; line-height:1.2; margin-top:2px;">0 รายการ</div>
+                  <div id="lowAlertCountSubtext" style="font-size:0.72rem; color:#fee2e2; font-weight:600; margin-top:2px;">หมดสต๊อก 0 | ใกล้หมด 0</div>
+                </div>
+              </div>
 
-          <div class="stat-card card-low-suppliers"
-            style="background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border: 1.5px solid #fde68a;">
-            <div class="stat-icon-wrapper amber">
-              <i data-lucide="store"></i>
+              <!-- ประมาณการงบสั่งซื้อด่วน -->
+              <div style="background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.22); border-radius:12px; padding:0.75rem 0.95rem; display:flex; align-items:center; gap:0.8rem;">
+                <div style="width:40px; height:40px; border-radius:10px; background:rgba(255,255,255,0.18); color:#ffffff; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                  <i data-lucide="calculator" style="width:20px; height:20px;"></i>
+                </div>
+                <div style="min-width:0; flex:1;">
+                  <div style="font-size:0.76rem; color:#dbeafe; font-weight:700;">ประมาณการงบสั่งซื้อด่วน</div>
+                  <div id="lowAlertEstBudget" style="font-size:1.35rem; font-weight:800; color:#ffffff; line-height:1.2; margin-top:2px;">฿0</div>
+                  <div style="font-size:0.72rem; color:#e0f2fe; font-weight:500; margin-top:2px;">คำนวณจากต้นทุนซื้อรอบล่าสุด</div>
+                </div>
+              </div>
             </div>
-            <div class="stat-meta" style="width: 100%;">
-              <div class="stat-label" style="color:#92400e; font-weight:700;">แนะนำสั่งซื้อแยกตามแหล่งซื้อ</div>
-              <!-- Mini breakdown chips by store e.g. Makro, Shopee -->
+
+            <!-- แนะนำสั่งซื้อแยกตามแหล่งซื้อ -->
+            <div style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); border-radius:12px; padding:0.75rem 0.95rem;">
+              <div style="display:flex; align-items:center; gap:0.45rem; font-size:0.8rem; font-weight:700; color:#fef3c7;">
+                <i data-lucide="store" style="width:15px; height:15px;"></i>
+                <span>แนะนำสั่งซื้อแยกตามแหล่งซื้อ</span>
+              </div>
               <div id="lowAlertSupplierBreakdownChips"
-                style="display:flex; flex-wrap:wrap; gap:0.35rem; margin-top:0.4rem;">
-                <span class="text-xs" style="color:#b45309;">ไม่มีรายการต้องซื้อ</span>
+                style="display:flex; flex-wrap:wrap; gap:0.4rem; margin-top:0.5rem;">
+                <span class="text-xs" style="color:#fef3c7;">ไม่มีรายการต้องซื้อ</span>
               </div>
             </div>
           </div>

@@ -11418,6 +11418,7 @@ class WaterFlowApp {
 
     // Update KPI Metric Highlights
     const countVal = document.getElementById('lowAlertCountVal');
+    const countSubEl = document.getElementById('lowAlertCountSubtext');
     const qtyVal = document.getElementById('lowAlertSuggestedQty');
     const budgetVal = document.getElementById('lowAlertEstBudget');
     const badge = document.getElementById('lowAlertPendingBadge');
@@ -11425,7 +11426,11 @@ class WaterFlowApp {
     const filterIndicator = document.getElementById('lowStockFilterIndicator');
     const btnResetFilter = document.getElementById('btnResetLowStockFilter');
 
+    const outOfStockCount = lowItems.filter(item => (Number(item.qty) || 0) <= 0).length;
+    const nearEmptyCount = lowItems.length - outOfStockCount;
+
     if (countVal) countVal.textContent = `${lowItems.length} รายการ`;
+    if (countSubEl) countSubEl.textContent = `หมดสต๊อก ${outOfStockCount} | ใกล้หมด ${nearEmptyCount}`;
     if (qtyVal) qtyVal.textContent = `${lowItems.length} รายการ (${totalSuggestedQty} หน่วย)`;
     if (budgetVal) budgetVal.textContent = this.formatCurrency(totalEstBudget);
     if (badge) {
