@@ -10276,10 +10276,33 @@ body {
 
   .ds-hero-stats {
     width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.55rem;
   }
 
   .ds-hero-stat-pill {
-    flex: 1;
+    min-width: 0;
+    padding: 0.55rem 0.75rem;
+  }
+
+  .ds-hero-stat-pill.ds-hero-date-pill {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.65rem;
+  }
+
+  .ds-hero-stat-pill.ds-hero-date-pill .ds-hero-date-input {
+    margin-top: 0 !important;
+    width: auto !important;
+    max-width: 165px;
+    flex-shrink: 0;
+  }
+
+  .ds-hero-stat-pill:last-child {
+    grid-column: 1 / -1;
   }
 
   /* ═══ Stock Profit History Modal Redesign ═══ */
