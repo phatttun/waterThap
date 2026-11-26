@@ -7168,9 +7168,12 @@ body {
     border-radius: var(--radius-md) !important;
     margin-bottom: 0.85rem !important;
     padding: 1rem !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+    box-shadow: none !important;
     position: relative !important;
     box-sizing: border-box !important;
+    contain: layout style !important;
+    content-visibility: auto !important;
+    contain-intrinsic-size: 220px !important;
   }
 
   .stock-redesigned-table tr[data-is-low="true"] {

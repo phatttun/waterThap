@@ -1431,8 +1431,14 @@ class WaterFlowApp {
 
     const stockSearch = document.getElementById('stockSearchInput');
     if (stockSearch) {
-      ['input', 'change', 'search'].forEach(evt => {
+      let stockSearchTimer = null;
+      stockSearch.addEventListener('input', () => {
+        if (stockSearchTimer) clearTimeout(stockSearchTimer);
+        stockSearchTimer = setTimeout(() => this.applyStockFilter(), 120);
+      });
+      ['change', 'search'].forEach(evt => {
         stockSearch.addEventListener(evt, () => {
+          if (stockSearchTimer) clearTimeout(stockSearchTimer);
           this.applyStockFilter();
         });
       });
@@ -1728,9 +1734,12 @@ class WaterFlowApp {
   }
 
   refreshLucide() {
-    if (window.lucide) {
-      window.lucide.createIcons();
-    }
+    if (!window.lucide) return;
+    if (this._lucideRaf) return;
+    this._lucideRaf = requestAnimationFrame(() => {
+      this._lucideRaf = null;
+      if (window.lucide) window.lucide.createIcons();
+    });
   }
 
   showToast(message, type = 'info') {
@@ -8642,32 +8651,28 @@ class WaterFlowApp {
         : item.category === 'PACKAGING' ? 'orange-tag'
           : item.category === 'FRIDGE_DRINK' ? 'cyan-tag'
             : item.category === 'STOCK' ? 'purple-tag' : 'gray-tag';
-      const catIcon = item.category === 'INGREDIENT' ? 'coffee'
-        : item.category === 'PACKAGING' ? 'cup-soda'
-          : item.category === 'FRIDGE_DRINK' ? 'snowflake'
-            : item.category === 'STOCK' ? 'package' : 'archive';
+      const catEmoji = item.category === 'INGREDIENT' ? '🍵'
+        : item.category === 'PACKAGING' ? '🥤'
+          : item.category === 'FRIDGE_DRINK' ? '🧊'
+            : item.category === 'STOCK' ? '📦' : '🛠️';
 
       const ratioPct = isNoAlert ? 100 : Math.min(100, Math.round((currentQty / Math.max(1, minQty * 2)) * 100));
 
       const statusTag = isNoAlert
-        ? `<span class="pill-tag" style="font-size:0.75rem; font-weight:600; background:#f1f5f9; color:#64748b; border:1px solid #cbd5e1;">
-            <i data-lucide="package-check" style="width:12px;height:12px;"></i> ของใช้ร้าน
-           </span>`
+        ? `<span class="pill-tag" style="font-size:0.75rem; font-weight:600; background:#f1f5f9; color:#64748b; border:1px solid #cbd5e1;">✓ ของใช้ร้าน</span>`
         : isLow
-          ? `<span class="pill-tag red-tag" style="font-weight:700; font-size:0.75rem; display:inline-flex; align-items:center; gap:0.25rem;">
-              <i data-lucide="alert-triangle" style="width:12px;height:12px;"></i> ใกล้หมด
-             </span>`
-          : `<span class="pill-tag green-tag" style="font-size:0.75rem; font-weight:600;">
-              <i data-lucide="check" style="width:12px;height:12px;"></i> ปกติ
-             </span>`;
+          ? `<span class="pill-tag red-tag" style="font-weight:700; font-size:0.75rem; display:inline-flex; align-items:center; gap:0.25rem;">⚠️ ใกล้หมด</span>`
+          : `<span class="pill-tag green-tag" style="font-size:0.75rem; font-weight:600;">✓ ปกติ</span>`;
+
+      const searchBlob = `${item.name || ''} ${catLabel || ''} ${item.supplier || ''} ${item.unit || ''}`.toLowerCase();
 
       return `
-        <tr data-category="${this.escapeHtml(item.category)}" data-is-low="${isLow}" style="${isLow ? 'background:#fffbfb;' : ''}">
+        <tr data-category="${this.escapeHtml(item.category)}" data-is-low="${isLow}" data-search="${this.escapeHtml(searchBlob)}" style="${isLow ? 'background:#fffbfb;' : ''}">
           <td>${statusTag}</td>
           <td>
             <div style="display:flex; align-items:center; gap:0.65rem;">
-              <div style="width:34px; height:34px; background:${isLow ? '#fee2e2' : '#f1f5f9'}; border-radius:var(--radius-sm); display:flex; align-items:center; justify-content:center; color:${isLow ? '#dc2626' : 'var(--primary)'}; flex-shrink:0;">
-                <i data-lucide="${catIcon}" style="width:18px;height:18px;"></i>
+              <div style="width:34px; height:34px; background:${isLow ? '#fee2e2' : '#f1f5f9'}; border-radius:var(--radius-sm); display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0;">
+                ${catEmoji}
               </div>
               <div>
                 <div class="font-bold text-main" style="font-size:0.95rem;">${this.escapeHtml(item.name)}</div>
@@ -8679,7 +8684,7 @@ class WaterFlowApp {
           const supInfo = this.parseSupplier(item.supplier);
           if (supInfo.isUrl) {
             return `<a href="${this.escapeHtml(supInfo.url)}" target="_blank" rel="noopener noreferrer" class="pill-tag orange-tag" style="font-size:0.7rem; padding:0.12rem 0.5rem; text-decoration:none; display:inline-flex; align-items:center; gap:0.25rem; background:#ffedd5; color:#c2410c; border:1px solid #fed7aa;" title="คลิกเพื่อเปิดลิ้งก์สั่งซื้อ ${this.escapeHtml(supInfo.domain)}">
-                        🛒 ${this.escapeHtml(supInfo.name)} <i data-lucide="external-link" style="width:11px;height:11px;"></i>
+                        🛒 ${this.escapeHtml(supInfo.name)} ↗
                       </a>`;
           }
           return `<span class="pill-tag orange-tag" style="font-size:0.7rem; padding:0.1rem 0.45rem;">🛒 ${this.escapeHtml(item.supplier)}</span>`;
@@ -8723,10 +8728,10 @@ class WaterFlowApp {
           </td>
           <td class="text-center" style="white-space:nowrap;">
             <button class="btn-outline-fastwork btn-sm mr-1" onclick="app.openStockModal('${item.id}')" title="แก้ไขสต๊อก" style="padding:0.3rem 0.55rem;">
-              <i data-lucide="edit-3" style="width:14px;height:14px;"></i>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
             </button>
             <button class="icon-btn-border" onclick="app.deleteStockItem('${item.id}')" title="ลบรายการ" style="padding:0.3rem 0.55rem;">
-              <i data-lucide="trash-2" style="width:14px;height:14px;color:var(--danger);"></i>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
             </button>
           </td>
         </tr>
@@ -8778,7 +8783,7 @@ class WaterFlowApp {
     rows.forEach(tr => {
       const cat = tr.dataset.category;
       const isLow = tr.dataset.isLow === 'true';
-      const text = (tr.textContent || tr.innerText || '').toLowerCase();
+      const text = tr.dataset.search || (tr.textContent || '').toLowerCase();
 
       let matchFilter = true;
       if (filterVal === 'low') {
@@ -9030,17 +9035,21 @@ class WaterFlowApp {
     }
 
     this.saveData();
-    this.syncRecipesWithExpenses();
     this.renderStock();
     this.renderStockProfitCard();
-    this.renderStockHistory();
-    this.renderLowStockAlertView();
-    this.renderExpenses();
-    this.renderRecipes();
-    this.calculatePricing();
-    this.renderDashboard();
-    this.renderTodaySummary();
-    this.renderCalendar();
+
+    if (this._stockBgSyncTimer) clearTimeout(this._stockBgSyncTimer);
+    this._stockBgSyncTimer = setTimeout(() => {
+      this.syncRecipesWithExpenses();
+      this.renderStockHistory();
+      this.renderLowStockAlertView();
+      this.renderExpenses();
+      this.renderRecipes();
+      this.calculatePricing();
+      this.renderDashboard();
+      this.renderTodaySummary();
+      this.renderCalendar();
+    }, 150);
 
     if (diff > 0 && (Number(item.unitCost) || 0) > 0) {
       const expVal = (diff * item.unitCost).toFixed(2);
